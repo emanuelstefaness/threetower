@@ -7,7 +7,6 @@ import type { RoomRecord } from "@/lib/buildingTypes";
 import { fetchBuildingState } from "@/features/building/apiClient";
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
-import { formatStatus } from "@/lib/status";
 import { colorForStatusSala, normalizeStatusSala } from "@/lib/treeTowerStatusSala";
 
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
@@ -92,8 +91,6 @@ export default function TowerAlfaReportsClient() {
   const { building, appMode, applyEvent, setBuilding, setRealtime } = useBuildingStoreClient();
 
   const [clock, setClock] = useState(() => new Date());
-  const [exportingDoc, setExportingDoc] = useState(false);
-
   const [statusSalaFilter, setStatusSalaFilter] = useState<string[] | "all">("all");
   const [floorFilter, setFloorFilter] = useState<number | "all">("all");
   const [areaMin, setAreaMin] = useState<number>(0);
@@ -364,90 +361,6 @@ export default function TowerAlfaReportsClient() {
     downloadCSV(`relatorio-salas.csv`, rows);
   };
 
-  const exportSystemDocument = async () => {
-    if (!building) return;
-    setExportingDoc(true);
-    try {
-      const XLSX = await import("xlsx");
-      const rooms = Object.values(building.roomsById).sort((a, b) => a.floor - b.floor || a.id - b.id);
-      const s = building.summary;
-      const ssMap = new Map<string, number>();
-      for (const r of rooms) {
-        const k = (r.statusSala ?? r.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
-        ssMap.set(k, (ssMap.get(k) ?? 0) + 1);
-      }
-      let areaTotal = 0;
-      let vendCount = 0;
-      let vendSum = 0;
-      for (const r of rooms) {
-        areaTotal += Number.isFinite(r.area) ? r.area : 0;
-        if (normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO") {
-          vendCount += 1;
-          const v = r.meta?.valorImovel;
-          if (typeof v === "number" && Number.isFinite(v)) vendSum += v;
-        }
-      }
-      const resumo: (string | number)[][] = [
-        ["Relatório — dados principais do sistema"],
-        ["Gerado em", new Date().toLocaleString("pt-BR")],
-        [],
-        ["Total de salas", rooms.length],
-        ["Salas disponíveis (operacional)", s.counts.disponivel],
-        ["Salas ocupadas (operacional)", s.counts.ocupada],
-        ["Salas reservadas (operacional)", s.counts.reservada],
-        ["Salas em manutenção (operacional)", s.counts.manutencao],
-        ["Área total somada (m²)", Math.round(areaTotal * 100) / 100],
-        ["Unidades vendidas (STATUS SALA)", vendCount],
-        ["Valor total vendidas", vendSum ? formatMoneyBRL(vendSum) : "—"],
-        [],
-        ["Distribuição por STATUS SALA (planilha)"],
-        ["Status", "Quantidade"],
-        ...Array.from(ssMap.entries())
-          .sort((a, b) => b[1] - a[1])
-          .map(([k, v]) => [k, v]),
-      ];
-      const salasHeader = [
-        "ID",
-        "Nome",
-        "Andar",
-        "Status operacional",
-        "STATUS SALA (planilha)",
-        "Unidade",
-        "Posição",
-        "Matrícula",
-        "Escrituras",
-        "Controle",
-        "Área (m²)",
-        "Valor m²",
-        "Valor imóvel",
-        "Última atualização",
-      ];
-      const salasRows = rooms.map((r) => [
-        r.id,
-        r.name,
-        r.floor,
-        formatStatus(r.status),
-        r.statusSala ?? r.meta?.statusSalaOriginal ?? "",
-        r.meta?.unidade ?? "",
-        r.meta?.posicao ?? "",
-        r.meta?.matricula ?? "",
-        r.meta?.escrituras ?? "",
-        r.meta?.controle ?? "",
-        r.area,
-        r.meta?.valorM2 ?? "",
-        r.meta?.valorImovel ?? "",
-        formatDateTime(r.lastUpdatedAt),
-      ]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumo), "Resumo");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([salasHeader, ...salasRows]), "Salas");
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, "").replace("T", "-");
-      XLSX.writeFile(wb, `torre-alfa-dados-${stamp}.xlsx`);
-    } finally {
-      setExportingDoc(false);
-    }
-  };
-
   return (
     <>
       <header className="topbar">
@@ -502,7 +415,7 @@ export default function TowerAlfaReportsClient() {
           <div className="sb-divider" />
           <div className="sb-section">Filtros</div>
 
-          <div className="sb-manage">
+          <div className="sb-manage reports-sb-manage">
             <div className="em-field">
               <div className="em-label">Status da sala (planilha)</div>
               <div className="report-status-grid">
@@ -593,30 +506,28 @@ export default function TowerAlfaReportsClient() {
               {building ? `${filteredRooms.length} salas filtradas` : "—"}
             </div>
 
-            <div className="em-btns" style={{ marginTop: 0 }}>
-              <button type="button" className="em-btn em-cancel" onClick={() => {
-                setStatusSalaFilter("all");
-                setFloorFilter("all");
-                setAreaMin(0);
-                setAreaMax(99999);
-                setSearch("");
-                setRecentOnly(false);
-                setRecentDays(90);
-                setSortBy("lastUpdatedDesc");
-              }}>
-                Limpar filtros
-              </button>
-              <button type="button" className="em-btn em-save" onClick={exportCSV}>
-                Exportar CSV
-              </button>
+            <div className="reports-sb-clear">
               <button
                 type="button"
-                className="em-btn em-save"
-                style={{ marginTop: 8 }}
-                disabled={!building || exportingDoc}
-                onClick={() => void exportSystemDocument()}
+                className="em-btn em-cancel"
+                onClick={() => {
+                  setStatusSalaFilter("all");
+                  setFloorFilter("all");
+                  setAreaMin(0);
+                  setAreaMax(99999);
+                  setSearch("");
+                  setRecentOnly(false);
+                  setRecentDays(90);
+                  setSortBy("lastUpdatedDesc");
+                }}
               >
-                {exportingDoc ? "A gerar…" : "Exportar documento (sistema)"}
+                Limpar filtros
+              </button>
+            </div>
+
+            <div className="reports-sb-csv-anchor">
+              <button type="button" className="em-btn em-save" disabled={!building} onClick={exportCSV}>
+                Exportar CSV
               </button>
             </div>
           </div>
@@ -638,14 +549,6 @@ export default function TowerAlfaReportsClient() {
                 </div>
                 <button type="button" className="report-action" onClick={exportCSV}>
                   Exportar CSV
-                </button>
-                <button
-                  type="button"
-                  className="report-action"
-                  disabled={!building || exportingDoc}
-                  onClick={() => void exportSystemDocument()}
-                >
-                  {exportingDoc ? "A gerar…" : "Exportar documento"}
                 </button>
               </div>
             </div>

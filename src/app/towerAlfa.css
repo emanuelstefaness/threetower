@@ -1748,6 +1748,31 @@ body::before {
   padding: 10px 14px 20px;
 }
 
+/* Relatórios: coluna com filtros + CSV no fundo da área com scroll */
+.reports-layout .reports-sb-manage {
+  display: flex;
+  flex-direction: column;
+}
+
+.reports-layout .reports-sb-clear {
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.reports-layout .reports-sb-clear .em-btn {
+  width: 100%;
+}
+
+.reports-layout .reports-sb-csv-anchor {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.reports-layout .reports-sb-csv-anchor .em-btn {
+  width: 100%;
+}
+
 .reports-layout .main {
   padding: 22px 22px 28px;
   gap: 14px;

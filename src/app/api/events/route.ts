@@ -4,6 +4,8 @@ import type { RoomStatusChangedEvent } from "@/lib/buildingTypes";
 // SSE nunca deve ser pré-renderizado estaticamente.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+/** Vercel: limite máximo da função (plano Hobby pode impor menos — ver doc de deploy). */
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const store = await getBuildingStore();

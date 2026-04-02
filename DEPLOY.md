@@ -296,6 +296,18 @@ Se a palavra-passe da base tiver caracteres especiais (`@`, `:`, etc.), use-os *
 
 - **Vercel / serverless puro:** sistema de ficheiros efémero. Use PostgreSQL gerido (Neon, Supabase, RDS, etc.) com `DATABASE_URL` ou um contentor sempre ligado com volume/Compose.
 
+## Hospedagem gratuita para testar
+
+| Opção | O que é | Encaixa no teu projeto? |
+|-------|---------|-------------------------|
+| **[Oracle Cloud Always Free](https://www.oracle.com/cloud/free/)** | VPS Linux (ex. São Paulo) onde corres **Docker + Compose** como no guia. | **Sim** — é o mais completo para testar **app + Postgres** sem cartão extra além da verificação. Guia: [DEPLOY-ORACLE-CLOUD.md](./DEPLOY-ORACLE-CLOUD.md). |
+| **[Railway](https://railway.app)** / **[Render](https://render.com)** | Créditos ou plano free limitado; serviço **Web** + **Postgres** gerido. | **Possível**, mas tens de adaptar: Dockerfile ou build Node, variáveis `DATABASE_URL`, etc. (não é copiar-colar do Compose sem ler a doc deles). |
+| **[Fly.io](https://fly.io)** | Tier gratuito com limites; suporta `fly launch` + Postgres. | **Possível** com configuração própria (não está pronto no repo). |
+| **Postgres gerido** + **[Vercel](https://vercel.com)** | [Neon](https://neon.tech), [Supabase](https://supabase.com), [Render](https://render.com), etc. | **Vercel + Neon (completo):** [DEPLOY-VERCEL-NEON.md](./DEPLOY-VERCEL-NEON.md) · **Geral:** [DEPLOY-VERCEL-SUPABASE.md](./DEPLOY-VERCEL-SUPABASE.md) |
+| **Túnel (PC ligado)** | [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/) ou [ngrok](https://ngrok.com) expõe o teu `localhost:3000`. | **Grátis** para mostrar a alguém **enquanto o teu PC e `npm run dev` estão ligados** — não é hospedagem 24h. |
+
+Para **testar o mesmo stack que em produção** (Docker + Postgres no mesmo sítio), o caminho mais direto em **grátis** costuma ser **Oracle Cloud** com o passo a passo dedicado.
+
 ## Resumo
 
 1. Em produção com Docker: `docker compose up` + `.env` com `POSTGRES_PASSWORD` forte.
