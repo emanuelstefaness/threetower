@@ -1,0 +1,41 @@
+# Stack: aplicação (UI + rotas /api) + PostgreSQL com volume persistente.
+# O Postgres NÃO expõe porta ao exterior — só o serviço `web` fala com `db` na rede interna.
+#
+# 1. Copie .env.example para .env e defina POSTGRES_PASSWORD (valor forte, único).
+# 2. docker compose up -d --build
+#
+# Nunca commite .env nem volte a pedir/colocar passwords em repositório ou chats.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tower}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ficheiro .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tower}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Sem secção `ports:` — a base fica inacessível de fora da rede Docker.
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tower}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tower}
+      NODE_ENV: production
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      APP_LOGIN_PASSWORD: ${APP_LOGIN_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
