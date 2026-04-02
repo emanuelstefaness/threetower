@@ -78,10 +78,20 @@ export async function createRoomsForFloor(args: {
   return (await res.json()) as { created: RoomRecord[] };
 }
 
-export async function updateRoomDetails(
-  roomId: number,
-  args: { name?: string; area?: number; planSlot?: string; statusSala?: string; by?: string }
-): Promise<{ updated: RoomRecord }> {
+export type UpdateRoomDetailsPayload = {
+  name?: string;
+  area?: number;
+  planSlot?: string;
+  statusSala?: string;
+  by?: string;
+  valorImovel?: number | null;
+  valorM2?: number | null;
+  precificacao?: string | null;
+  faixa?: string | null;
+  baseCalculoVenda?: number | null;
+};
+
+export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsPayload): Promise<{ updated: RoomRecord }> {
   const res = await fetch(`/api/rooms/${roomId}/details`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -91,6 +101,11 @@ export async function updateRoomDetails(
       planSlot: args.planSlot,
       statusSala: args.statusSala,
       by: args.by ?? "admin",
+      valorImovel: args.valorImovel,
+      valorM2: args.valorM2,
+      precificacao: args.precificacao,
+      faixa: args.faixa,
+      baseCalculoVenda: args.baseCalculoVenda,
     }),
   });
   if (!res.ok) {

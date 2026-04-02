@@ -13,6 +13,18 @@ function formatMoneyBRL(v: unknown) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
+function parseOptionalMoney(raw: string): number | null {
+  const t = raw.trim().replace(/\s/g, "");
+  if (!t) return null;
+  let n = t;
+  if (n.includes(",") && n.includes(".")) n = n.replace(/\./g, "").replace(",", ".");
+  else if (n.includes(",")) n = n.replace(",", ".");
+  const v = Number(n);
+  if (!Number.isFinite(v)) throw new Error("Valores numéricos: use apenas dígitos (ex.: 1500000 ou 1500000,50).");
+  return v;
+}
+
 function statusSelectOptions(current: string): string[] {
   const cur = current.trim();
   const base = [...TREE_TOWER_STATUS_SALA_OPTIONS];
@@ -47,6 +59,11 @@ export default function RoomFloorWorkbench({
   const [editRoomId, setEditRoomId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editStatusSala, setEditStatusSala] = useState("");
+  const [editValorImovel, setEditValorImovel] = useState("");
+  const [editValorM2, setEditValorM2] = useState("");
+  const [editPrecificacao, setEditPrecificacao] = useState("");
+  const [editFaixa, setEditFaixa] = useState("");
+  const [editBaseCalculo, setEditBaseCalculo] = useState("");
 
   const [selectedPlanSlot, setSelectedPlanSlot] = useState<string | null>(null);
 
@@ -66,6 +83,12 @@ export default function RoomFloorWorkbench({
     setEditRoomId(room.id);
     setEditName(room.name ?? "");
     setEditStatusSala(room.statusSala ?? room.meta?.statusSalaOriginal ?? "");
+    const m = room.meta;
+    setEditValorImovel(m?.valorImovel != null && Number.isFinite(m.valorImovel) ? String(m.valorImovel) : "");
+    setEditValorM2(m?.valorM2 != null && Number.isFinite(m.valorM2) ? String(m.valorM2) : "");
+    setEditPrecificacao(m?.precificacao ?? "");
+    setEditFaixa(m?.faixa ?? "");
+    setEditBaseCalculo(m?.baseCalculoVenda != null && Number.isFinite(m.baseCalculoVenda) ? String(m.baseCalculoVenda) : "");
   }, []);
 
   const closeEdit = () => setEditRoomId(null);
@@ -99,11 +122,32 @@ export default function RoomFloorWorkbench({
       const nextName = editName.trim();
       if (!nextName) throw new Error("Informe o nome da sala.");
 
-      await updateRoomDetails(editRoomId, { name: nextName, statusSala: next, by: "admin" });
+      let valorImovel: number | null;
+      let valorM2: number | null;
+      let baseCalculoVenda: number | null;
+      try {
+        valorImovel = parseOptionalMoney(editValorImovel);
+        valorM2 = parseOptionalMoney(editValorM2);
+        baseCalculoVenda = parseOptionalMoney(editBaseCalculo);
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Valor inválido", "⚠️");
+        return;
+      }
+
+      await updateRoomDetails(editRoomId, {
+        name: nextName,
+        statusSala: next,
+        by: "admin",
+        valorImovel,
+        valorM2,
+        baseCalculoVenda,
+        precificacao: editPrecificacao.trim() || null,
+        faixa: editFaixa.trim() || null,
+      });
 
       const { snapshot, appMode: mode, authEnabled } = await fetchBuildingState();
       setBuilding(snapshot, mode, authEnabled);
-      showToast("Status da sala atualizado", "✅");
+      showToast("Dados da sala atualizados", "✅");
       closeEdit();
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Falha ao salvar", "⚠️");
@@ -233,12 +277,42 @@ export default function RoomFloorWorkbench({
                     <div className="em-input em-readonly">{editingRoom.meta?.matricula?.trim() || "—"}</div>
                   </div>
                   <div className="em-field">
-                    <div className="em-label">Valor do imóvel</div>
-                    <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorImovel) || "—"}</div>
+                    <label className="em-label" htmlFor="room-valor-imovel">
+                      Valor do imóvel (R$)
+                    </label>
+                    {readOnly ? (
+                      <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorImovel) || "—"}</div>
+                    ) : (
+                      <input
+                        id="room-valor-imovel"
+                        className="em-input"
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        placeholder="Ex.: 1500000 ou 1500000,50"
+                        value={editValorImovel}
+                        onChange={(e) => setEditValorImovel(e.target.value)}
+                      />
+                    )}
                   </div>
                   <div className="em-field">
-                    <div className="em-label">Valor m²</div>
-                    <div className="em-input em-readonly">{editingRoom.meta?.valorM2 ?? "—"}</div>
+                    <label className="em-label" htmlFor="room-valor-m2">
+                      Valor m²
+                    </label>
+                    {readOnly ? (
+                      <div className="em-input em-readonly">{editingRoom.meta?.valorM2 ?? "—"}</div>
+                    ) : (
+                      <input
+                        id="room-valor-m2"
+                        className="em-input"
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        placeholder="Ex.: 12500,50"
+                        value={editValorM2}
+                        onChange={(e) => setEditValorM2(e.target.value)}
+                      />
+                    )}
                   </div>
                 </div>
               </div>

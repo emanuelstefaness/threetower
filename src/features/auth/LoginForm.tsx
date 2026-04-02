@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -57,9 +58,18 @@ export default function LoginForm() {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-brand">
-          <div className="logo-sq">🏢</div>
+          <Image
+            src="/three-tower-logo.png"
+            alt=""
+            width={56}
+            height={56}
+            className="login-logo-mark"
+            priority
+          />
           <div>
-            <h1 className="login-title">Torre Alfa</h1>
+            <h1 className="login-title">
+              Three <span>Tower</span>
+            </h1>
             <p className="login-sub">Inicie sessão para continuar</p>
           </div>
         </div>

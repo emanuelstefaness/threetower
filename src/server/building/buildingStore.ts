@@ -27,6 +27,11 @@ type Store = {
     by: string;
     planSlot?: string;
     statusSala?: string;
+    valorImovel?: number | null;
+    valorM2?: number | null;
+    precificacao?: string | null;
+    faixa?: string | null;
+    baseCalculoVenda?: number | null;
   }) => RoomRecord;
   deleteRoom: (args: { roomId: number; by: string }) => { ok: true; deletedRoomId: number; floor: number };
   subscribe: (listener: Listener) => () => void;
@@ -224,6 +229,11 @@ async function createStore(): Promise<Store> {
     by,
     planSlot,
     statusSala,
+    valorImovel,
+    valorM2,
+    precificacao,
+    faixa,
+    baseCalculoVenda,
   }: {
     roomId: number;
     name?: string;
@@ -231,6 +241,11 @@ async function createStore(): Promise<Store> {
     by: string;
     planSlot?: string;
     statusSala?: string;
+    valorImovel?: number | null;
+    valorM2?: number | null;
+    precificacao?: string | null;
+    faixa?: string | null;
+    baseCalculoVenda?: number | null;
   }) => {
     const room = state.roomsById[roomId];
     if (!room) throw new Error("Sala não encontrada");
@@ -295,6 +310,37 @@ async function createStore(): Promise<Store> {
           reason: "atualização de status da sala (planilha)",
         };
         room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
+      }
+    }
+
+    const metaPriceKeys =
+      valorImovel !== undefined ||
+      valorM2 !== undefined ||
+      precificacao !== undefined ||
+      faixa !== undefined ||
+      baseCalculoVenda !== undefined;
+    if (metaPriceKeys) {
+      if (!room.meta) room.meta = {};
+      const m = room.meta;
+      if (valorImovel !== undefined) {
+        if (valorImovel === null) delete m.valorImovel;
+        else m.valorImovel = valorImovel;
+      }
+      if (valorM2 !== undefined) {
+        if (valorM2 === null) delete m.valorM2;
+        else m.valorM2 = valorM2;
+      }
+      if (precificacao !== undefined) {
+        if (precificacao === null || precificacao === "") delete m.precificacao;
+        else m.precificacao = precificacao;
+      }
+      if (faixa !== undefined) {
+        if (faixa === null || faixa === "") delete m.faixa;
+        else m.faixa = faixa;
+      }
+      if (baseCalculoVenda !== undefined) {
+        if (baseCalculoVenda === null) delete m.baseCalculoVenda;
+        else m.baseCalculoVenda = baseCalculoVenda;
       }
     }
 

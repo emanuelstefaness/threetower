@@ -3,8 +3,8 @@ import "./globals.css";
 import "./towerAlfa.css";
 
 export const metadata: Metadata = {
-  title: "Sistema de Salas - Prédio 3D",
-  description: "Gerenciamento de salas por andar com dashboard 3D interativo.",
+  title: "Three Tower — Salas",
+  description: "Gestão de salas por andar — Three Tower.",
 };
 
 export default function RootLayout({

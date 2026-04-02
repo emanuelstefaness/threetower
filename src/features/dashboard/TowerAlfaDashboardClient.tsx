@@ -7,6 +7,8 @@ import { fetchBuildingState } from "@/features/building/apiClient";
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import RoomFloorWorkbench from "@/features/dashboard/RoomFloorWorkbench";
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
+import { BrandLogo } from "@/features/ui/BrandLogo";
+import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { colorForStatusSala } from "@/lib/treeTowerStatusSala";
 
 function formatClock(d: Date) {
@@ -44,7 +46,14 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
         const pathD = `M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z`;
 
         const el = (
-          <path key={`donut-${item.key}`} d={pathD} fill={item.color} opacity={0.85} stroke="#111827" strokeWidth={2} />
+          <path
+            key={`donut-${item.key}`}
+            d={pathD}
+            fill={item.color}
+            opacity={0.72}
+            stroke="rgba(15, 23, 42, 0.45)"
+            strokeWidth={1.5}
+          />
         );
 
         angle += sw;
@@ -138,33 +147,13 @@ export default function TowerAlfaDashboardClient() {
     <>
       <div className="dashboard-page">
       <header className="topbar">
-        <div className="logo">
-          <div className="logo-sq">🏢</div>
-          Torre <span>Alfa</span>
-        </div>
+        <BrandLogo />
         {appMode === "view" ? (
           <div className="app-mode-pill" title="Edição desativada no servidor">
             Somente leitura
           </div>
         ) : null}
         <AuthLogoutButton />
-        <div className="top-chips">
-          {statusSalaBreakdown.slice(0, 6).map((item) => (
-            <div
-              key={`chip-ss-${item.name}`}
-              className="chip"
-              title={item.name}
-              style={{ borderColor: `${item.color}55`, color: item.color, background: `${item.color}14`, whiteSpace: "nowrap" }}
-            >
-              ● {item.name.toUpperCase()} <strong>{item.count}</strong>
-            </div>
-          ))}
-          {statusSalaBreakdown.length > 6 ? (
-            <div className="chip" style={{ borderColor: "rgba(148,163,184,0.22)", color: "rgba(226,232,240,0.75)", background: "rgba(2,6,23,0.2)" }}>
-              +{statusSalaBreakdown.length - 6}
-            </div>
-          ) : null}
-        </div>
         <div className="top-spacer" />
         <div className="clock">{formatClock(clock)}</div>
       </header>
@@ -275,7 +264,7 @@ export default function TowerAlfaDashboardClient() {
               <div
                 key={`sc-${item.name}`}
                 className="status-card"
-                style={{ borderColor: `${item.color}55`, background: `${item.color}14` }}
+                style={{ borderLeft: `3px solid ${item.color}` }}
                 title={item.name}
               >
                 <div className="status-card-top">
@@ -315,6 +304,8 @@ export default function TowerAlfaDashboardClient() {
           <span>{toast.msg}</span>
         </div>
       )}
+
+      <MinimalUiToggle />
     </>
   );
 }

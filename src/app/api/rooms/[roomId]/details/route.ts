@@ -21,8 +21,20 @@ export async function PATCH(
     by?: string;
     planSlot?: string;
     statusSala?: string;
+    valorImovel?: number | null;
+    valorM2?: number | null;
+    precificacao?: string | null;
+    faixa?: string | null;
+    baseCalculoVenda?: number | null;
   };
   const by = typeof body.by === "string" && body.by.trim() ? body.by.trim() : "admin";
+
+  const optFinite = (v: unknown, label: string): number | null | undefined => {
+    if (v === undefined) return undefined;
+    if (v === null) return null;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    throw new Error(`${label} inválido`);
+  };
 
   try {
     const updated: RoomRecord = store.updateRoomDetails({
@@ -32,6 +44,23 @@ export async function PATCH(
       planSlot: typeof body.planSlot === "string" ? body.planSlot : undefined,
       statusSala: typeof body.statusSala === "string" ? body.statusSala : undefined,
       by,
+      valorImovel: optFinite(body.valorImovel, "Valor do imóvel"),
+      valorM2: optFinite(body.valorM2, "Valor m²"),
+      baseCalculoVenda: optFinite(body.baseCalculoVenda, "Base cálculo"),
+      precificacao:
+        body.precificacao === undefined
+          ? undefined
+          : body.precificacao === null
+            ? null
+            : typeof body.precificacao === "string"
+              ? body.precificacao
+              : (() => {
+                  throw new Error("Precificação inválida");
+                })(),
+      faixa:
+        body.faixa === undefined ? undefined : body.faixa === null ? null : typeof body.faixa === "string" ? body.faixa : (() => {
+            throw new Error("Faixa inválida");
+          })(),
     });
     return Response.json({ updated });
   } catch (e) {

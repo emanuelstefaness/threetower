@@ -7,6 +7,8 @@ import type { RoomRecord } from "@/lib/buildingTypes";
 import { fetchBuildingState } from "@/features/building/apiClient";
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
+import { BrandLogo } from "@/features/ui/BrandLogo";
+import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { colorForStatusSala, normalizeStatusSala } from "@/lib/treeTowerStatusSala";
 
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
@@ -364,34 +366,13 @@ export default function TowerAlfaReportsClient() {
   return (
     <>
       <header className="topbar">
-        <div className="logo">
-          <div className="logo-sq">🏢</div>
-          Torre <span>Alfa</span>
-        </div>
+        <BrandLogo />
         {appMode === "view" ? (
           <div className="app-mode-pill" title="Edição desativada no servidor">
             Somente leitura
           </div>
         ) : null}
         <AuthLogoutButton />
-
-        <div className="top-chips" style={{ overflowX: "auto" }}>
-          {statusSalaBreakdown.slice(0, 8).map((item) => (
-            <div
-              key={`chip-ss-${item.name}`}
-              className="chip"
-              title={item.name}
-              style={{ borderColor: `${item.color}55`, color: item.color, background: `${item.color}14`, whiteSpace: "nowrap" }}
-            >
-              ● {item.name.toUpperCase()} <strong>{item.count}</strong>
-            </div>
-          ))}
-          {statusSalaBreakdown.length > 8 ? (
-            <div className="chip" style={{ borderColor: "rgba(148,163,184,0.22)", color: "rgba(226,232,240,0.75)", background: "rgba(2,6,23,0.2)" }}>
-              +{statusSalaBreakdown.length - 8}
-            </div>
-          ) : null}
-        </div>
 
         <div className="top-spacer" />
         <div className="clock">{clock.toLocaleTimeString("pt-BR")}</div>
@@ -751,6 +732,8 @@ export default function TowerAlfaReportsClient() {
           </main>
         </div>
       </div>
+
+      <MinimalUiToggle />
     </>
   );
 }

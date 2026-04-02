@@ -3,10 +3,9 @@
 @tailwind utilities;
 
 body {
-  background: radial-gradient(60% 40% at 50% 20%, rgba(56, 189, 248, 0.18), transparent 60%),
-    radial-gradient(40% 35% at 15% 70%, rgba(16, 185, 129, 0.1), transparent 55%),
-    radial-gradient(50% 45% at 85% 70%, rgba(59, 130, 246, 0.12), transparent 58%),
-    #020617;
+  background: radial-gradient(60% 40% at 50% 18%, rgba(197, 160, 115, 0.08), transparent 58%),
+    radial-gradient(40% 35% at 12% 75%, rgba(197, 160, 115, 0.05), transparent 55%),
+    #1c2128;
 }
 
 @layer utilities {

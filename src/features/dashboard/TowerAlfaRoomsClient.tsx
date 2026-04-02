@@ -6,6 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { fetchBuildingState } from "@/features/building/apiClient";
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
+import { BrandLogo } from "@/features/ui/BrandLogo";
+import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import RoomFloorWorkbench from "@/features/dashboard/RoomFloorWorkbench";
 
 export default function TowerAlfaRoomsClient() {
@@ -79,10 +81,7 @@ export default function TowerAlfaRoomsClient() {
   return (
     <>
       <header className="topbar">
-        <div className="logo">
-          <div className="logo-sq">🏢</div>
-          Torre <span>Alfa</span>
-        </div>
+        <BrandLogo />
         {appMode === "view" ? (
           <div className="app-mode-pill" title="Edição desativada no servidor">
             Somente leitura
@@ -135,6 +134,8 @@ export default function TowerAlfaRoomsClient() {
           />
         </main>
       </div>
+
+      <MinimalUiToggle />
     </>
   );
 }
