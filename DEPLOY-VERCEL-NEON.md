@@ -135,7 +135,7 @@ Confirma que **não** há espaços a mais antes/depois dos valores.
 | *Too many connections* | Usa a string **Pooled** do Neon, não só a ligação **direct**. |
 | Sem página de login | `AUTH_SECRET` vazio ou não definido em **Production**. |
 | SSE / tempo real desliga rápido | Limites do plano **Hobby** da Vercel; com poucos utilizadores pode ser aceitável. Ver também [DEPLOY-VERCEL-SUPABASE.md](./DEPLOY-VERCEL-SUPABASE.md) secção de limitações. |
-| Dashboard com **88 salas** ou estado antigo após corrigir o `treeTowerSeed.json` no Git | O **Neon** guarda o snapshot na tabela `building_state`; não é substituído só por um novo deploy. Depois do deploy com o seed certo, chama **`POST /api/admin/reapply-seed`** com header `Authorization: Bearer <EXCEL_SYNC_SECRET>` (o mesmo do sync Excel). |
+| Dashboard com **88 salas** ou só “VENDIDO” | O **Neon** ainda tem snapshot antigo **ou** o Excel de sync só tinha a aba Oficial. O sistema usa a aba **Pedro** para todas as salas/status e a aba **Oficial** só para atualizar **VENDIDO**. Envia o `.xlsx` completo no **`POST /api/admin/sync-excel`** ou, após deploy com `treeTowerSeed.json` certo, **`POST /api/admin/reapply-seed`** com `Authorization: Bearer <EXCEL_SYNC_SECRET>`. |
 
 ---
 

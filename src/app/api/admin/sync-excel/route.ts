@@ -2,11 +2,10 @@ import { createHash, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { getBuildingStore } from "@/server/building/buildingStore";
 import { generateBuildingFromSeed } from "@/server/building/generateBuilding";
+import type { SeedRoom } from "@/server/building/generateBuilding";
 import { persistSnapshotNow } from "@/server/building/loadPersisted";
 import { isPersistenceEnabled } from "@/server/building/persistBuildingState";
-import treeTowerSeed from "@/server/building/treeTowerSeed.json";
-import { mergeOfficialVendidosIntoBase, parseTreeTowerXlsxBuffer } from "@/server/building/parseTreeTowerXlsx";
-import type { SeedRoom } from "@/server/building/generateBuilding";
+import { buildSeedFromPedroAndOficialWorkbook } from "@/server/building/parseTreeTowerXlsx";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,9 +26,8 @@ function syncSecretOk(header: string | null): boolean {
 }
 
 /**
- * Importa planilha Excel (aba Oficial). Mantém todas as salas do seed base e **atualiza só as VENDIDO**
- * conforme a planilha enviada (corretor, comprador, forma de pagamento, etc.).
- * Autenticação: header `Authorization: Bearer <EXCEL_SYNC_SECRET>`.
+ * Importa o Excel com aba **Pedro** (lista completa + status) e, se existir, aba **Oficial** (só linhas **VENDIDO** sobrescrevem dados de venda).
+ * Autenticação: `Authorization: Bearer <EXCEL_SYNC_SECRET>`.
  * Body: `multipart/form-data` com campo `file` (.xlsx).
  */
 export async function POST(req: Request) {
@@ -67,32 +65,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ficheiro vazio" }, { status: 400 });
   }
 
-  let officialRows: SeedRoom[];
+  let seed: SeedRoom[];
   try {
-    officialRows = parseTreeTowerXlsxBuffer(buf);
+    seed = buildSeedFromPedroAndOficialWorkbook(buf);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao ler Excel";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  if (officialRows.length === 0) {
-    return NextResponse.json({ error: "Nenhuma sala válida na planilha" }, { status: 400 });
+  if (seed.length === 0) {
+    return NextResponse.json({ error: "Nenhuma sala válida na aba Pedro" }, { status: 400 });
   }
 
-  const base = treeTowerSeed as SeedRoom[];
-  const seed = mergeOfficialVendidosIntoBase(base, officialRows);
   const snapshot = generateBuildingFromSeed(seed);
   const store = await getBuildingStore();
   store.replaceSnapshotFromImport(snapshot);
   await persistSnapshotNow(store.getState());
 
-  const vendidoRows = officialRows.filter(
+  const vendidoCount = seed.filter(
     (r) => (r.statusSala ?? r.meta?.statusSalaOriginal ?? "").trim().toUpperCase() === "VENDIDO"
-  );
+  ).length;
+
   return NextResponse.json({
     ok: true,
     roomsTotal: seed.length,
-    rowsInSpreadsheet: officialRows.length,
-    vendidosAplicados: vendidoRows.length,
+    vendidasNoEstado: vendidoCount,
+    nota: "Base = aba Pedro; dados extra de venda nas linhas VENDIDO vêm da aba Oficial quando existir.",
   });
 }

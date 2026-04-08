@@ -1,9 +1,10 @@
 import * as XLSX from "xlsx";
+import type { RoomStatus } from "@/lib/buildingTypes";
 import type { SeedRoom } from "./generateBuilding";
 
 /**
- * Mantém o seed completo (ex.: 362 salas) e substitui apenas as linhas cujo STATUS SALA na planilha oficial é **VENDIDO**.
- * Linhas não vendidas na nova planilha não sobrescrevem o estado anterior — assim a base antiga permanece para o resto.
+ * Mantém o seed completo (aba **Pedro**) e substitui apenas as linhas cujo STATUS SALA na aba **Oficial** é **VENDIDO**.
+ * Linhas não vendidas na Oficial não sobrescrevem a Pedro.
  */
 export function mergeOfficialVendidosIntoBase(base: SeedRoom[], officialParsed: SeedRoom[]): SeedRoom[] {
   const vendidoById = new Map<number, SeedRoom>();
@@ -17,6 +18,18 @@ export function mergeOfficialVendidosIntoBase(base: SeedRoom[], officialParsed: 
   const merged = base.map((room) => vendidoById.get(room.id) ?? room);
   const extras = Array.from(vendidoById.values()).filter((r) => !baseIds.has(r.id));
   return [...merged, ...extras].sort((a, b) => a.floor - b.floor || a.id - b.id);
+}
+
+/** Igual à lógica do store ao derivar status operacional a partir do texto STATUS SALA. */
+function operationalStatusFromStatusSala(statusSala: string): RoomStatus {
+  const u = statusSala.trim().toUpperCase();
+  if (u === "INDISPONIVEL" || u === "INDISPONÍVEL") return "ocupada";
+  if (u === "VENDIDO") return "ocupada";
+  if (u.includes("RESERV")) return "reservada";
+  if (u.includes("MANUT")) return "manutencao";
+  if (u.includes("DBN")) return "reservada";
+  if (u.includes("ATACADO") || u.includes("AUDIT") || u.includes("ROOFTOP")) return "manutencao";
+  return "disponivel";
 }
 
 function normalizeHeader(h: unknown): string {
@@ -50,13 +63,6 @@ function slotFromRoomId(roomId: number): string | undefined {
   return `F-${String(n).padStart(2, "0")}`;
 }
 
-function mapStatus(statusSalaRaw: unknown): string {
-  const s = String(statusSalaRaw ?? "").trim().toUpperCase();
-  if (s === "VENDIDO") return "ocupada";
-  if (s === "ESTOQUE") return "disponivel";
-  return "disponivel";
-}
-
 /** Primeira linha onde aparece STATUS SALA (cabeçalhos). */
 function findHeaderRowIndex(rows: unknown[][]): number {
   for (let i = 0; i < Math.min(6, rows.length); i++) {
@@ -78,15 +84,12 @@ function buildHeaderMap(headerRow: unknown[]): Map<string, number> {
   return headerMap;
 }
 
-/**
- * Lê Excel "Salas Tree Tower": prefere aba **Oficial**; cabeçalhos na primeira linha que contiver STATUS SALA + UNIDADE.
- */
-export function parseTreeTowerXlsxBuffer(buffer: Buffer): SeedRoom[] {
-  const wb = XLSX.read(buffer, { type: "buffer" });
-  const sheetName = wb.SheetNames.includes("Oficial") ? "Oficial" : wb.SheetNames[0];
-  if (!sheetName) throw new Error("Planilha sem abas");
-  const ws = wb.Sheets[sheetName];
-  if (!ws) throw new Error("Aba inválida");
+function findSheetNameCI(sheetNames: string[], wanted: string): string | undefined {
+  const w = wanted.trim().toLowerCase();
+  return sheetNames.find((n) => n.trim().toLowerCase() === w);
+}
+
+function parseWorksheet(ws: XLSX.WorkSheet): SeedRoom[] {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" }) as unknown[][];
   if (rows.length < 2) throw new Error("Planilha vazia ou formato inesperado");
 
@@ -137,7 +140,7 @@ export function parseTreeTowerXlsxBuffer(buffer: Buffer): SeedRoom[] {
     out.push({
       id: roomId,
       floor: floorNum,
-      status: mapStatus(statusSalaRaw),
+      status: operationalStatusFromStatusSala(statusSala || "disponivel"),
       statusSala,
       name: displayName,
       area: areaPriv ?? 25,
@@ -227,4 +230,54 @@ export function parseTreeTowerXlsxBuffer(buffer: Buffer): SeedRoom[] {
 
   out.sort((a, b) => a.floor - b.floor || a.id - b.id);
   return out;
+}
+
+/**
+ * Lê o workbook completo: aba **Pedro** = todas as salas e status; aba **Oficial** (opcional) = só sobrescreve **VENDIDO** (dados de venda).
+ */
+export function buildSeedFromPedroAndOficialWorkbook(buffer: Buffer): SeedRoom[] {
+  const wb = XLSX.read(buffer, { type: "buffer" });
+  const names = wb.SheetNames;
+  if (names.length === 0) throw new Error("Ficheiro Excel sem abas");
+
+  const pedroName = findSheetNameCI(names, "Pedro");
+  if (!pedroName) {
+    throw new Error(
+      'O Excel deve ter uma aba "Pedro" com todas as salas e os status. A aba "Oficial" só atualiza as vendidas.'
+    );
+  }
+
+  const wsPedro = wb.Sheets[pedroName];
+  if (!wsPedro) throw new Error('Aba "Pedro" inválida');
+  const pedroRooms = parseWorksheet(wsPedro);
+
+  const oficialName = findSheetNameCI(names, "Oficial");
+  if (!oficialName) {
+    return pedroRooms;
+  }
+  const wsOf = wb.Sheets[oficialName];
+  if (!wsOf) return pedroRooms;
+  const oficialRooms = parseWorksheet(wsOf);
+  return mergeOfficialVendidosIntoBase(pedroRooms, oficialRooms);
+}
+
+/**
+ * Lê uma única aba pelo nome (comparação sem acento de maiúsculas).
+ * Útil para testes ou ficheiros só com uma folha.
+ */
+export function parseTreeTowerXlsxSingleSheet(buffer: Buffer, sheetName: string): SeedRoom[] {
+  const wb = XLSX.read(buffer, { type: "buffer" });
+  const resolved = findSheetNameCI(wb.SheetNames, sheetName);
+  if (!resolved) throw new Error(`Aba não encontrada: ${sheetName}`);
+  const ws = wb.Sheets[resolved];
+  if (!ws) throw new Error("Aba inválida");
+  return parseWorksheet(ws);
+}
+
+/**
+ * @deprecated Preferir `buildSeedFromPedroAndOficialWorkbook` (Pedro + Oficial).
+ * Mantido para compat: delega para o fluxo completo com abas Pedro/Oficial.
+ */
+export function parseTreeTowerXlsxBuffer(buffer: Buffer): SeedRoom[] {
+  return buildSeedFromPedroAndOficialWorkbook(buffer);
 }

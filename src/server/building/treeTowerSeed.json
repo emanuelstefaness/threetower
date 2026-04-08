@@ -2,7 +2,7 @@
   {
     "id": 101,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 101",
     "area": 38.35,
@@ -27,7 +27,7 @@
   {
     "id": 102,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 102",
     "area": 38.35,
@@ -52,7 +52,7 @@
   {
     "id": 103,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 103",
     "area": 39,
@@ -77,7 +77,7 @@
   {
     "id": 104,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 104",
     "area": 39,
@@ -102,7 +102,7 @@
   {
     "id": 105,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 105",
     "area": 39.19,
@@ -127,7 +127,7 @@
   {
     "id": 106,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 106",
     "area": 39.19,
@@ -152,7 +152,7 @@
   {
     "id": 107,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 107",
     "area": 38.46,
@@ -177,7 +177,7 @@
   {
     "id": 108,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 108",
     "area": 38.46,
@@ -202,7 +202,7 @@
   {
     "id": 109,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 109",
     "area": 139.43,
@@ -227,7 +227,7 @@
   {
     "id": 110,
     "floor": 1,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "AUDITÓRIO",
     "name": "Sala 110",
     "area": 139.43,
@@ -252,7 +252,7 @@
   {
     "id": 201,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 201",
     "area": 38.35,
@@ -277,7 +277,7 @@
   {
     "id": 202,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 202",
     "area": 38.35,
@@ -302,7 +302,7 @@
   {
     "id": 203,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 203",
     "area": 39,
@@ -327,7 +327,7 @@
   {
     "id": 204,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 204",
     "area": 39,
@@ -352,7 +352,7 @@
   {
     "id": 205,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 205",
     "area": 39.19,
@@ -377,7 +377,7 @@
   {
     "id": 206,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 206",
     "area": 39.19,
@@ -402,7 +402,7 @@
   {
     "id": 207,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 207",
     "area": 38.46,
@@ -427,7 +427,7 @@
   {
     "id": 208,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 208",
     "area": 38.46,
@@ -452,7 +452,7 @@
   {
     "id": 209,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 209",
     "area": 139.43,
@@ -477,7 +477,7 @@
   {
     "id": 210,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 210",
     "area": 139.43,
@@ -502,7 +502,7 @@
   {
     "id": 211,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 211",
     "area": 39.03,
@@ -527,7 +527,7 @@
   {
     "id": 212,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 212",
     "area": 39.07,
@@ -552,7 +552,7 @@
   {
     "id": 213,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 213",
     "area": 39.03,
@@ -577,7 +577,7 @@
   {
     "id": 214,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 214",
     "area": 39.07,
@@ -602,7 +602,7 @@
   {
     "id": 215,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 215",
     "area": 39.03,
@@ -627,7 +627,7 @@
   {
     "id": 216,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 216",
     "area": 39.07,
@@ -652,7 +652,7 @@
   {
     "id": 217,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 217",
     "area": 39.03,
@@ -677,7 +677,7 @@
   {
     "id": 218,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 218",
     "area": 39.07,
@@ -702,7 +702,7 @@
   {
     "id": 219,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 219",
     "area": 39.24,
@@ -727,7 +727,7 @@
   {
     "id": 220,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 220",
     "area": 39.27,
@@ -752,7 +752,7 @@
   {
     "id": 221,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 221",
     "area": 138.47,
@@ -777,7 +777,7 @@
   {
     "id": 222,
     "floor": 2,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 222",
     "area": 138.47,
@@ -802,7 +802,7 @@
   {
     "id": 301,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 301",
     "area": 38.35,
@@ -827,7 +827,7 @@
   {
     "id": 302,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 302",
     "area": 38.35,
@@ -852,7 +852,7 @@
   {
     "id": 303,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 303",
     "area": 39,
@@ -877,7 +877,7 @@
   {
     "id": 304,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 304",
     "area": 39,
@@ -902,7 +902,7 @@
   {
     "id": 305,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 305",
     "area": 39.19,
@@ -927,7 +927,7 @@
   {
     "id": 306,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 306",
     "area": 39.19,
@@ -952,7 +952,7 @@
   {
     "id": 307,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 307",
     "area": 38.46,
@@ -977,7 +977,7 @@
   {
     "id": 308,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 308",
     "area": 38.46,
@@ -1002,7 +1002,7 @@
   {
     "id": 309,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 309",
     "area": 139.43,
@@ -1027,7 +1027,7 @@
   {
     "id": 310,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 310",
     "area": 139.43,
@@ -1052,7 +1052,7 @@
   {
     "id": 311,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 311",
     "area": 39.03,
@@ -1077,7 +1077,7 @@
   {
     "id": 312,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 312",
     "area": 39.07,
@@ -1102,7 +1102,7 @@
   {
     "id": 313,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 313",
     "area": 39.03,
@@ -1127,7 +1127,7 @@
   {
     "id": 314,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 314",
     "area": 39.07,
@@ -1152,7 +1152,7 @@
   {
     "id": 315,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 315",
     "area": 39.03,
@@ -1177,7 +1177,7 @@
   {
     "id": 316,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 316",
     "area": 39.07,
@@ -1202,7 +1202,7 @@
   {
     "id": 317,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 317",
     "area": 39.03,
@@ -1227,7 +1227,7 @@
   {
     "id": 318,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 318",
     "area": 39.07,
@@ -1252,7 +1252,7 @@
   {
     "id": 319,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 319",
     "area": 39.24,
@@ -1277,7 +1277,7 @@
   {
     "id": 320,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 320",
     "area": 39.27,
@@ -1302,7 +1302,7 @@
   {
     "id": 321,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 321",
     "area": 138.47,
@@ -1327,7 +1327,7 @@
   {
     "id": 322,
     "floor": 3,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 322",
     "area": 138.47,
@@ -1352,7 +1352,7 @@
   {
     "id": 401,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 401",
     "area": 38.35,
@@ -1377,7 +1377,7 @@
   {
     "id": 402,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 402",
     "area": 38.35,
@@ -1402,7 +1402,7 @@
   {
     "id": 403,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 403",
     "area": 39,
@@ -1427,7 +1427,7 @@
   {
     "id": 404,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 404",
     "area": 39,
@@ -1452,7 +1452,7 @@
   {
     "id": 405,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 405",
     "area": 39.19,
@@ -1477,7 +1477,7 @@
   {
     "id": 406,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 406",
     "area": 39.19,
@@ -1502,7 +1502,7 @@
   {
     "id": 407,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 407",
     "area": 38.46,
@@ -1527,7 +1527,7 @@
   {
     "id": 408,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 408",
     "area": 38.46,
@@ -1552,7 +1552,7 @@
   {
     "id": 409,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 409",
     "area": 139.43,
@@ -1577,7 +1577,7 @@
   {
     "id": 410,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 410",
     "area": 139.43,
@@ -1602,7 +1602,7 @@
   {
     "id": 411,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 411",
     "area": 39.03,
@@ -1627,7 +1627,7 @@
   {
     "id": 412,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 412",
     "area": 39.07,
@@ -1652,7 +1652,7 @@
   {
     "id": 413,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 413",
     "area": 39.03,
@@ -1677,7 +1677,7 @@
   {
     "id": 414,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 414",
     "area": 39.07,
@@ -1702,7 +1702,7 @@
   {
     "id": 415,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 415",
     "area": 39.03,
@@ -1727,7 +1727,7 @@
   {
     "id": 416,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 416",
     "area": 39.07,
@@ -1752,7 +1752,7 @@
   {
     "id": 417,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 417",
     "area": 39.03,
@@ -1777,7 +1777,7 @@
   {
     "id": 418,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 418",
     "area": 39.07,
@@ -1802,7 +1802,7 @@
   {
     "id": 419,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 419",
     "area": 39.24,
@@ -1827,7 +1827,7 @@
   {
     "id": 420,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 420",
     "area": 39.27,
@@ -1852,7 +1852,7 @@
   {
     "id": 421,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 421",
     "area": 138.47,
@@ -1877,7 +1877,7 @@
   {
     "id": 422,
     "floor": 4,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 422",
     "area": 138.47,
@@ -3256,7 +3256,7 @@
   {
     "id": 701,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 701",
     "area": 38.35,
@@ -3281,7 +3281,7 @@
   {
     "id": 702,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 702",
     "area": 38.35,
@@ -3306,7 +3306,7 @@
   {
     "id": 703,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 703",
     "area": 39,
@@ -3331,7 +3331,7 @@
   {
     "id": 704,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 704",
     "area": 39,
@@ -3356,7 +3356,7 @@
   {
     "id": 705,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | AQUISIÇÃO QUAVO",
     "name": "Sala 705",
     "area": 39.19,
@@ -3381,7 +3381,7 @@
   {
     "id": 706,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | AQUISIÇÃO QUAVO",
     "name": "Sala 706",
     "area": 39.19,
@@ -3406,7 +3406,7 @@
   {
     "id": 707,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | AQUISIÇÃO QUAVO",
     "name": "Sala 707",
     "area": 38.46,
@@ -3431,7 +3431,7 @@
   {
     "id": 708,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | AQUISIÇÃO QUAVO",
     "name": "Sala 708",
     "area": 38.46,
@@ -3456,7 +3456,7 @@
   {
     "id": 709,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | AQUISIÇÃO QUAVO",
     "name": "Sala 709",
     "area": 139.43,
@@ -3481,7 +3481,7 @@
   {
     "id": 710,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | AQUISIÇÃO QUAVO",
     "name": "Sala 710",
     "area": 139.43,
@@ -3506,7 +3506,7 @@
   {
     "id": 711,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 711",
     "area": 39.03,
@@ -3531,7 +3531,7 @@
   {
     "id": 712,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 712",
     "area": 39.07,
@@ -3556,7 +3556,7 @@
   {
     "id": 713,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 713",
     "area": 39.03,
@@ -3581,7 +3581,7 @@
   {
     "id": 714,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 714",
     "area": 39.07,
@@ -3606,7 +3606,7 @@
   {
     "id": 715,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 715",
     "area": 39.03,
@@ -3631,7 +3631,7 @@
   {
     "id": 716,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 716",
     "area": 39.07,
@@ -3656,7 +3656,7 @@
   {
     "id": 717,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 717",
     "area": 39.03,
@@ -3681,7 +3681,7 @@
   {
     "id": 718,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 718",
     "area": 39.07,
@@ -3706,7 +3706,7 @@
   {
     "id": 719,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 719",
     "area": 39.24,
@@ -3731,7 +3731,7 @@
   {
     "id": 720,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | BRENO",
     "name": "Sala 720",
     "area": 39.27,
@@ -3756,7 +3756,7 @@
   {
     "id": 721,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 721",
     "area": 138.47,
@@ -3781,7 +3781,7 @@
   {
     "id": 722,
     "floor": 7,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 722",
     "area": 138.47,
@@ -4104,7 +4104,7 @@
   {
     "id": 812,
     "floor": 8,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | CENTRAL",
     "name": "Sala 812",
     "area": 39.07,
@@ -4155,7 +4155,7 @@
   {
     "id": 814,
     "floor": 8,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | CENTRAL",
     "name": "Sala 814",
     "area": 39.07,
@@ -4206,7 +4206,7 @@
   {
     "id": 816,
     "floor": 8,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | CENTRAL",
     "name": "Sala 816",
     "area": 39.07,
@@ -4265,7 +4265,7 @@
   {
     "id": 818,
     "floor": 8,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | CENTRAL",
     "name": "Sala 818",
     "area": 39.07,
@@ -4324,7 +4324,7 @@
   {
     "id": 820,
     "floor": 8,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | CENTRAL",
     "name": "Sala 820",
     "area": 39.27,
@@ -4407,7 +4407,7 @@
   {
     "id": 901,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 901",
     "area": 38.35,
@@ -4432,7 +4432,7 @@
   {
     "id": 902,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 902",
     "area": 38.35,
@@ -4457,7 +4457,7 @@
   {
     "id": 903,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 903",
     "area": 39,
@@ -4482,7 +4482,7 @@
   {
     "id": 904,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 904",
     "area": 39,
@@ -4507,7 +4507,7 @@
   {
     "id": 905,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 905",
     "area": 39.19,
@@ -4532,7 +4532,7 @@
   {
     "id": 906,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 906",
     "area": 39.19,
@@ -4557,7 +4557,7 @@
   {
     "id": 907,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 907",
     "area": 38.46,
@@ -4582,7 +4582,7 @@
   {
     "id": 908,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 908",
     "area": 38.46,
@@ -4607,7 +4607,7 @@
   {
     "id": 909,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 909",
     "area": 139.43,
@@ -4632,7 +4632,7 @@
   {
     "id": 910,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 910",
     "area": 139.43,
@@ -4657,7 +4657,7 @@
   {
     "id": 911,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 911",
     "area": 39.03,
@@ -4682,7 +4682,7 @@
   {
     "id": 912,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 912",
     "area": 39.07,
@@ -4707,7 +4707,7 @@
   {
     "id": 913,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 913",
     "area": 39.03,
@@ -4732,7 +4732,7 @@
   {
     "id": 914,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 914",
     "area": 39.07,
@@ -4757,7 +4757,7 @@
   {
     "id": 915,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 915",
     "area": 39.03,
@@ -4782,7 +4782,7 @@
   {
     "id": 916,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 916",
     "area": 39.07,
@@ -4807,7 +4807,7 @@
   {
     "id": 917,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 917",
     "area": 39.03,
@@ -4832,7 +4832,7 @@
   {
     "id": 918,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 918",
     "area": 39.07,
@@ -4857,7 +4857,7 @@
   {
     "id": 919,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 919",
     "area": 39.24,
@@ -4882,7 +4882,7 @@
   {
     "id": 920,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 920",
     "area": 39.27,
@@ -4907,7 +4907,7 @@
   {
     "id": 921,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 921",
     "area": 138.47,
@@ -4932,7 +4932,7 @@
   {
     "id": 922,
     "floor": 9,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 922",
     "area": 138.47,
@@ -7013,7 +7013,7 @@
   {
     "id": 1301,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1301",
     "area": 38.35,
@@ -7038,7 +7038,7 @@
   {
     "id": 1302,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1302",
     "area": 38.35,
@@ -7063,7 +7063,7 @@
   {
     "id": 1303,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1303",
     "area": 39,
@@ -7088,7 +7088,7 @@
   {
     "id": 1304,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1304",
     "area": 39,
@@ -7113,7 +7113,7 @@
   {
     "id": 1305,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1305",
     "area": 39.19,
@@ -7138,7 +7138,7 @@
   {
     "id": 1306,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1306",
     "area": 39.19,
@@ -7163,7 +7163,7 @@
   {
     "id": 1307,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1307",
     "area": 38.46,
@@ -7188,7 +7188,7 @@
   {
     "id": 1308,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1308",
     "area": 38.46,
@@ -7213,7 +7213,7 @@
   {
     "id": 1309,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1309",
     "area": 139.43,
@@ -7238,7 +7238,7 @@
   {
     "id": 1310,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1310",
     "area": 139.43,
@@ -7263,7 +7263,7 @@
   {
     "id": 1311,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1311",
     "area": 39.03,
@@ -7288,7 +7288,7 @@
   {
     "id": 1312,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1312",
     "area": 39.07,
@@ -7313,7 +7313,7 @@
   {
     "id": 1313,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1313",
     "area": 39.03,
@@ -7338,7 +7338,7 @@
   {
     "id": 1314,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1314",
     "area": 39.07,
@@ -7363,7 +7363,7 @@
   {
     "id": 1315,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1315",
     "area": 39.03,
@@ -7388,7 +7388,7 @@
   {
     "id": 1316,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1316",
     "area": 39.07,
@@ -7413,7 +7413,7 @@
   {
     "id": 1317,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1317",
     "area": 39.03,
@@ -7438,7 +7438,7 @@
   {
     "id": 1318,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1318",
     "area": 39.07,
@@ -7463,7 +7463,7 @@
   {
     "id": 1319,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1319",
     "area": 39.24,
@@ -7488,7 +7488,7 @@
   {
     "id": 1320,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1320",
     "area": 39.27,
@@ -7513,7 +7513,7 @@
   {
     "id": 1321,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1321",
     "area": 138.47,
@@ -7538,7 +7538,7 @@
   {
     "id": 1322,
     "floor": 13,
-    "status": "disponivel",
+    "status": "manutencao",
     "statusSala": "ATACADO",
     "name": "Sala 1322",
     "area": 138.47,
@@ -7563,7 +7563,7 @@
   {
     "id": 1401,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1401",
     "area": 38.35,
@@ -7589,7 +7589,7 @@
   {
     "id": 1402,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1402",
     "area": 38.35,
@@ -7615,7 +7615,7 @@
   {
     "id": 1403,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1403",
     "area": 39,
@@ -7641,7 +7641,7 @@
   {
     "id": 1404,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1404",
     "area": 39,
@@ -7667,7 +7667,7 @@
   {
     "id": 1405,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1405",
     "area": 39.19,
@@ -7693,7 +7693,7 @@
   {
     "id": 1406,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1406",
     "area": 39.19,
@@ -7719,7 +7719,7 @@
   {
     "id": 1407,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1407",
     "area": 38.46,
@@ -7745,7 +7745,7 @@
   {
     "id": 1408,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1408",
     "area": 38.46,
@@ -7771,7 +7771,7 @@
   {
     "id": 1409,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1409",
     "area": 139.43,
@@ -7797,7 +7797,7 @@
   {
     "id": 1410,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1410",
     "area": 139.43,
@@ -7823,7 +7823,7 @@
   {
     "id": 1411,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1411",
     "area": 39.03,
@@ -7849,7 +7849,7 @@
   {
     "id": 1412,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1412",
     "area": 39.07,
@@ -7875,7 +7875,7 @@
   {
     "id": 1413,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1413",
     "area": 39.03,
@@ -7901,7 +7901,7 @@
   {
     "id": 1414,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1414",
     "area": 39.07,
@@ -7927,7 +7927,7 @@
   {
     "id": 1415,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1415",
     "area": 39.03,
@@ -7953,7 +7953,7 @@
   {
     "id": 1416,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1416",
     "area": 39.07,
@@ -7979,7 +7979,7 @@
   {
     "id": 1417,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1417",
     "area": 39.03,
@@ -8005,7 +8005,7 @@
   {
     "id": 1418,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1418",
     "area": 39.07,
@@ -8031,7 +8031,7 @@
   {
     "id": 1419,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1419",
     "area": 39.24,
@@ -8057,7 +8057,7 @@
   {
     "id": 1420,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1420",
     "area": 39.27,
@@ -8083,7 +8083,7 @@
   {
     "id": 1421,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1421",
     "area": 138.47,
@@ -8109,7 +8109,7 @@
   {
     "id": 1422,
     "floor": 14,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1422",
     "area": 138.47,
@@ -8135,7 +8135,7 @@
   {
     "id": 1501,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1501",
     "area": 38.35,
@@ -8161,7 +8161,7 @@
   {
     "id": 1502,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1502",
     "area": 38.35,
@@ -8187,7 +8187,7 @@
   {
     "id": 1503,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1503",
     "area": 39,
@@ -8213,7 +8213,7 @@
   {
     "id": 1504,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1504",
     "area": 39,
@@ -8239,7 +8239,7 @@
   {
     "id": 1505,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1505",
     "area": 39.19,
@@ -8265,7 +8265,7 @@
   {
     "id": 1506,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1506",
     "area": 39.19,
@@ -8291,7 +8291,7 @@
   {
     "id": 1507,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1507",
     "area": 38.46,
@@ -8317,7 +8317,7 @@
   {
     "id": 1508,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1508",
     "area": 38.46,
@@ -8343,7 +8343,7 @@
   {
     "id": 1509,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1509",
     "area": 139.43,
@@ -8369,7 +8369,7 @@
   {
     "id": 1510,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1510",
     "area": 139.43,
@@ -8395,7 +8395,7 @@
   {
     "id": 1511,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1511",
     "area": 39.03,
@@ -8421,7 +8421,7 @@
   {
     "id": 1512,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1512",
     "area": 39.07,
@@ -8447,7 +8447,7 @@
   {
     "id": 1513,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1513",
     "area": 39.03,
@@ -8473,7 +8473,7 @@
   {
     "id": 1514,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1514",
     "area": 39.07,
@@ -8499,7 +8499,7 @@
   {
     "id": 1515,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1515",
     "area": 39.03,
@@ -8525,7 +8525,7 @@
   {
     "id": 1516,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1516",
     "area": 39.07,
@@ -8551,7 +8551,7 @@
   {
     "id": 1517,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1517",
     "area": 39.03,
@@ -8577,7 +8577,7 @@
   {
     "id": 1518,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1518",
     "area": 39.07,
@@ -8603,7 +8603,7 @@
   {
     "id": 1519,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1519",
     "area": 39.24,
@@ -8629,7 +8629,7 @@
   {
     "id": 1520,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1520",
     "area": 39.27,
@@ -8655,7 +8655,7 @@
   {
     "id": 1521,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1521",
     "area": 138.47,
@@ -8681,7 +8681,7 @@
   {
     "id": 1522,
     "floor": 15,
-    "status": "disponivel",
+    "status": "reservada",
     "statusSala": "DBN | TERRENO",
     "name": "Sala 1522",
     "area": 138.47,
