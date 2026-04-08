@@ -4,6 +4,16 @@ Guia para publicar o projeto **threetower** (Next.js) na **[Vercel](https://verc
 
 **Pré-requisitos:** conta **GitHub** com o código do projeto (ex.: [emanuelstefaness/threetower](https://github.com/emanuelstefaness/threetower)).
 
+### Dados das salas (planilha só como referência)
+
+A **planilha Excel não está integrada nem sincronizada em tempo real** com o sistema. É apenas **documento de referência** offline.
+
+Os dados que a aplicação usa vêm do ficheiro **`src/server/building/treeTowerSeed.json`** no repositório (informação **copiada** para lá a partir dessa referência: aba *Pedro* = lista completa; aba *Oficial* = detalhe das vendidas, quando aplicável).
+
+- **Dia a dia:** alterações pelo **gestor** na interface, ou novo **deploy** depois de atualizar o JSON no Git.
+- **Neon:** o estado gravado na base pode ser alinhado ao JSON do código com `POST /api/admin/reapply-seed` (ver secção de problemas).
+- **`EXCEL_SYNC_SECRET` / `sync-excel`:** opcional — importação **pontual** de um ficheiro `.xlsx` (cópia da planilha) para a base, **sem** ligação direta contínua ao Excel.
+
 ---
 
 ## Parte 1 — Criar projeto e base no Neon

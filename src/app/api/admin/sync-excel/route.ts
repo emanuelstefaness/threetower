@@ -26,9 +26,11 @@ function syncSecretOk(header: string | null): boolean {
 }
 
 /**
- * Importa o Excel com aba **Pedro** (lista completa + status) e, se existir, aba **Oficial** (só linhas **VENDIDO** sobrescrevem dados de venda).
- * Autenticação: `Authorization: Bearer <EXCEL_SYNC_SECRET>`.
- * Body: `multipart/form-data` com campo `file` (.xlsx).
+ * Importação **pontual** a partir de um ficheiro .xlsx (cópia da planilha de referência).
+ * Não existe integração contínua com Excel; o estado normal vem de `treeTowerSeed.json` + persistência.
+ *
+ * Abas: **Pedro** (lista completa) e opcionalmente **Oficial** (só **VENDIDO** sobrescreve dados de venda).
+ * `Authorization: Bearer <EXCEL_SYNC_SECRET>`. Body: `multipart/form-data`, campo `file`.
  */
 export async function POST(req: Request) {
   if (!process.env.EXCEL_SYNC_SECRET?.trim()) {

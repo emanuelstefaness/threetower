@@ -1,3 +1,7 @@
+/**
+ * Leitura ocasional de ficheiros .xlsx (referência offline).
+ * O sistema em produção usa `treeTowerSeed.json` — não há ligação em tempo real ao Excel.
+ */
 import * as XLSX from "xlsx";
 import type { RoomStatus } from "@/lib/buildingTypes";
 import type { SeedRoom } from "./generateBuilding";

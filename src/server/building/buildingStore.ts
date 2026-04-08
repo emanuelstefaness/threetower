@@ -11,6 +11,7 @@ import type {
 import { STATUS_META, STATUS_ORDER } from "@/lib/status";
 import { generateBuildingFromSeed, generateInitialBuilding } from "./generateBuilding";
 import { loadPersistedSnapshotAsync, savePersistedSnapshotUniversal } from "./loadPersisted";
+/** Dados do empreendimento (copiados da planilha de referência para o repo; sem ligação direta ao Excel em runtime). */
 import seedRooms from "./treeTowerSeed.json";
 
 type Listener = (evt: RoomStatusChangedEvent) => void;
