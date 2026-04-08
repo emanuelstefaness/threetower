@@ -4,7 +4,9 @@ import { getBuildingStore } from "@/server/building/buildingStore";
 import { generateBuildingFromSeed } from "@/server/building/generateBuilding";
 import { persistSnapshotNow } from "@/server/building/loadPersisted";
 import { isPersistenceEnabled } from "@/server/building/persistBuildingState";
-import { parseTreeTowerXlsxBuffer } from "@/server/building/parseTreeTowerXlsx";
+import treeTowerSeed from "@/server/building/treeTowerSeed.json";
+import { mergeOfficialVendidosIntoBase, parseTreeTowerXlsxBuffer } from "@/server/building/parseTreeTowerXlsx";
+import type { SeedRoom } from "@/server/building/generateBuilding";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,7 +27,8 @@ function syncSecretOk(header: string | null): boolean {
 }
 
 /**
- * Importa planilha Excel (formato Tree Tower) e substitui o estado do prédio.
+ * Importa planilha Excel (aba Oficial). Mantém todas as salas do seed base e **atualiza só as VENDIDO**
+ * conforme a planilha enviada (corretor, comprador, forma de pagamento, etc.).
  * Autenticação: header `Authorization: Bearer <EXCEL_SYNC_SECRET>`.
  * Body: `multipart/form-data` com campo `file` (.xlsx).
  */
@@ -64,22 +67,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ficheiro vazio" }, { status: 400 });
   }
 
-  let seed;
+  let officialRows: SeedRoom[];
   try {
-    seed = parseTreeTowerXlsxBuffer(buf);
+    officialRows = parseTreeTowerXlsxBuffer(buf);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao ler Excel";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  if (seed.length === 0) {
+  if (officialRows.length === 0) {
     return NextResponse.json({ error: "Nenhuma sala válida na planilha" }, { status: 400 });
   }
 
+  const base = treeTowerSeed as SeedRoom[];
+  const seed = mergeOfficialVendidosIntoBase(base, officialRows);
   const snapshot = generateBuildingFromSeed(seed);
   const store = await getBuildingStore();
   store.replaceSnapshotFromImport(snapshot);
   await persistSnapshotNow(store.getState());
 
-  return NextResponse.json({ ok: true, roomsImported: seed.length });
+  const vendidoRows = officialRows.filter(
+    (r) => (r.statusSala ?? r.meta?.statusSalaOriginal ?? "").trim().toUpperCase() === "VENDIDO"
+  );
+  return NextResponse.json({
+    ok: true,
+    roomsTotal: seed.length,
+    rowsInSpreadsheet: officialRows.length,
+    vendidosAplicados: vendidoRows.length,
+  });
 }

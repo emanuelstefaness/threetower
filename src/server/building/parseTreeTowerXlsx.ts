@@ -1,6 +1,24 @@
 import * as XLSX from "xlsx";
 import type { SeedRoom } from "./generateBuilding";
 
+/**
+ * Mantém o seed completo (ex.: 362 salas) e substitui apenas as linhas cujo STATUS SALA na planilha oficial é **VENDIDO**.
+ * Linhas não vendidas na nova planilha não sobrescrevem o estado anterior — assim a base antiga permanece para o resto.
+ */
+export function mergeOfficialVendidosIntoBase(base: SeedRoom[], officialParsed: SeedRoom[]): SeedRoom[] {
+  const vendidoById = new Map<number, SeedRoom>();
+  for (const row of officialParsed) {
+    const ss = (row.statusSala ?? row.meta?.statusSalaOriginal ?? "").trim().toUpperCase();
+    if (ss === "VENDIDO") {
+      vendidoById.set(row.id, row);
+    }
+  }
+  const baseIds = new Set(base.map((r) => r.id));
+  const merged = base.map((room) => vendidoById.get(room.id) ?? room);
+  const extras = Array.from(vendidoById.values()).filter((r) => !baseIds.has(r.id));
+  return [...merged, ...extras].sort((a, b) => a.floor - b.floor || a.id - b.id);
+}
+
 function normalizeHeader(h: unknown): string {
   const s = String(h ?? "").trim();
   return s
