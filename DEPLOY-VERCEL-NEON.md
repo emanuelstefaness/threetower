@@ -127,6 +127,33 @@ Confirma que **não** há espaços a mais antes/depois dos valores.
 2. A Vercel faz **deploy automático** (por defeito).
 3. Se mudares **só** variáveis no painel: **Redeploy** manual em **Deployments** → **⋯** → **Redeploy**.
 
+### Alinhar a Neon ao `treeTowerSeed.json` (uma vez após corrigir o seed no Git)
+
+O deploy **não** substitui sozinho o JSON antigo na base. Depois de um deploy que inclua o `treeTowerSeed.json` novo, faz isto **uma vez**:
+
+1. **Confirma o deploy** na Vercel (último deployment com o commit certo).
+2. Na Vercel → **Settings** → **Environment Variables** → em **Production** existe **`EXCEL_SYNC_SECRET`** com um valor forte (se criaste agora, faz **Redeploy**).
+3. Copia o URL público da app (ex. `https://threetower-xxx.vercel.app`).
+4. No **PowerShell** no teu PC (substitui URL e o segredo pelo que está na Vercel):
+
+   ```powershell
+   $url = "https://SUBSTITUI.vercel.app/api/admin/reapply-seed"
+   $secret = "COLOCA_AQUI_O_VALOR_DE_EXCEL_SYNC_SECRET"
+
+   Invoke-RestMethod -Uri $url -Method Post -Headers @{ Authorization = "Bearer $secret" }
+   ```
+
+5. Resposta esperada: JSON com `"ok": true` e `"roomsTotal"` igual ao número de salas no seed (ex. 362).
+6. Abre o site no browser e **recarrega** o dashboard (idealmente com Ctrl+F5).
+
+**Se der erro**
+
+| Código / mensagem | O que fazer |
+|-------------------|-------------|
+| `501` — EXCEL_SYNC_SECRET não configurado | Cria a variável na Vercel (Production) e **Redeploy**. |
+| `401` — Não autorizado | O `Bearer` tem de ser **exatamente** o valor de `EXCEL_SYNC_SECRET`, sem espaços a mais. |
+| `503` — Persistência desativada | Em produção com Neon, `DATABASE_URL` deve estar definida; `BUILDING_PERSISTENCE` não pode desativar persistência se quiseres gravar na base. |
+
 ---
 
 ## Parte 5 — Domínio próprio (opcional)
