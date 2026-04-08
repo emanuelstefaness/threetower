@@ -90,7 +90,7 @@ function formatMoneyBRL(v: unknown) {
 
 export default function TowerAlfaReportsClient() {
   const pathname = usePathname();
-  const { building, appMode, applyEvent, setBuilding, setRealtime } = useBuildingStoreClient();
+  const { building, appMode, authRole, applyEvent, setBuilding, setRealtime } = useBuildingStoreClient();
 
   const [clock, setClock] = useState(() => new Date());
   const [statusSalaFilter, setStatusSalaFilter] = useState<string[] | "all">("all");
@@ -109,9 +109,9 @@ export default function TowerAlfaReportsClient() {
   useEffect(() => {
     let alive = true;
     fetchBuildingState()
-      .then(({ snapshot, appMode: mode, authEnabled }) => {
+      .then(({ snapshot, appMode: mode, authEnabled, authRole: r }) => {
         if (!alive) return;
-        setBuilding(snapshot, mode, authEnabled);
+        setBuilding(snapshot, mode, authEnabled, r);
       })
       .catch((e) => {
         if (!alive) return;
@@ -150,7 +150,7 @@ export default function TowerAlfaReportsClient() {
   useEffect(() => {
     const id = window.setInterval(() => {
       fetchBuildingState()
-        .then(({ snapshot, appMode: mode, authEnabled }) => setBuilding(snapshot, mode, authEnabled))
+        .then(({ snapshot, appMode: mode, authEnabled, authRole: r }) => setBuilding(snapshot, mode, authEnabled, r))
         .catch(() => void 0);
     }, 20000);
     return () => window.clearInterval(id);

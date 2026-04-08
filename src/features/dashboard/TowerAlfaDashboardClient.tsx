@@ -64,7 +64,7 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
 }
 
 export default function TowerAlfaDashboardClient() {
-  const { building, appMode, setBuilding, applyEvent, setRealtime } = useBuildingStoreClient();
+  const { building, appMode, authRole, setBuilding, applyEvent, setRealtime } = useBuildingStoreClient();
   const pathname = usePathname();
   const [clock, setClock] = useState(() => new Date());
   const [toast, setToast] = useState<{ msg: string; icon: string } | null>(null);
@@ -78,7 +78,9 @@ export default function TowerAlfaDashboardClient() {
   useEffect(() => {
     let alive = true;
     fetchBuildingState()
-      .then(({ snapshot, appMode: mode, authEnabled }) => alive && setBuilding(snapshot, mode, authEnabled))
+      .then(({ snapshot, appMode: mode, authEnabled, authRole }) =>
+        alive && setBuilding(snapshot, mode, authEnabled, authRole)
+      )
       .catch((e) => alive && setRealtime({ lastError: e instanceof Error ? e.message : "Erro ao carregar" }));
     return () => {
       alive = false;
@@ -164,7 +166,11 @@ export default function TowerAlfaDashboardClient() {
           <div className="sb-nav">
             <Link href="/" className={`sb-item ${pathname === "/" ? "active" : ""}`}>Dashboard</Link>
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>Salas</Link>
-            <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>Relatórios</Link>
+            {authRole !== "viewer" ? (
+              <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
+                Relatórios
+              </Link>
+            ) : null}
           </div>
           <div className="sb-divider" />
           <div className="sb-section">Resumo</div>

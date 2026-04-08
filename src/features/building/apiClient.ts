@@ -5,6 +5,7 @@ export type BuildingStatePayload = {
   snapshot: BuildingSnapshot;
   appMode: AppMode;
   authEnabled?: boolean;
+  authRole?: "editor" | "viewer";
 };
 
 export async function fetchBuildingState(): Promise<BuildingStatePayload> {
@@ -25,11 +26,17 @@ export async function fetchBuildingState(): Promise<BuildingStatePayload> {
     "appMode" in data &&
     (data as { appMode: string }).appMode
   ) {
-    const d = data as { snapshot: BuildingSnapshot; appMode: AppMode; authEnabled?: boolean };
+    const d = data as {
+      snapshot: BuildingSnapshot;
+      appMode: AppMode;
+      authEnabled?: boolean;
+      authRole?: "editor" | "viewer";
+    };
     return {
       snapshot: d.snapshot,
       appMode: d.appMode,
       authEnabled: d.authEnabled === true,
+      authRole: d.authRole,
     };
   }
   return { snapshot: data as BuildingSnapshot, appMode: "edit" };
@@ -89,6 +96,13 @@ export type UpdateRoomDetailsPayload = {
   precificacao?: string | null;
   faixa?: string | null;
   baseCalculoVenda?: number | null;
+  corretor?: string | null;
+  imobiliaria?: string | null;
+  comprador?: string | null;
+  formaPagamento?: string | null;
+  prazoPagamento?: string | null;
+  valorVenda?: number | null;
+  descontos?: number | null;
 };
 
 export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsPayload): Promise<{ updated: RoomRecord }> {
@@ -106,6 +120,13 @@ export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsP
       precificacao: args.precificacao,
       faixa: args.faixa,
       baseCalculoVenda: args.baseCalculoVenda,
+      corretor: args.corretor,
+      imobiliaria: args.imobiliaria,
+      comprador: args.comprador,
+      formaPagamento: args.formaPagamento,
+      prazoPagamento: args.prazoPagamento,
+      valorVenda: args.valorVenda,
+      descontos: args.descontos,
     }),
   });
   if (!res.ok) {

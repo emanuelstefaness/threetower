@@ -17,6 +17,17 @@ export type RoomMeta = {
   valorM2?: number;
   valorImovel?: number;
   statusSalaOriginal?: string;
+  /** Venda (ex.: STATUS SALA = VENDIDO). */
+  corretor?: string;
+  imobiliaria?: string;
+  comprador?: string;
+  /** Não enviado ao visitante na API (só gestor). */
+  formaPagamento?: string;
+  prazoPagamento?: string;
+  valorVenda?: number;
+  descontos?: number;
+  dataVenda?: number;
+  competencia?: number;
 };
 
 export type StatusSalaHistoryEntry = {

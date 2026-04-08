@@ -32,10 +32,19 @@ type Store = {
     precificacao?: string | null;
     faixa?: string | null;
     baseCalculoVenda?: number | null;
+    corretor?: string | null;
+    imobiliaria?: string | null;
+    comprador?: string | null;
+    formaPagamento?: string | null;
+    prazoPagamento?: string | null;
+    valorVenda?: number | null;
+    descontos?: number | null;
   }) => RoomRecord;
   deleteRoom: (args: { roomId: number; by: string }) => { ok: true; deletedRoomId: number; floor: number };
   subscribe: (listener: Listener) => () => void;
   getState: () => BuildingSnapshot;
+  /** Substitui todo o estado em memória (ex.: reimport da planilha). Não grava disco/BD — use `persistSnapshotNow` depois. */
+  replaceSnapshotFromImport: (snapshot: BuildingSnapshot) => void;
 };
 
 function uid() {
@@ -234,6 +243,13 @@ async function createStore(): Promise<Store> {
     precificacao,
     faixa,
     baseCalculoVenda,
+    corretor,
+    imobiliaria,
+    comprador,
+    formaPagamento,
+    prazoPagamento,
+    valorVenda,
+    descontos,
   }: {
     roomId: number;
     name?: string;
@@ -246,6 +262,13 @@ async function createStore(): Promise<Store> {
     precificacao?: string | null;
     faixa?: string | null;
     baseCalculoVenda?: number | null;
+    corretor?: string | null;
+    imobiliaria?: string | null;
+    comprador?: string | null;
+    formaPagamento?: string | null;
+    prazoPagamento?: string | null;
+    valorVenda?: number | null;
+    descontos?: number | null;
   }) => {
     const room = state.roomsById[roomId];
     if (!room) throw new Error("Sala não encontrada");
@@ -318,7 +341,14 @@ async function createStore(): Promise<Store> {
       valorM2 !== undefined ||
       precificacao !== undefined ||
       faixa !== undefined ||
-      baseCalculoVenda !== undefined;
+      baseCalculoVenda !== undefined ||
+      corretor !== undefined ||
+      imobiliaria !== undefined ||
+      comprador !== undefined ||
+      formaPagamento !== undefined ||
+      prazoPagamento !== undefined ||
+      valorVenda !== undefined ||
+      descontos !== undefined;
     if (metaPriceKeys) {
       if (!room.meta) room.meta = {};
       const m = room.meta;
@@ -341,6 +371,24 @@ async function createStore(): Promise<Store> {
       if (baseCalculoVenda !== undefined) {
         if (baseCalculoVenda === null) delete m.baseCalculoVenda;
         else m.baseCalculoVenda = baseCalculoVenda;
+      }
+      const strOrDel = (key: "corretor" | "imobiliaria" | "comprador" | "formaPagamento" | "prazoPagamento", v: string | null | undefined) => {
+        if (v === undefined) return;
+        if (v === null || v === "") delete m[key];
+        else m[key] = v;
+      };
+      strOrDel("corretor", corretor);
+      strOrDel("imobiliaria", imobiliaria);
+      strOrDel("comprador", comprador);
+      strOrDel("formaPagamento", formaPagamento);
+      strOrDel("prazoPagamento", prazoPagamento);
+      if (valorVenda !== undefined) {
+        if (valorVenda === null) delete m.valorVenda;
+        else m.valorVenda = valorVenda;
+      }
+      if (descontos !== undefined) {
+        if (descontos === null) delete m.descontos;
+        else m.descontos = descontos;
       }
     }
 
@@ -499,6 +547,14 @@ async function createStore(): Promise<Store> {
     return evt;
   };
 
+  const replaceSnapshotFromImport = (snapshot: BuildingSnapshot) => {
+    state.floors = snapshot.floors;
+    state.roomsById = snapshot.roomsById;
+    state.floorAggregates = snapshot.floorAggregates;
+    state.summary = snapshot.summary;
+    state.notifications = snapshot.notifications ?? [];
+  };
+
   const store: Store = {
     state,
     listeners,
@@ -508,6 +564,7 @@ async function createStore(): Promise<Store> {
     deleteRoom: deleteRoomImpl,
     subscribe,
     getState,
+    replaceSnapshotFromImport,
   };
 
   return store;

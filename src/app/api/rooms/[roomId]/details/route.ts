@@ -26,6 +26,13 @@ export async function PATCH(
     precificacao?: string | null;
     faixa?: string | null;
     baseCalculoVenda?: number | null;
+    corretor?: string | null;
+    imobiliaria?: string | null;
+    comprador?: string | null;
+    formaPagamento?: string | null;
+    prazoPagamento?: string | null;
+    valorVenda?: number | null;
+    descontos?: number | null;
   };
   const by = typeof body.by === "string" && body.by.trim() ? body.by.trim() : "admin";
 
@@ -37,6 +44,13 @@ export async function PATCH(
   };
 
   try {
+    const strOrUndef = (v: unknown): string | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      if (typeof v === "string") return v;
+      throw new Error("Texto inválido");
+    };
+
     const updated: RoomRecord = store.updateRoomDetails({
       roomId,
       name: typeof body.name === "string" ? body.name : undefined,
@@ -61,6 +75,13 @@ export async function PATCH(
         body.faixa === undefined ? undefined : body.faixa === null ? null : typeof body.faixa === "string" ? body.faixa : (() => {
             throw new Error("Faixa inválida");
           })(),
+      corretor: strOrUndef(body.corretor),
+      imobiliaria: strOrUndef(body.imobiliaria),
+      comprador: strOrUndef(body.comprador),
+      formaPagamento: strOrUndef(body.formaPagamento),
+      prazoPagamento: strOrUndef(body.prazoPagamento),
+      valorVenda: optFinite(body.valorVenda, "Valor da venda"),
+      descontos: optFinite(body.descontos, "Descontos"),
     });
     return Response.json({ updated });
   } catch (e) {

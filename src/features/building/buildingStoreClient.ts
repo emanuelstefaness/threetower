@@ -21,6 +21,8 @@ type BuildingStoreClient = {
   appMode: AppMode;
   /** `true` quando AUTH_SECRET está definido (mostrar Sair). */
   authEnabled: boolean;
+  /** `viewer` = visitante (sem relatórios / sem forma de pagamento e campos de relatório na API). */
+  authRole: "editor" | "viewer" | null;
 
   // UI
   selectedFloor: number | null;
@@ -40,7 +42,7 @@ type BuildingStoreClient = {
   notifications: NotificationEvent[];
 
   // Actions
-  setBuilding: (snapshot: BuildingSnapshot, appMode: AppMode, authEnabled?: boolean) => void;
+  setBuilding: (snapshot: BuildingSnapshot, appMode: AppMode, authEnabled?: boolean, authRole?: "editor" | "viewer" | null) => void;
   applyEvent: (evt: RoomStatusChangedEvent) => void;
   setSelectedFloor: (floor: number | null) => void;
   openRoom: (roomId: number) => void;
@@ -56,6 +58,7 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
   building: null,
   appMode: "edit",
   authEnabled: false,
+  authRole: null,
 
   selectedFloor: null,
   selectedRoomId: null,
@@ -67,11 +70,12 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
   realtime: { connected: false, lastEventAt: null, lastError: null },
   notifications: [],
 
-  setBuilding: (snapshot, appMode, authEnabled = false) =>
+  setBuilding: (snapshot, appMode, authEnabled = false, authRole = null) =>
     set(() => ({
       building: snapshot,
       appMode,
       authEnabled,
+      authRole: authRole ?? null,
       selectedFloor: null,
       selectedRoomId: null,
       roomModalOpen: false,

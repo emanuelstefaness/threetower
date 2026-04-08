@@ -49,3 +49,14 @@ export function queuePostgresSave(state: BuildingSnapshot): void {
       // Falha silenciosa como no disco; não expor conteúdo do estado em logs.
     });
 }
+
+/** Gravação imediata (ex.: import Excel) — evita perder dados em serverless antes da fila correr. */
+export async function savePostgresSnapshotNow(state: BuildingSnapshot): Promise<void> {
+  const pool = getPool();
+  await ensureTable(pool);
+  await pool.query(
+    `INSERT INTO building_state (id, snapshot) VALUES (1, $1::jsonb)
+     ON CONFLICT (id) DO UPDATE SET snapshot = EXCLUDED.snapshot, updated_at = now()`,
+    [JSON.stringify(state)]
+  );
+}

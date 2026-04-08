@@ -4,7 +4,7 @@ import {
   loadPersistedSnapshot,
   savePersistedSnapshot,
 } from "./persistBuildingState";
-import { loadFromPostgres, queuePostgresSave } from "./persistPostgres";
+import { loadFromPostgres, queuePostgresSave, savePostgresSnapshotNow } from "./persistPostgres";
 
 function persistenceIsPostgres(): boolean {
   return Boolean(process.env.DATABASE_URL?.trim());
@@ -28,5 +28,19 @@ export function savePersistedSnapshotUniversal(state: BuildingSnapshot): void {
     savePersistedSnapshot(state);
   } catch {
     // igual ao store: não bloquear mutação
+  }
+}
+
+/** Persistência síncrona/imediata após import em massa (PostgreSQL ou ficheiro). */
+export async function persistSnapshotNow(state: BuildingSnapshot): Promise<void> {
+  if (!isPersistenceEnabled()) return;
+  if (persistenceIsPostgres()) {
+    await savePostgresSnapshotNow(state);
+    return;
+  }
+  try {
+    savePersistedSnapshot(state);
+  } catch {
+    // ignore
   }
 }

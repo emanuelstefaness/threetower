@@ -18,6 +18,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Import automático da planilha (Bearer EXCEL_SYNC_SECRET; sem cookie de sessão)
+  if (pathname.startsWith("/api/admin/sync-excel")) {
+    return NextResponse.next();
+  }
+
+  // Visitante (JWT role viewer) não acede a Relatórios
+  if (pathname.startsWith("/reports") && secret) {
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (token) {
+      const v = await verifyJwtHs256Edge(token, secret);
+      if (v.ok && v.payload.role === "viewer") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   if (!token) {
     if (pathname.startsWith("/api/")) {
