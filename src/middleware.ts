@@ -18,8 +18,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Import automático da planilha (Bearer EXCEL_SYNC_SECRET; sem cookie de sessão)
-  if (pathname.startsWith("/api/admin/sync-excel")) {
+  // Admin com Bearer EXCEL_SYNC_SECRET (sem cookie de sessão)
+  if (pathname.startsWith("/api/admin/sync-excel") || pathname.startsWith("/api/admin/reapply-seed")) {
     return NextResponse.next();
   }
 
