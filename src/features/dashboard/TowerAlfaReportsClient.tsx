@@ -235,12 +235,10 @@ export default function TowerAlfaReportsClient() {
   const vendidas = useMemo(() => {
     const sold = filteredRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO");
     const faturamento = sold.reduce((s, r) => s + valorFaturamentoVenda(r), 0);
-    const patrimonioReferencia = sold.reduce((s, r) => s + valorImovelMeta(r), 0);
     const areaTotal = sold.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
     return {
       count: sold.length,
       faturamento,
-      patrimonioReferencia,
       areaTotal,
       ticketMedio: sold.length ? faturamento / sold.length : 0,
     };
@@ -553,7 +551,7 @@ export default function TowerAlfaReportsClient() {
               <div className="report-hero-left">
                 <div className="report-title">Relatórios</div>
                 <div className="report-sub">
-                  Faturamento (vendas): valor de venda da planilha; se faltar, valor do imóvel. Tabela e CSV = estado atual do prédio.
+                  Vendas: mostra só faturamento (valor de venda; se faltar, valor do imóvel). O somatório de valor imóvel no filtro está no painel à direita. Tabela e CSV = estado do prédio.
                 </div>
               </div>
               <div className="report-hero-right">
@@ -605,12 +603,6 @@ export default function TowerAlfaReportsClient() {
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Valor de venda / faturamento</div>
                     <div className="report-kpi-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
-                  </div>
-                  <div className="report-kpi-row">
-                    <div className="report-kpi-label" title="Soma do valor de referência (planilha) nas vendidas">
-                      Valor imóvel (referência) — vendidas
-                    </div>
-                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.patrimonioReferencia) || "—"}</div>
                   </div>
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Ticket médio (valor de venda)</div>
