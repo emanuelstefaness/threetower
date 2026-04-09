@@ -104,6 +104,9 @@ export default function TowerAlfaRoomsClient() {
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>
               Salas
             </Link>
+            <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>
+              Painel TV
+            </Link>
             {canAccessInbox(authRole, authEnabled) ? (
               <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
                 Reservas

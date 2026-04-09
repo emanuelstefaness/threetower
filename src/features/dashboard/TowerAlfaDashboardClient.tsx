@@ -167,6 +167,7 @@ export default function TowerAlfaDashboardClient() {
           <div className="sb-nav">
             <Link href="/" className={`sb-item ${pathname === "/" ? "active" : ""}`}>Dashboard</Link>
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>Salas</Link>
+            <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>Painel TV</Link>
             {canAccessInbox(authRole, authEnabled) ? (
               <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
                 Reservas
@@ -262,15 +263,6 @@ export default function TowerAlfaDashboardClient() {
             🏗️ Prédio Inteiro
             <span className="rp-sub">{totalAllRooms} salas</span>
           </div>
-          <div className="donut-wrap">
-            <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de distribuição">
-              <DonutPaths segments={statusSalaDonutSegments} />
-            </svg>
-            <div className="donut-center">
-              <div className="donut-total">{totalAllRooms}</div>
-              <div className="donut-label">salas totais</div>
-            </div>
-          </div>
           <div className="status-cards">
             {statusSalaBreakdown.map((item) => (
               <div
@@ -286,6 +278,15 @@ export default function TowerAlfaDashboardClient() {
                 <div className="status-card-num">{item.count}</div>
               </div>
             ))}
+          </div>
+          <div className="donut-wrap">
+            <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de distribuição">
+              <DonutPaths segments={statusSalaDonutSegments} />
+            </svg>
+            <div className="donut-center">
+              <div className="donut-total">{totalAllRooms}</div>
+              <div className="donut-label">salas totais</div>
+            </div>
           </div>
         </aside>
       </div>

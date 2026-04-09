@@ -498,7 +498,7 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   background: transparent;
 }
 .donut-svg {
@@ -528,7 +528,7 @@ body::before {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  max-height: 250px;
+  max-height: min(56vh, 420px);
   overflow: auto;
   align-content: start;
 }

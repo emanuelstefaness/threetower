@@ -5,14 +5,9 @@ import { fetchBuildingState, updateRoomDetails } from "@/features/building/apiCl
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import FloorPlanHotspots from "@/features/floorplan/FloorPlanHotspots";
 import type { RoomRecord } from "@/lib/buildingTypes";
+import { formatDecimalBRL, formatMoneyBRL } from "@/lib/formatMoney";
 import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
 import { TREE_TOWER_STATUS_SALA_OPTIONS } from "@/lib/treeTowerStatusSala";
-
-function formatMoneyBRL(v: unknown) {
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n)) return "—";
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 /** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
 function parseOptionalMoney(raw: string): number | null {
@@ -77,8 +72,6 @@ export default function RoomFloorWorkbench({
   const [editComprador, setEditComprador] = useState("");
   const [editFormaPagamento, setEditFormaPagamento] = useState("");
   const [editPrazoPagamento, setEditPrazoPagamento] = useState("");
-  const [editValorVenda, setEditValorVenda] = useState("");
-  const [editDescontos, setEditDescontos] = useState("");
 
   const [selectedPlanSlot, setSelectedPlanSlot] = useState<string | null>(null);
 
@@ -109,8 +102,6 @@ export default function RoomFloorWorkbench({
     setEditComprador(m?.comprador ?? "");
     setEditFormaPagamento(m?.formaPagamento ?? "");
     setEditPrazoPagamento(m?.prazoPagamento ?? "");
-    setEditValorVenda(m?.valorVenda != null && Number.isFinite(m.valorVenda) ? String(m.valorVenda) : "");
-    setEditDescontos(m?.descontos != null && Number.isFinite(m.descontos) ? String(m.descontos) : "");
   }, []);
 
   const closeEdit = () => setEditRoomId(null);
@@ -147,14 +138,10 @@ export default function RoomFloorWorkbench({
       let valorImovel: number | null;
       let valorM2: number | null;
       let baseCalculoVenda: number | null;
-      let valorVenda: number | null;
-      let descontos: number | null;
       try {
         valorImovel = parseOptionalMoney(editValorImovel);
         valorM2 = parseOptionalMoney(editValorM2);
         baseCalculoVenda = parseOptionalMoney(editBaseCalculo);
-        valorVenda = parseOptionalMoney(editValorVenda);
-        descontos = parseOptionalMoney(editDescontos);
       } catch (e) {
         showToast(e instanceof Error ? e.message : "Valor inválido", "⚠️");
         return;
@@ -174,8 +161,6 @@ export default function RoomFloorWorkbench({
         comprador: editComprador.trim() || null,
         formaPagamento: editFormaPagamento.trim() || null,
         prazoPagamento: editPrazoPagamento.trim() || null,
-        valorVenda,
-        descontos,
       });
 
       const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an } = await fetchBuildingState();
@@ -391,7 +376,7 @@ export default function RoomFloorWorkbench({
                       Valor do imóvel (R$)
                     </label>
                     {readOnly ? (
-                      <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorImovel) || "—"}</div>
+                      <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorImovel)}</div>
                     ) : (
                       <input
                         id="room-valor-imovel"
@@ -411,7 +396,11 @@ export default function RoomFloorWorkbench({
                         Valor m²
                       </label>
                       {readOnly ? (
-                        <div className="em-input em-readonly">{editingRoom.meta?.valorM2 ?? "—"}</div>
+                        <div className="em-input em-readonly">
+                          {editingRoom.meta?.valorM2 != null && Number.isFinite(editingRoom.meta.valorM2)
+                            ? formatDecimalBRL(editingRoom.meta.valorM2)
+                            : "—"}
+                        </div>
                       ) : (
                         <input
                           id="room-valor-m2"
@@ -462,7 +451,7 @@ export default function RoomFloorWorkbench({
                       </div>
                       <div className="em-field">
                         <div className="em-label">Base cálculo</div>
-                        <div className="em-input em-readonly">{editingRoom.meta?.baseCalculoVenda ?? "—"}</div>
+                        <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.baseCalculoVenda)}</div>
                       </div>
                     </div>
                   </div>
@@ -501,44 +490,6 @@ export default function RoomFloorWorkbench({
                             onChange={(e) => setEditPrazoPagamento(e.target.value)}
                             placeholder="Observações de prazo"
                             autoComplete="off"
-                          />
-                        )}
-                      </div>
-                      <div className="em-field">
-                        <label className="em-label" htmlFor="room-valor-venda">
-                          Valor da venda (R$)
-                        </label>
-                        {readOnly ? (
-                          <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorVenda) || "—"}</div>
-                        ) : (
-                          <input
-                            id="room-valor-venda"
-                            className="em-input"
-                            type="text"
-                            inputMode="decimal"
-                            autoComplete="off"
-                            placeholder="Opcional"
-                            value={editValorVenda}
-                            onChange={(e) => setEditValorVenda(e.target.value)}
-                          />
-                        )}
-                      </div>
-                      <div className="em-field">
-                        <label className="em-label" htmlFor="room-descontos">
-                          Descontos (R$)
-                        </label>
-                        {readOnly ? (
-                          <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.descontos) || "—"}</div>
-                        ) : (
-                          <input
-                            id="room-descontos"
-                            className="em-input"
-                            type="text"
-                            inputMode="decimal"
-                            autoComplete="off"
-                            placeholder="Opcional"
-                            value={editDescontos}
-                            onChange={(e) => setEditDescontos(e.target.value)}
                           />
                         )}
                       </div>

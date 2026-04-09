@@ -3,13 +3,8 @@
 import Image from "next/image";
 import type { RoomRecord } from "@/lib/buildingTypes";
 import { getFloorPlanImage, getFloorPlanSlots } from "./floorPlanConfig";
+import { tryFormatMoneyBRL } from "@/lib/formatMoney";
 import { planToneForStatusSala } from "@/lib/treeTowerStatusSala";
-
-function formatMoneyBRL(v: unknown) {
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n)) return "";
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 type Props = {
   floor: number;
@@ -67,7 +62,7 @@ export default function FloorPlanHotspots({
           const isSelected = selectedSlotId === slot.id;
 
           const valor = room?.meta?.valorImovel;
-          const valorTxt = formatMoneyBRL(valor);
+          const valorTxt = tryFormatMoneyBRL(valor) ?? "";
 
           const title = room
             ? `${room.name} · ${room.statusSala ?? room.meta?.statusSalaOriginal ?? "—"}${valorTxt ? ` · ${valorTxt}` : ""}`

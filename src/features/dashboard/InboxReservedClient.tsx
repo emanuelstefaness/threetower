@@ -9,14 +9,9 @@ import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { canAccessInbox, canAccessReports } from "@/lib/authUi";
+import { formatMoneyBRL } from "@/lib/formatMoney";
 import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
 import { colorForStatusSala, isReservaStatusSalaForInbox } from "@/lib/treeTowerStatusSala";
-
-function formatMoneyBRL(v: unknown) {
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n)) return "—";
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 export default function InboxReservedClient() {
   const pathname = usePathname();
@@ -63,6 +58,9 @@ export default function InboxReservedClient() {
             </Link>
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>
               Salas
+            </Link>
+            <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>
+              Painel TV
             </Link>
             {canAccessInbox(authRole, authEnabled) ? (
               <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>

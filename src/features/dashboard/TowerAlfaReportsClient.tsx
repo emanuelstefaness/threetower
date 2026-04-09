@@ -10,6 +10,7 @@ import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { canAccessInbox, canAccessReports } from "@/lib/authUi";
+import { formatDecimalBRL, formatMoneyBRL } from "@/lib/formatMoney";
 import { colorForStatusSala, normalizeStatusSala } from "@/lib/treeTowerStatusSala";
 
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
@@ -81,12 +82,6 @@ function startOfDay(ts: number) {
   const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
-}
-
-function formatMoneyBRL(v: unknown) {
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n)) return "";
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 /** Faturamento da venda: `valorVenda` (aba Oficial), senão `valorImovel` como referência. */
@@ -377,12 +372,12 @@ export default function TowerAlfaReportsClient() {
         r.statusSala ?? r.meta?.statusSalaOriginal ?? "",
         r.meta?.posicao ?? "",
         r.meta?.matricula ?? "",
-        r.meta?.valorM2 != null ? String(r.meta.valorM2) : "",
-        r.meta?.valorImovel != null ? String(r.meta.valorImovel) : "",
-        r.meta?.valorVenda != null ? String(r.meta.valorVenda) : "",
+        r.meta?.valorM2 != null ? formatDecimalBRL(r.meta.valorM2) : "",
+        r.meta?.valorImovel != null ? formatMoneyBRL(r.meta.valorImovel) : "",
+        r.meta?.valorVenda != null ? formatMoneyBRL(r.meta.valorVenda) : "",
         r.meta?.precificacao ?? "",
         r.meta?.faixa ?? "",
-        r.meta?.baseCalculoVenda != null ? String(r.meta.baseCalculoVenda) : "",
+        r.meta?.baseCalculoVenda != null ? formatMoneyBRL(r.meta.baseCalculoVenda) : "",
         r.meta?.corretor ?? "",
         r.meta?.imobiliaria ?? "",
         r.meta?.comprador ?? "",
@@ -421,6 +416,9 @@ export default function TowerAlfaReportsClient() {
             </Link>
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>
               Salas
+            </Link>
+            <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>
+              Painel TV
             </Link>
             {canAccessInbox(authRole, authEnabled) ? (
               <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
@@ -721,10 +719,10 @@ export default function TowerAlfaReportsClient() {
                           </td>
                           <td>{formatMoneyBRL(r.meta?.valorImovel)}</td>
                           <td>{formatMoneyBRL(r.meta?.valorVenda)}</td>
-                          <td>{r.meta?.valorM2 ?? ""}</td>
+                          <td>{r.meta?.valorM2 != null && Number.isFinite(r.meta.valorM2) ? formatDecimalBRL(r.meta.valorM2) : ""}</td>
                           <td>{r.meta?.precificacao ?? ""}</td>
                           <td>{r.meta?.faixa ?? ""}</td>
-                          <td>{r.meta?.baseCalculoVenda ?? ""}</td>
+                          <td>{formatMoneyBRL(r.meta?.baseCalculoVenda)}</td>
                           <td className="report-ellipsis" title={r.meta?.comprador ?? ""}>
                             {r.meta?.comprador ?? ""}
                           </td>
