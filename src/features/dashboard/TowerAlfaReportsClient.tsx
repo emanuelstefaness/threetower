@@ -88,6 +88,25 @@ function formatMoneyBRL(v: unknown) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/** Faturamento da venda: `valorVenda` (aba Oficial), senão `valorImovel` como referência. */
+function valorFaturamentoVenda(r: RoomRecord): number {
+  const m = r.meta;
+  if (!m) return 0;
+  if (typeof m.valorVenda === "number" && Number.isFinite(m.valorVenda)) return m.valorVenda;
+  if (typeof m.valorImovel === "number" && Number.isFinite(m.valorImovel)) return m.valorImovel;
+  return 0;
+}
+
+function valorDescontoMeta(r: RoomRecord): number {
+  const d = r.meta?.descontos;
+  return typeof d === "number" && Number.isFinite(d) ? d : 0;
+}
+
+function valorImovelMeta(r: RoomRecord): number {
+  const v = r.meta?.valorImovel;
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
 export default function TowerAlfaReportsClient() {
   const pathname = usePathname();
   const { building, appMode, authRole, applyEvent, setBuilding, setRealtime } = useBuildingStoreClient();
@@ -215,14 +234,23 @@ export default function TowerAlfaReportsClient() {
   }, [building]);
 
   const totalValorImovel = useMemo(() => {
-    return filteredRooms.reduce((s, r) => s + (Number.isFinite(r.meta?.valorImovel) ? (r.meta?.valorImovel as number) : 0), 0);
+    return filteredRooms.reduce((s, r) => s + valorImovelMeta(r), 0);
   }, [filteredRooms]);
 
   const vendidas = useMemo(() => {
     const sold = filteredRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO");
-    const faturamento = sold.reduce((s, r) => s + (Number.isFinite(r.meta?.valorImovel) ? (r.meta?.valorImovel as number) : 0), 0);
+    const faturamento = sold.reduce((s, r) => s + valorFaturamentoVenda(r), 0);
+    const totalDescontos = sold.reduce((s, r) => s + valorDescontoMeta(r), 0);
+    const patrimonioReferencia = sold.reduce((s, r) => s + valorImovelMeta(r), 0);
     const areaTotal = sold.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
-    return { count: sold.length, faturamento, areaTotal, ticketMedio: sold.length ? faturamento / sold.length : 0 };
+    return {
+      count: sold.length,
+      faturamento,
+      totalDescontos,
+      patrimonioReferencia,
+      areaTotal,
+      ticketMedio: sold.length ? faturamento / sold.length : 0,
+    };
   }, [filteredRooms]);
 
   const statusSalaBreakdown = useMemo(() => {
@@ -333,9 +361,16 @@ export default function TowerAlfaReportsClient() {
         "matricula",
         "valor_m2",
         "valor_imovel",
+        "valor_venda",
+        "descontos",
         "precificacao",
         "faixa",
         "base_calculo_venda",
+        "corretor",
+        "imobiliaria",
+        "comprador",
+        "forma_pagamento",
+        "prazo_pagamento",
         "area_coberta_m2",
         "area_descoberta_m2",
         "area_privativa_m2",
@@ -351,9 +386,16 @@ export default function TowerAlfaReportsClient() {
         r.meta?.matricula ?? "",
         r.meta?.valorM2 != null ? String(r.meta.valorM2) : "",
         r.meta?.valorImovel != null ? String(r.meta.valorImovel) : "",
+        r.meta?.valorVenda != null ? String(r.meta.valorVenda) : "",
+        r.meta?.descontos != null ? String(r.meta.descontos) : "",
         r.meta?.precificacao ?? "",
         r.meta?.faixa ?? "",
         r.meta?.baseCalculoVenda != null ? String(r.meta.baseCalculoVenda) : "",
+        r.meta?.corretor ?? "",
+        r.meta?.imobiliaria ?? "",
+        r.meta?.comprador ?? "",
+        r.meta?.formaPagamento ?? "",
+        r.meta?.prazoPagamento ?? "",
         r.meta?.areaCobertaM2 != null ? String(r.meta.areaCobertaM2) : "",
         r.meta?.areaDescobertaM2 != null ? String(r.meta.areaDescobertaM2) : "",
         r.meta?.areaPrivativaM2 != null ? String(r.meta.areaPrivativaM2) : "",
@@ -520,7 +562,7 @@ export default function TowerAlfaReportsClient() {
               <div className="report-hero-left">
                 <div className="report-title">Relatórios</div>
                 <div className="report-sub">
-                  KPIs, tendências e lista completa com filtros avançados. Atualiza em tempo real conforme o prédio muda.
+                  Faturamento (vendas): prioridade ao valor de venda da planilha; se faltar, usa valor do imóvel. Descontos e totais de referência estão nos cartões. Tabela e CSV refletem o mesmo estado do prédio.
                 </div>
               </div>
               <div className="report-hero-right">
@@ -553,45 +595,56 @@ export default function TowerAlfaReportsClient() {
                 <div className="report-kpi-card-sub">m² por sala</div>
               </div>
               <div className="report-kpi-card">
-                <div className="report-kpi-card-label">Faturamento (vendidas)</div>
+                <div className="report-kpi-card-label">Faturamento (vendas)</div>
                 <div className="report-kpi-card-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
                 <div className="report-kpi-card-sub">
-                  {vendidas.count} vendida{vendidas.count !== 1 ? "s" : ""} · Ticket médio {formatMoneyBRL(vendidas.ticketMedio) || "—"}
+                  {vendidas.count} unidade{vendidas.count !== 1 ? "s" : ""} · Descontos {formatMoneyBRL(vendidas.totalDescontos) || "—"} · Ticket méd.{" "}
+                  {formatMoneyBRL(vendidas.ticketMedio) || "—"}
                 </div>
               </div>
             </div>
 
             <div className="report-grid-2">
               <div className="report-panel">
-                <div className="report-panel-head">Resumo de faturamento (vendidas)</div>
+                <div className="report-panel-head">Vendas (status VENDIDO no filtro)</div>
                 <div className="report-kpi-list">
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Quantidade vendida</div>
+                    <div className="report-kpi-label">Quantidade</div>
                     <div className="report-kpi-value">{vendidas.count}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Faturamento</div>
+                    <div className="report-kpi-label">Valor de venda / faturamento</div>
                     <div className="report-kpi-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Ticket médio</div>
+                    <div className="report-kpi-label" title="Soma do valor de referência (planilha) nas vendidas">
+                      Valor imóvel (referência) — vendidas
+                    </div>
+                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.patrimonioReferencia) || "—"}</div>
+                  </div>
+                  <div className="report-kpi-row">
+                    <div className="report-kpi-label">Total de descontos</div>
+                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.totalDescontos) || "—"}</div>
+                  </div>
+                  <div className="report-kpi-row">
+                    <div className="report-kpi-label">Ticket médio (valor de venda)</div>
                     <div className="report-kpi-value">{formatMoneyBRL(vendidas.ticketMedio) || "—"}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Área total vendida</div>
+                    <div className="report-kpi-label">Área total vendida (m²)</div>
                     <div className="report-kpi-value">{Math.round(vendidas.areaTotal * 10) / 10}</div>
                   </div>
                 </div>
               </div>
               <div className="report-panel">
-                <div className="report-panel-head">Valor total (imóveis, filtrado)</div>
+                <div className="report-panel-head">Valor de referência — todas as salas (filtro)</div>
                 <div className="report-kpi-list">
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Somatório</div>
+                    <div className="report-kpi-label">Somatório valor imóvel</div>
                     <div className="report-kpi-value">{formatMoneyBRL(totalValorImovel) || "—"}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Média por sala</div>
+                    <div className="report-kpi-label">Média por sala (filtro)</div>
                     <div className="report-kpi-value">
                       {filteredRooms.length ? formatMoneyBRL(totalValorImovel / filteredRooms.length) : "—"}
                     </div>
@@ -646,13 +699,18 @@ export default function TowerAlfaReportsClient() {
                       <th>Nome</th>
                       <th>Andar</th>
                       <th>Área</th>
-                      <th>Status sala (planilha)</th>
+                      <th>Status (planilha)</th>
                       <th>Posição</th>
-                      <th>Valor do imóvel</th>
+                      <th>Valor imóvel</th>
+                      <th>Valor venda</th>
+                      <th>Descontos</th>
                       <th>Valor m²</th>
                       <th>Precificação</th>
                       <th>Faixa</th>
                       <th>Base venda</th>
+                      <th>Comprador</th>
+                      <th>Corretor</th>
+                      <th>Forma pag.</th>
                       <th>Matrícula</th>
                       <th>Atualizado</th>
                     </tr>
@@ -671,12 +729,25 @@ export default function TowerAlfaReportsClient() {
                               {(r.statusSala ?? r.meta?.statusSalaOriginal ?? "").trim() || "Sem status"}
                             </span>
                           </td>
-                          <td>{r.meta?.posicao ?? ""}</td>
+                          <td className="report-ellipsis" title={r.meta?.posicao ?? ""}>
+                            {r.meta?.posicao ?? ""}
+                          </td>
                           <td>{formatMoneyBRL(r.meta?.valorImovel)}</td>
+                          <td>{formatMoneyBRL(r.meta?.valorVenda)}</td>
+                          <td>{formatMoneyBRL(r.meta?.descontos)}</td>
                           <td>{r.meta?.valorM2 ?? ""}</td>
                           <td>{r.meta?.precificacao ?? ""}</td>
                           <td>{r.meta?.faixa ?? ""}</td>
                           <td>{r.meta?.baseCalculoVenda ?? ""}</td>
+                          <td className="report-ellipsis" title={r.meta?.comprador ?? ""}>
+                            {r.meta?.comprador ?? ""}
+                          </td>
+                          <td className="report-ellipsis" title={r.meta?.corretor ?? ""}>
+                            {r.meta?.corretor ?? ""}
+                          </td>
+                          <td className="report-ellipsis" title={r.meta?.formaPagamento ?? ""}>
+                            {r.meta?.formaPagamento ?? ""}
+                          </td>
                           <td>{r.meta?.matricula ?? ""}</td>
                           <td title={formatDateTime(r.lastUpdatedAt)}>{new Date(r.lastUpdatedAt).toLocaleDateString("pt-BR")}</td>
                         </tr>
