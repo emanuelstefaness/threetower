@@ -86,7 +86,7 @@ export default function LoginForm() {
           />
           <div>
             <h1 className="login-title">
-              Three <span>Tower</span>
+              Tree <span>Tower</span>
             </h1>
             <p className="login-sub">Inicie sessão para continuar</p>
           </div>
@@ -105,13 +105,12 @@ export default function LoginForm() {
                 className="login-input"
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
-                placeholder="ex.: pedro, lariele"
                 disabled={loading !== null}
               />
             </>
           ) : null}
           <label className="login-label" htmlFor="login-password">
-            {namedUsers ? "Palavra-passe" : "Palavra-passe (gestor)"}
+            Palavra-passe
           </label>
           <input
             id="login-password"
@@ -140,8 +139,6 @@ export default function LoginForm() {
         >
           {loading === "viewer" ? "A abrir…" : "Acessar como visualizador"}
         </button>
-        <p className="login-hint">Visualizador: consulta sem alterar dados.</p>
-
         {error ? <p className="login-error">{error}</p> : null}
       </div>
     </div>

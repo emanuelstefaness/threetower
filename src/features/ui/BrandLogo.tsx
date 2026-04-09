@@ -13,7 +13,7 @@ export function BrandLogo() {
         className="logo-mark"
         priority
       />
-      Three <span>Tower</span>
+      Tree <span>Tower</span>
     </div>
   );
 }

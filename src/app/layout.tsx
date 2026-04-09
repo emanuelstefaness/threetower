@@ -3,8 +3,8 @@ import "./globals.css";
 import "./towerAlfa.css";
 
 export const metadata: Metadata = {
-  title: "Three Tower — Salas",
-  description: "Gestão de salas por andar — Three Tower.",
+  title: "Tree Tower — Salas",
+  description: "Gestão de salas por andar — Tree Tower.",
 };
 
 export default function RootLayout({
