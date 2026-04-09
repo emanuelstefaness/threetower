@@ -88,13 +88,6 @@ function formatMoneyBRL(v: unknown) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-/** Evita mostrar R$ 0,00 em campos opcionais (ex. desconto inexistente na planilha). */
-function moneyOrDash(v: unknown): string {
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n) || n === 0) return "—";
-  return formatMoneyBRL(n);
-}
-
 /** Faturamento da venda: `valorVenda` (aba Oficial), senão `valorImovel` como referência. */
 function valorFaturamentoVenda(r: RoomRecord): number {
   const m = r.meta;
@@ -102,12 +95,6 @@ function valorFaturamentoVenda(r: RoomRecord): number {
   if (typeof m.valorVenda === "number" && Number.isFinite(m.valorVenda)) return m.valorVenda;
   if (typeof m.valorImovel === "number" && Number.isFinite(m.valorImovel)) return m.valorImovel;
   return 0;
-}
-
-/** Soma apenas descontos estritamente positivos (evita ruído de 0 vindo do Excel/JSON). */
-function valorDescontoMeta(r: RoomRecord): number {
-  const d = r.meta?.descontos;
-  return typeof d === "number" && Number.isFinite(d) && d > 0 ? d : 0;
 }
 
 function valorImovelMeta(r: RoomRecord): number {
@@ -248,13 +235,11 @@ export default function TowerAlfaReportsClient() {
   const vendidas = useMemo(() => {
     const sold = filteredRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO");
     const faturamento = sold.reduce((s, r) => s + valorFaturamentoVenda(r), 0);
-    const totalDescontos = sold.reduce((s, r) => s + valorDescontoMeta(r), 0);
     const patrimonioReferencia = sold.reduce((s, r) => s + valorImovelMeta(r), 0);
     const areaTotal = sold.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
     return {
       count: sold.length,
       faturamento,
-      totalDescontos,
       patrimonioReferencia,
       areaTotal,
       ticketMedio: sold.length ? faturamento / sold.length : 0,
@@ -370,7 +355,6 @@ export default function TowerAlfaReportsClient() {
         "valor_m2",
         "valor_imovel",
         "valor_venda",
-        "descontos",
         "precificacao",
         "faixa",
         "base_calculo_venda",
@@ -395,7 +379,6 @@ export default function TowerAlfaReportsClient() {
         r.meta?.valorM2 != null ? String(r.meta.valorM2) : "",
         r.meta?.valorImovel != null ? String(r.meta.valorImovel) : "",
         r.meta?.valorVenda != null ? String(r.meta.valorVenda) : "",
-        r.meta?.descontos != null && r.meta.descontos !== 0 ? String(r.meta.descontos) : "",
         r.meta?.precificacao ?? "",
         r.meta?.faixa ?? "",
         r.meta?.baseCalculoVenda != null ? String(r.meta.baseCalculoVenda) : "",
@@ -570,7 +553,7 @@ export default function TowerAlfaReportsClient() {
               <div className="report-hero-left">
                 <div className="report-title">Relatórios</div>
                 <div className="report-sub">
-                  Faturamento (vendas): valor de venda da planilha, senão valor do imóvel. Linha de descontos só aparece se existir total de descontos nos dados. Tabela e CSV = estado atual do prédio.
+                  Faturamento (vendas): valor de venda da planilha; se faltar, valor do imóvel. Tabela e CSV = estado atual do prédio.
                 </div>
               </div>
               <div className="report-hero-right">
@@ -606,9 +589,7 @@ export default function TowerAlfaReportsClient() {
                 <div className="report-kpi-card-label">Faturamento (vendas)</div>
                 <div className="report-kpi-card-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
                 <div className="report-kpi-card-sub">
-                  {vendidas.count} unidade{vendidas.count !== 1 ? "s" : ""}
-                  {vendidas.totalDescontos > 0 ? ` · Descontos ${formatMoneyBRL(vendidas.totalDescontos)}` : ""} · Ticket méd.{" "}
-                  {formatMoneyBRL(vendidas.ticketMedio) || "—"}
+                  {vendidas.count} unidade{vendidas.count !== 1 ? "s" : ""} · Ticket méd. {formatMoneyBRL(vendidas.ticketMedio) || "—"}
                 </div>
               </div>
             </div>
@@ -631,12 +612,6 @@ export default function TowerAlfaReportsClient() {
                     </div>
                     <div className="report-kpi-value">{formatMoneyBRL(vendidas.patrimonioReferencia) || "—"}</div>
                   </div>
-                  {vendidas.totalDescontos > 0 ? (
-                    <div className="report-kpi-row">
-                      <div className="report-kpi-label">Total de descontos</div>
-                      <div className="report-kpi-value">{formatMoneyBRL(vendidas.totalDescontos)}</div>
-                    </div>
-                  ) : null}
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Ticket médio (valor de venda)</div>
                     <div className="report-kpi-value">{formatMoneyBRL(vendidas.ticketMedio) || "—"}</div>
@@ -714,7 +689,6 @@ export default function TowerAlfaReportsClient() {
                       <th>Posição</th>
                       <th>Valor imóvel</th>
                       <th>Valor venda</th>
-                      <th>Descontos</th>
                       <th>Valor m²</th>
                       <th>Precificação</th>
                       <th>Faixa</th>
@@ -745,7 +719,6 @@ export default function TowerAlfaReportsClient() {
                           </td>
                           <td>{formatMoneyBRL(r.meta?.valorImovel)}</td>
                           <td>{formatMoneyBRL(r.meta?.valorVenda)}</td>
-                          <td>{moneyOrDash(r.meta?.descontos)}</td>
                           <td>{r.meta?.valorM2 ?? ""}</td>
                           <td>{r.meta?.precificacao ?? ""}</td>
                           <td>{r.meta?.faixa ?? ""}</td>
