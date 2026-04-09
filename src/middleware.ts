@@ -13,7 +13,8 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/auth/login") ||
     pathname.startsWith("/api/auth/logout") ||
-    pathname.startsWith("/api/auth/instance")
+    pathname.startsWith("/api/auth/instance") ||
+    pathname.startsWith("/api/auth/config")
   ) {
     return NextResponse.next();
   }
@@ -23,16 +24,43 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Visitante (JWT role viewer) não acede a Relatórios
+  function middlewareRole(payload: Record<string, unknown>): string | null {
+    const r = payload.role;
+    if (r === "viewer" || r === "secretaria" || r === "gestor") return r as string;
+    if (r === "editor") return "gestor";
+    return null;
+  }
+
+  // Visitante e secretaria de vendas não acedem a Relatórios
   if (pathname.startsWith("/reports") && secret) {
     const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (token) {
       const v = await verifyJwtHs256Edge(token, secret);
-      if (v.ok && v.payload.role === "viewer") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/";
-        url.search = "";
-        return NextResponse.redirect(url);
+      if (v.ok) {
+        const mr = middlewareRole(v.payload);
+        if (mr === "viewer" || mr === "secretaria") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          url.search = "";
+          return NextResponse.redirect(url);
+        }
+      }
+    }
+  }
+
+  // Caixa de entrada (salas reservadas): só gestores
+  if (pathname.startsWith("/inbox") && secret) {
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (token) {
+      const v = await verifyJwtHs256Edge(token, secret);
+      if (v.ok) {
+        const mr = middlewareRole(v.payload);
+        if (mr !== "gestor") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          url.search = "";
+          return NextResponse.redirect(url);
+        }
       }
     }
   }

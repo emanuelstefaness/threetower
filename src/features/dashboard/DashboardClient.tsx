@@ -34,9 +34,9 @@ export default function DashboardClient() {
   useEffect(() => {
     let alive = true;
     fetchBuildingState()
-      .then(({ snapshot, appMode: mode, authEnabled, authRole }) => {
+      .then(({ snapshot, appMode: mode, authEnabled, authRole, authName }) => {
         if (!alive) return;
-        setBuilding(snapshot, mode, authEnabled, authRole);
+        setBuilding(snapshot, mode, authEnabled, authRole, authName);
       })
       .catch((e) => {
         if (!alive) return;

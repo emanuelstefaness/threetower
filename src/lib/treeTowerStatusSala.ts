@@ -10,11 +10,13 @@ export const TREE_TOWER_STATUS_SALA_OPTIONS: string[] = [
   "DBN | CENTRAL",
   "DBN | TERRENO",
   "ESTOQUE",
+  "RESERVADA",
   "VENDIDO",
   "ÁREA DE LOCAÇÃO ROOFTOP",
 ];
 
 const STATUS_SALA_COLOR_BY_KEY: Record<string, string> = {
+  "RESERVADA": "#c026d3",
   "VENDIDO": "#ef4444",
   "ESTOQUE": "#22d3a5",
   "DBN | AQUISIÇÃO QUAVO": "#a78bfa",
@@ -61,6 +63,7 @@ export function colorForStatusSala(statusSala: string | undefined): string {
 export function planToneForStatusSala(statusSala: string | undefined): "d" | "i" | "v" | "a" {
   const u = normalizeStatusSala(statusSala);
   if (u === "VENDIDO") return "i";
+  if (u === "RESERVADA" || u.includes("RESERV")) return "v";
   if (u === "ESTOQUE") return "d";
   if (u.includes("DBN")) return "v";
   if (u.includes("AUDIT")) return "a";

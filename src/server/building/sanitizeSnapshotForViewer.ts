@@ -22,6 +22,7 @@ export function sanitizeSnapshotForViewer(snapshot: BuildingSnapshot): BuildingS
       for (const k of SENSITIVE_META_KEYS) {
         delete (meta as Record<string, unknown>)[k];
       }
+      delete (meta as Record<string, unknown>).reservedByLogin;
     }
     roomsById[id] = {
       ...room,

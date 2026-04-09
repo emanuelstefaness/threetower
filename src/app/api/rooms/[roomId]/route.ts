@@ -1,5 +1,5 @@
 import { getBuildingStore } from "@/server/building/buildingStore";
-import { rejectIfViewMode } from "@/server/mutationGuard";
+import { rejectIfSecretaria, rejectIfViewMode } from "@/server/mutationGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +9,8 @@ export async function DELETE(
 ): Promise<Response> {
   const denied = await rejectIfViewMode();
   if (denied) return denied;
+  const sec = await rejectIfSecretaria();
+  if (sec) return sec;
 
   const store = await getBuildingStore();
   const roomId = Number(params.roomId);

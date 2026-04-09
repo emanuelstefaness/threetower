@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginForm() {
@@ -9,9 +9,26 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/";
 
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<"password" | "viewer" | null>(null);
+  const [namedUsers, setNamedUsers] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/config", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { namedUsers?: boolean }) => {
+        if (alive) setNamedUsers(d.namedUsers === true);
+      })
+      .catch(() => {
+        if (alive) setNamedUsers(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const goNext = () => {
     router.replace(nextPath.startsWith("/") ? nextPath : "/");
@@ -38,7 +55,8 @@ export default function LoginForm() {
     setLoading("password");
     setError(null);
     try {
-      if (await postLogin({ password })) goNext();
+      const body = namedUsers ? { login, password } : { password };
+      if (await postLogin(body)) goNext();
     } finally {
       setLoading(null);
     }
@@ -75,21 +93,38 @@ export default function LoginForm() {
         </div>
 
         <form className="login-form" onSubmit={onSubmitPassword}>
+          {namedUsers ? (
+            <>
+              <label className="login-label" htmlFor="login-user">
+                Utilizador
+              </label>
+              <input
+                id="login-user"
+                type="text"
+                autoComplete="username"
+                className="login-input"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                placeholder="ex.: pedro, lariele"
+                disabled={loading !== null}
+              />
+            </>
+          ) : null}
           <label className="login-label" htmlFor="login-password">
-            Palavra-passe (edição)
+            {namedUsers ? "Palavra-passe" : "Palavra-passe (gestor)"}
           </label>
           <input
             id="login-password"
             type="password"
-            autoComplete="current-password"
+            autoComplete={namedUsers ? "current-password" : "current-password"}
             className="login-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             disabled={loading !== null}
           />
-          <button type="submit" className="login-btn login-btn-primary" disabled={loading !== null}>
-            {loading === "password" ? "A entrar…" : "Entrar com palavra-passe"}
+          <button type="submit" className="login-btn login-btn-primary" disabled={loading !== null || namedUsers === null}>
+            {loading === "password" ? "A entrar…" : namedUsers ? "Entrar" : "Entrar com palavra-passe"}
           </button>
         </form>
 

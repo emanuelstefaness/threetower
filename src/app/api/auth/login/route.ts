@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "crypto";
 import { getAuthSecret, isAuthEnabled } from "@/lib/authConfig";
 import { AUTH_COOKIE_NAME } from "@/server/auth/constants";
+import { findAppUser, hasNamedUsers } from "@/server/auth/appUsers";
 import { signAuthToken } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -24,17 +25,39 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Autenticação não configurada (AUTH_SECRET)" }, { status: 501 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as { password?: string; asViewer?: boolean };
+  const body = (await req.json().catch(() => ({}))) as {
+    password?: string;
+    login?: string;
+    asViewer?: boolean;
+  };
 
   if (body.asViewer === true) {
-    const token = await signAuthToken("viewer", secret);
+    const token = await signAuthToken(secret, { role: "viewer", name: "Visitante", login: "" });
+    return jsonWithSessionCookie(token);
+  }
+
+  if (hasNamedUsers()) {
+    const login = typeof body.login === "string" ? body.login.trim() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!login || !password) {
+      return NextResponse.json({ error: "Indique utilizador e palavra-passe" }, { status: 400 });
+    }
+    const user = findAppUser(login, password);
+    if (!user) {
+      return NextResponse.json({ error: "Utilizador ou palavra-passe incorretos" }, { status: 401 });
+    }
+    const token = await signAuthToken(secret, {
+      role: user.role,
+      name: user.name,
+      login: user.login,
+    });
     return jsonWithSessionCookie(token);
   }
 
   const expected = process.env.APP_LOGIN_PASSWORD?.trim();
   if (!expected) {
     return NextResponse.json(
-      { error: "Login com palavra-passe não configurado (defina APP_LOGIN_PASSWORD)" },
+      { error: "Login não configurado (defina APP_USERS_JSON ou APP_LOGIN_PASSWORD)" },
       { status: 503 }
     );
   }
@@ -44,7 +67,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Palavra-passe incorreta" }, { status: 401 });
   }
 
-  const token = await signAuthToken("editor", secret);
+  const token = await signAuthToken(secret, { role: "gestor", name: "Gestor", login: "gestor" });
   return jsonWithSessionCookie(token);
 }
 

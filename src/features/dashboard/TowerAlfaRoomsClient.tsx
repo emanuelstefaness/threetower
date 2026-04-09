@@ -9,9 +9,10 @@ import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import RoomFloorWorkbench from "@/features/dashboard/RoomFloorWorkbench";
+import { canAccessInbox, canAccessReports } from "@/lib/authUi";
 
 export default function TowerAlfaRoomsClient() {
-  const { building, appMode, authRole, setBuilding, applyEvent, setRealtime } = useBuildingStoreClient();
+  const { building, appMode, authRole, authEnabled, setBuilding, applyEvent, setRealtime } = useBuildingStoreClient();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const consumedRoomParam = useRef<string | null>(null);
@@ -22,8 +23,8 @@ export default function TowerAlfaRoomsClient() {
   useEffect(() => {
     let alive = true;
     fetchBuildingState()
-      .then(({ snapshot, appMode: mode, authEnabled, authRole }) =>
-        alive && setBuilding(snapshot, mode, authEnabled, authRole)
+      .then(({ snapshot, appMode: mode, authEnabled, authRole, authName }) =>
+        alive && setBuilding(snapshot, mode, authEnabled, authRole, authName)
       )
       .catch((e) => alive && setRealtime({ lastError: e instanceof Error ? e.message : "Erro ao carregar" }));
     return () => {
@@ -103,7 +104,12 @@ export default function TowerAlfaRoomsClient() {
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>
               Salas
             </Link>
-            {authRole !== "viewer" ? (
+            {canAccessInbox(authRole, authEnabled) ? (
+              <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
+                Reservas
+              </Link>
+            ) : null}
+            {canAccessReports(authRole) ? (
               <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
                 Relatórios
               </Link>

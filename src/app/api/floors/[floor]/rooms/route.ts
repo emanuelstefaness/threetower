@@ -1,5 +1,5 @@
 import { getBuildingStore } from "@/server/building/buildingStore";
-import { rejectIfViewMode } from "@/server/mutationGuard";
+import { rejectIfSecretaria, rejectIfViewMode } from "@/server/mutationGuard";
 import type { RoomStatus, RoomRecord } from "@/lib/buildingTypes";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +10,8 @@ export async function POST(
 ): Promise<Response> {
   const denied = await rejectIfViewMode();
   if (denied) return denied;
+  const sec = await rejectIfSecretaria();
+  if (sec) return sec;
 
   const store = await getBuildingStore();
   const floor = Number(params.floor);

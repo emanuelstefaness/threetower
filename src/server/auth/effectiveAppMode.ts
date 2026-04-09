@@ -6,7 +6,7 @@ import { AUTH_COOKIE_NAME } from "./constants";
 import { verifyAuthToken } from "./session";
 
 /**
- * Modo efetivo para este pedido: env global, depois papel na sessão (editor vs visualizador).
+ * Modo efetivo: env global, depois papel na sessão (visitante = view; gestor e secretaria = edit).
  */
 export async function getEffectiveAppMode(): Promise<AppMode> {
   if (getServerAppMode() === "view") return "view";

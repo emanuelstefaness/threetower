@@ -13,7 +13,7 @@ export const STATUS_META: Record<
 > = {
   disponivel: { label: "Disponível", emoji: "🟢", color: 0x22c55e, glow: 1.2 },
   ocupada: { label: "Ocupada", emoji: "🔴", color: 0xef4444, glow: 1.3 },
-  reservada: { label: "Reservada", emoji: "🔵", color: 0x3b82f6, glow: 1.1 },
+  reservada: { label: "Reservada", emoji: "🟣", color: 0xc026d3, glow: 1.15 },
   manutencao: { label: "Manutenção", emoji: "🟡", color: 0xf59e0b, glow: 1.25 },
 };
 

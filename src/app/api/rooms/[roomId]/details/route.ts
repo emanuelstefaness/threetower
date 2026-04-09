@@ -1,4 +1,6 @@
+import { isAuthEnabled } from "@/lib/authConfig";
 import { getBuildingStore } from "@/server/building/buildingStore";
+import { getAuthSession } from "@/server/auth/getAuthRole";
 import { rejectIfViewMode } from "@/server/mutationGuard";
 import type { RoomRecord } from "@/lib/buildingTypes";
 
@@ -34,7 +36,18 @@ export async function PATCH(
     valorVenda?: number | null;
     descontos?: number | null;
   };
-  const by = typeof body.by === "string" && body.by.trim() ? body.by.trim() : "admin";
+  const session = await getAuthSession();
+  const by =
+    session?.name?.trim() ||
+    (typeof body.by === "string" && body.by.trim() ? body.by.trim() : "") ||
+    "Sistema";
+
+  const reserveBy =
+    session && (session.role === "gestor" || session.role === "secretaria")
+      ? { name: session.name, login: session.login }
+      : !isAuthEnabled()
+        ? { name: by, login: "local" }
+        : { name: by, login: "" };
 
   const optFinite = (v: unknown, label: string): number | null | undefined => {
     if (v === undefined) return undefined;
@@ -82,6 +95,7 @@ export async function PATCH(
       prazoPagamento: strOrUndef(body.prazoPagamento),
       valorVenda: optFinite(body.valorVenda, "Valor da venda"),
       descontos: optFinite(body.descontos, "Descontos"),
+      reserveBy,
     });
     return Response.json({ updated });
   } catch (e) {

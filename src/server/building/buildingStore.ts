@@ -40,6 +40,8 @@ type Store = {
     prazoPagamento?: string | null;
     valorVenda?: number | null;
     descontos?: number | null;
+    /** Preenchido pelo servidor ao entrar em reservada (quem registou). */
+    reserveBy?: { name: string; login: string };
   }) => RoomRecord;
   deleteRoom: (args: { roomId: number; by: string }) => { ok: true; deletedRoomId: number; floor: number };
   subscribe: (listener: Listener) => () => void;
@@ -251,6 +253,7 @@ async function createStore(): Promise<Store> {
     prazoPagamento,
     valorVenda,
     descontos,
+    reserveBy,
   }: {
     roomId: number;
     name?: string;
@@ -270,11 +273,13 @@ async function createStore(): Promise<Store> {
     prazoPagamento?: string | null;
     valorVenda?: number | null;
     descontos?: number | null;
+    reserveBy?: { name: string; login: string };
   }) => {
     const room = state.roomsById[roomId];
     if (!room) throw new Error("Sala não encontrada");
 
     const statusAtStart = room.status;
+    const wasReserved = statusAtStart === "reservada";
     const statusSalaAtStart = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "").trim();
 
     const cleanName = typeof name === "string" ? name.trim() : undefined;
@@ -335,6 +340,20 @@ async function createStore(): Promise<Store> {
         };
         room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
       }
+    }
+
+    const isReservedNow = room.status === "reservada";
+    if (!isReservedNow) {
+      if (room.meta) {
+        delete room.meta.reservedAt;
+        delete room.meta.reservedByName;
+        delete room.meta.reservedByLogin;
+      }
+    } else if (!wasReserved && typeof statusSala === "string" && reserveBy) {
+      if (!room.meta) room.meta = {};
+      room.meta.reservedAt = Date.now();
+      room.meta.reservedByName = reserveBy.name;
+      room.meta.reservedByLogin = reserveBy.login;
     }
 
     const metaPriceKeys =

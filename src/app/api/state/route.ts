@@ -1,5 +1,5 @@
 import { isAuthEnabled } from "@/lib/authConfig";
-import { getAuthRole } from "@/server/auth/getAuthRole";
+import { getAuthRole, getAuthSession } from "@/server/auth/getAuthRole";
 import { getEffectiveAppMode } from "@/server/auth/effectiveAppMode";
 import { getBuildingStore } from "@/server/building/buildingStore";
 import { sanitizeSnapshotForViewer } from "@/server/building/sanitizeSnapshotForViewer";
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const store = await getBuildingStore();
   const role = await getAuthRole();
+  const session = await getAuthSession();
   let snapshot = store.getState();
   if (role === "viewer") {
     snapshot = sanitizeSnapshotForViewer(snapshot);
@@ -19,6 +20,7 @@ export async function GET() {
     appMode: await getEffectiveAppMode(),
     authEnabled: isAuthEnabled(),
     authRole: role ?? undefined,
+    authName: session?.name,
   });
 }
 

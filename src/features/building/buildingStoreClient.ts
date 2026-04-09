@@ -8,6 +8,7 @@ import type {
   RoomStatus,
   RoomStatusChangedEvent,
 } from "@/lib/buildingTypes";
+import type { ClientAuthRole } from "@/lib/authUi";
 
 type Filters = {
   status: RoomStatus | "all";
@@ -21,8 +22,10 @@ type BuildingStoreClient = {
   appMode: AppMode;
   /** `true` quando AUTH_SECRET está definido (mostrar Sair). */
   authEnabled: boolean;
-  /** `viewer` = visitante (sem relatórios / sem forma de pagamento e campos de relatório na API). */
-  authRole: "editor" | "viewer" | null;
+  /** `viewer` = visitante; `secretaria` = vendas (sem relatórios); `gestor` = gestão completa. */
+  authRole: ClientAuthRole;
+  /** Nome da sessão (ex.: Lariele, Pedro). */
+  authName: string | null;
 
   // UI
   selectedFloor: number | null;
@@ -42,7 +45,13 @@ type BuildingStoreClient = {
   notifications: NotificationEvent[];
 
   // Actions
-  setBuilding: (snapshot: BuildingSnapshot, appMode: AppMode, authEnabled?: boolean, authRole?: "editor" | "viewer" | null) => void;
+  setBuilding: (
+    snapshot: BuildingSnapshot,
+    appMode: AppMode,
+    authEnabled?: boolean,
+    authRole?: ClientAuthRole,
+    authName?: string | null
+  ) => void;
   applyEvent: (evt: RoomStatusChangedEvent) => void;
   setSelectedFloor: (floor: number | null) => void;
   openRoom: (roomId: number) => void;
@@ -59,6 +68,7 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
   appMode: "edit",
   authEnabled: false,
   authRole: null,
+  authName: null,
 
   selectedFloor: null,
   selectedRoomId: null,
@@ -70,12 +80,13 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
   realtime: { connected: false, lastEventAt: null, lastError: null },
   notifications: [],
 
-  setBuilding: (snapshot, appMode, authEnabled = false, authRole = null) =>
+  setBuilding: (snapshot, appMode, authEnabled = false, authRole = null, authName = null) =>
     set(() => ({
       building: snapshot,
       appMode,
       authEnabled,
       authRole: authRole ?? null,
+      authName: authName ?? null,
       selectedFloor: null,
       selectedRoomId: null,
       roomModalOpen: false,

@@ -1,5 +1,5 @@
 import { getBuildingStore } from "@/server/building/buildingStore";
-import { rejectIfViewMode } from "@/server/mutationGuard";
+import { rejectIfSecretaria, rejectIfViewMode } from "@/server/mutationGuard";
 import type { RoomStatus } from "@/lib/buildingTypes";
 
 export async function PATCH(
@@ -8,6 +8,8 @@ export async function PATCH(
 ) {
   const denied = await rejectIfViewMode();
   if (denied) return denied;
+  const sec = await rejectIfSecretaria();
+  if (sec) return sec;
 
   const store = await getBuildingStore();
   const roomId = Number(params.roomId);

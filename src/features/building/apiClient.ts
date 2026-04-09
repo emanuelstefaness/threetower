@@ -1,11 +1,19 @@
 import type { AppMode } from "@/lib/appMode";
+import type { ClientAuthRole } from "@/lib/authUi";
 import type { BuildingSnapshot, RoomRecord, RoomStatus, RoomStatusChangedEvent } from "@/lib/buildingTypes";
+
+function normalizeClientAuthRole(r: string | undefined): ClientAuthRole {
+  if (r === "gestor" || r === "secretaria" || r === "viewer") return r;
+  if (r === "editor") return "gestor";
+  return null;
+}
 
 export type BuildingStatePayload = {
   snapshot: BuildingSnapshot;
   appMode: AppMode;
   authEnabled?: boolean;
-  authRole?: "editor" | "viewer";
+  authRole?: ClientAuthRole;
+  authName?: string;
 };
 
 export async function fetchBuildingState(): Promise<BuildingStatePayload> {
@@ -30,13 +38,15 @@ export async function fetchBuildingState(): Promise<BuildingStatePayload> {
       snapshot: BuildingSnapshot;
       appMode: AppMode;
       authEnabled?: boolean;
-      authRole?: "editor" | "viewer";
+      authRole?: string;
+      authName?: string;
     };
     return {
       snapshot: d.snapshot,
       appMode: d.appMode,
       authEnabled: d.authEnabled === true,
-      authRole: d.authRole,
+      authRole: normalizeClientAuthRole(d.authRole),
+      authName: typeof d.authName === "string" ? d.authName : undefined,
     };
   }
   return { snapshot: data as BuildingSnapshot, appMode: "edit" };

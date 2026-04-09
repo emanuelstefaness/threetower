@@ -6,6 +6,7 @@ import type { RoomStatus } from "@/lib/buildingTypes";
 import { STATUS_META, STATUS_ORDER } from "@/lib/status";
 import { formatDateTime, formatRelativeDateTime } from "@/lib/time";
 import { updateRoomStatus } from "@/features/building/apiClient";
+import { isSecretaria } from "@/lib/authUi";
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
 };
 
 export function RoomModal({ roomId, open, onClose }: Props) {
-  const { building, appMode } = useBuildingStoreClient();
+  const { building, appMode, authRole } = useBuildingStoreClient();
   const readOnly = appMode === "view";
   const room = building?.roomsById?.[roomId] ?? null;
 
@@ -91,8 +92,14 @@ export function RoomModal({ roomId, open, onClose }: Props) {
                     <div className="text-sm font-semibold text-slate-200">Ações</div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
-                        disabled={!canOpenEdit || readOnly}
-                        title={readOnly ? "Modo somente leitura" : undefined}
+                        disabled={!canOpenEdit || readOnly || isSecretaria(authRole)}
+                        title={
+                          readOnly
+                            ? "Modo somente leitura"
+                            : isSecretaria(authRole)
+                              ? "Secretaria de vendas: use Salas → editar sala e o status da planilha (ex.: RESERVADA)."
+                              : undefined
+                        }
                         onClick={() => {
                           setPendingStatus(room.status === "disponivel" ? "ocupada" : "disponivel");
                           setEditOpen(true);

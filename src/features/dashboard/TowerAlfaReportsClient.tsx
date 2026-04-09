@@ -9,6 +9,7 @@ import { useBuildingStoreClient } from "@/features/building/buildingStoreClient"
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
+import { canAccessInbox, canAccessReports } from "@/lib/authUi";
 import { colorForStatusSala, normalizeStatusSala } from "@/lib/treeTowerStatusSala";
 
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
@@ -104,7 +105,7 @@ function valorImovelMeta(r: RoomRecord): number {
 
 export default function TowerAlfaReportsClient() {
   const pathname = usePathname();
-  const { building, appMode, authRole, applyEvent, setBuilding, setRealtime } = useBuildingStoreClient();
+  const { building, appMode, authRole, authEnabled, applyEvent, setBuilding, setRealtime } = useBuildingStoreClient();
 
   const [clock, setClock] = useState(() => new Date());
   const [statusSalaFilter, setStatusSalaFilter] = useState<string[] | "all">("all");
@@ -123,9 +124,9 @@ export default function TowerAlfaReportsClient() {
   useEffect(() => {
     let alive = true;
     fetchBuildingState()
-      .then(({ snapshot, appMode: mode, authEnabled, authRole: r }) => {
+      .then(({ snapshot, appMode: mode, authEnabled, authRole: r, authName }) => {
         if (!alive) return;
-        setBuilding(snapshot, mode, authEnabled, r);
+        setBuilding(snapshot, mode, authEnabled, r, authName);
       })
       .catch((e) => {
         if (!alive) return;
@@ -164,7 +165,9 @@ export default function TowerAlfaReportsClient() {
   useEffect(() => {
     const id = window.setInterval(() => {
       fetchBuildingState()
-        .then(({ snapshot, appMode: mode, authEnabled, authRole: r }) => setBuilding(snapshot, mode, authEnabled, r))
+        .then(({ snapshot, appMode: mode, authEnabled, authRole: r, authName }) =>
+          setBuilding(snapshot, mode, authEnabled, r, authName)
+        )
         .catch(() => void 0);
     }, 20000);
     return () => window.clearInterval(id);
@@ -419,9 +422,16 @@ export default function TowerAlfaReportsClient() {
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>
               Salas
             </Link>
-            <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
-              Relatórios
-            </Link>
+            {canAccessInbox(authRole, authEnabled) ? (
+              <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
+                Reservas
+              </Link>
+            ) : null}
+            {canAccessReports(authRole) ? (
+              <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
+                Relatórios
+              </Link>
+            ) : null}
           </div>
 
           <div className="sb-divider" />

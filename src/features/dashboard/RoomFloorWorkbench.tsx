@@ -56,7 +56,7 @@ export default function RoomFloorWorkbench({
   className,
   nestedInFloorModal = false,
 }: RoomFloorWorkbenchProps) {
-  const { building, appMode, authRole, setBuilding } = useBuildingStoreClient();
+  const { building, appMode, authRole, authName, setBuilding } = useBuildingStoreClient();
   const readOnly = appMode === "view";
   const isViewer = authRole === "viewer";
   /** Visitante não vê blocos de relatório nem pagamento; valor do imóvel e comprador sim (API alinhada). */
@@ -162,7 +162,7 @@ export default function RoomFloorWorkbench({
       await updateRoomDetails(editRoomId, {
         name: nextName,
         statusSala: next,
-        by: "admin",
+        by: authName?.trim() || "admin",
         valorImovel,
         valorM2,
         baseCalculoVenda,
@@ -177,8 +177,8 @@ export default function RoomFloorWorkbench({
         descontos,
       });
 
-      const { snapshot, appMode: mode, authEnabled, authRole: r } = await fetchBuildingState();
-      setBuilding(snapshot, mode, authEnabled, r);
+      const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an } = await fetchBuildingState();
+      setBuilding(snapshot, mode, authEnabled, r, an);
       showToast("Dados da sala atualizados", "✅");
       closeEdit();
     } catch (e) {
@@ -295,7 +295,33 @@ export default function RoomFloorWorkbench({
                     </select>
                   </div>
                 </div>
+                <p className="em-hint" style={{ marginTop: 10, fontSize: 12, opacity: 0.8, lineHeight: 1.45 }}>
+                  Status <strong>RESERVADA</strong>: ao gravar, regista-se quem fez a reserva. Após 72 horas é mostrado um aviso informativo; a reserva não é removida automaticamente.
+                </p>
               </div>
+
+              {editingRoom?.status === "reservada" && (editingRoom.meta?.reservedByName || editingRoom.meta?.reservedAt) ? (
+                <div className="em-section">
+                  <div className="em-section-title">Reserva</div>
+                  {editingRoom.meta?.reservedByName ? (
+                    <div className="em-readonly-banner" style={{ marginBottom: 8 }}>
+                      Reservado por: <strong>{editingRoom.meta.reservedByName}</strong>
+                      {editingRoom.meta.reservedByLogin ? (
+                        <span style={{ opacity: 0.75 }}> ({editingRoom.meta.reservedByLogin})</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {typeof editingRoom.meta?.reservedAt === "number" &&
+                  Date.now() - editingRoom.meta.reservedAt > 72 * 60 * 60 * 1000 ? (
+                    <div
+                      className="em-readonly-banner"
+                      style={{ borderColor: "rgba(245, 158, 11, 0.45)", background: "rgba(245, 158, 11, 0.12)" }}
+                    >
+                      Esta reserva tem mais de <strong>72 horas</strong>. Trata-se apenas de um lembrete — o estado da sala não muda sozinho.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="em-section">
                 <div className="em-section-title">

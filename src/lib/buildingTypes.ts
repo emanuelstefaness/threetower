@@ -28,6 +28,12 @@ export type RoomMeta = {
   descontos?: number;
   dataVenda?: number;
   competencia?: number;
+  /** Momento em que a sala passou a reservada (epoch ms). */
+  reservedAt?: number;
+  /** Quem registou a reserva (nome). */
+  reservedByName?: string;
+  /** Login interno (gestor/secretaria). */
+  reservedByLogin?: string;
 };
 
 export type StatusSalaHistoryEntry = {
