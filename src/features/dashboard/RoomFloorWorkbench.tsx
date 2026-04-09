@@ -5,6 +5,7 @@ import { fetchBuildingState, updateRoomDetails } from "@/features/building/apiCl
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import FloorPlanHotspots from "@/features/floorplan/FloorPlanHotspots";
 import type { RoomRecord } from "@/lib/buildingTypes";
+import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
 import { TREE_TOWER_STATUS_SALA_OPTIONS } from "@/lib/treeTowerStatusSala";
 
 function formatMoneyBRL(v: unknown) {
@@ -303,14 +304,18 @@ export default function RoomFloorWorkbench({
               {editingRoom?.status === "reservada" && (editingRoom.meta?.reservedByName || editingRoom.meta?.reservedAt) ? (
                 <div className="em-section">
                   <div className="em-section-title">Reserva</div>
-                  {editingRoom.meta?.reservedByName ? (
-                    <div className="em-readonly-banner" style={{ marginBottom: 8 }}>
-                      Reservado por: <strong>{editingRoom.meta.reservedByName}</strong>
-                      {editingRoom.meta.reservedByLogin ? (
-                        <span style={{ opacity: 0.75 }}> ({editingRoom.meta.reservedByLogin})</span>
-                      ) : null}
-                    </div>
-                  ) : null}
+                  <div className="em-readonly-banner" style={{ marginBottom: 8 }}>
+                    Reservado por: <strong>{displayReservedByName(editingRoom.meta)}</strong>
+                    {(() => {
+                      const login = editingRoom.meta?.reservedByLogin?.trim();
+                      const shown = displayReservedByName(editingRoom.meta);
+                      if (!login || shown.toLowerCase() === login.toLowerCase()) return null;
+                      return <span style={{ opacity: 0.75 }}> ({login})</span>;
+                    })()}
+                  </div>
+                  <div className="em-readonly-banner" style={{ marginBottom: 8 }}>
+                    Reservado para (comprador): <strong>{displayReservedForName(editingRoom.meta)}</strong>
+                  </div>
                   {typeof editingRoom.meta?.reservedAt === "number" &&
                   Date.now() - editingRoom.meta.reservedAt > 72 * 60 * 60 * 1000 ? (
                     <div

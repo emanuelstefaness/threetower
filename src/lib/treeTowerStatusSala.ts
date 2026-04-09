@@ -51,6 +51,14 @@ export function normalizeStatusSala(statusSala: string | undefined): string {
   return (statusSala ?? "").trim().toUpperCase();
 }
 
+/**
+ * Lista da caixa "Reservas" (gestores): apenas STATUS SALA = RESERVADA.
+ * DBN e outros valores podem mapear o estado operacional para `reservada`, mas não entram nesta lista.
+ */
+export function isReservaStatusSalaForInbox(statusSala: string | undefined): boolean {
+  return normalizeStatusSala(statusSala) === "RESERVADA";
+}
+
 export function colorForStatusSala(statusSala: string | undefined): string {
   const normalized = normalizeStatusSala(statusSala);
   if (!normalized) return "#64748b";

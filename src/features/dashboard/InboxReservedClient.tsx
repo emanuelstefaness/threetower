@@ -9,7 +9,8 @@ import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { canAccessInbox, canAccessReports } from "@/lib/authUi";
-import { colorForStatusSala } from "@/lib/treeTowerStatusSala";
+import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
+import { colorForStatusSala, isReservaStatusSalaForInbox } from "@/lib/treeTowerStatusSala";
 
 const MS_72H = 72 * 60 * 60 * 1000;
 
@@ -38,7 +39,7 @@ export default function InboxReservedClient() {
   const reservedRooms = useMemo(() => {
     if (!building) return [];
     return Object.values(building.roomsById)
-      .filter((r) => r.status === "reservada")
+      .filter((r) => isReservaStatusSalaForInbox(r.statusSala ?? r.meta?.statusSalaOriginal))
       .sort((a, b) => (b.meta?.reservedAt ?? b.lastUpdatedAt) - (a.meta?.reservedAt ?? a.lastUpdatedAt));
   }, [building]);
 
@@ -95,7 +96,7 @@ export default function InboxReservedClient() {
           <div className="manager-wrap" style={{ marginTop: 16 }}>
             {reservedRooms.length === 0 ? (
               <div className="em-readonly-banner" style={{ borderRadius: 12 }}>
-                Nenhuma sala com status operacional &quot;Reservada&quot; neste momento.
+                Nenhuma sala com STATUS SALA <strong>RESERVADA</strong> neste momento (DBN e outros não aparecem aqui).
               </div>
             ) : (
               <div className="rooms-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
@@ -121,11 +122,14 @@ export default function InboxReservedClient() {
                       <div className="rc-status" style={{ marginTop: 6, fontSize: 12, opacity: 0.9 }}>
                         {formatMoneyBRL(r.meta?.valorImovel)}
                       </div>
-                      {r.meta?.reservedByName ? (
-                        <div className="rc-status" style={{ marginTop: 6, fontSize: 11, opacity: 0.85 }}>
-                          Reservado por: <strong>{r.meta.reservedByName}</strong>
-                        </div>
-                      ) : null}
+                      <div className="rc-status" style={{ marginTop: 8, fontSize: 11, opacity: 0.88, lineHeight: 1.35 }}>
+                        <span style={{ color: "rgba(252, 211, 77, 0.95)" }}>Reservado por:</span>{" "}
+                        <strong>{displayReservedByName(r.meta)}</strong>
+                      </div>
+                      <div className="rc-status" style={{ marginTop: 4, fontSize: 11, opacity: 0.88, lineHeight: 1.35 }}>
+                        <span style={{ color: "rgba(148, 163, 184, 0.95)" }}>Reservado para:</span>{" "}
+                        <strong>{displayReservedForName(r.meta)}</strong>
+                      </div>
                       {over72 ? (
                         <div
                           style={{

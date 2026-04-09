@@ -43,8 +43,12 @@ export async function verifyAuthToken(token: string, secret: string): Promise<Au
     }
     const role = normalizeAuthRole(typeof payload.role === "string" ? payload.role : undefined);
     if (!role) return null;
-    const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : "Utilizador";
     const login = typeof payload.login === "string" ? payload.login.trim() : "";
+    let name = typeof payload.name === "string" ? payload.name.trim() : "";
+    if (!name) {
+      if (role === "viewer") name = "Visitante";
+      else name = login || "Gestor";
+    }
     return { role, name, login };
   } catch {
     return null;
