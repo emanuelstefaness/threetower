@@ -296,9 +296,6 @@ export default function RoomFloorWorkbench({
                     </select>
                   </div>
                 </div>
-                <p className="em-hint" style={{ marginTop: 10, fontSize: 12, opacity: 0.8, lineHeight: 1.45 }}>
-                  Status <strong>RESERVADA</strong>: ao gravar, regista-se quem fez a reserva. Após 72 horas é mostrado um aviso informativo; a reserva não é removida automaticamente.
-                </p>
               </div>
 
               {editingRoom?.status === "reservada" && (editingRoom.meta?.reservedByName || editingRoom.meta?.reservedAt) ? (
@@ -316,15 +313,6 @@ export default function RoomFloorWorkbench({
                   <div className="em-readonly-banner" style={{ marginBottom: 8 }}>
                     Reservado para (comprador): <strong>{displayReservedForName(editingRoom.meta)}</strong>
                   </div>
-                  {typeof editingRoom.meta?.reservedAt === "number" &&
-                  Date.now() - editingRoom.meta.reservedAt > 72 * 60 * 60 * 1000 ? (
-                    <div
-                      className="em-readonly-banner"
-                      style={{ borderColor: "rgba(245, 158, 11, 0.45)", background: "rgba(245, 158, 11, 0.12)" }}
-                    >
-                      Esta reserva tem mais de <strong>72 horas</strong>. Trata-se apenas de um lembrete — o estado da sala não muda sozinho.
-                    </div>
-                  ) : null}
                 </div>
               ) : null}
 
