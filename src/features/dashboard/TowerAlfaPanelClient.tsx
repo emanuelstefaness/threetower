@@ -1,39 +1,38 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { fetchBuildingState } from "@/features/building/apiClient";
-import { BrandLogo } from "@/features/ui/BrandLogo";
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
+import { BrandLogo } from "@/features/ui/BrandLogo";
 import { formatMoneyBRL } from "@/lib/formatMoney";
-import { colorForStatusSala, isReservaStatusSalaForInbox } from "@/lib/treeTowerStatusSala";
+import { colorForStatusSala } from "@/lib/treeTowerStatusSala";
 
 type PanelState = Awaited<ReturnType<typeof fetchBuildingState>> | null;
 
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
   const total = segments.reduce((s, i) => s + i.value, 0);
-  const cx = 110;
-  const cy = 110;
-  const R = 92;
-  const r = 62;
   if (!total) return null;
+  const cx = 90;
+  const cy = 90;
+  const rOuter = 78;
+  const rInner = 52;
   let angle = -Math.PI / 2;
   return (
     <>
       {segments.map((item) => {
-        const sw = (item.value / total) * Math.PI * 2;
-        const x1 = cx + R * Math.cos(angle);
-        const y1 = cy + R * Math.sin(angle);
-        const x2 = cx + R * Math.cos(angle + sw);
-        const y2 = cy + R * Math.sin(angle + sw);
-        const xi1 = cx + r * Math.cos(angle);
-        const yi1 = cy + r * Math.sin(angle);
-        const xi2 = cx + r * Math.cos(angle + sw);
-        const yi2 = cy + r * Math.sin(angle + sw);
-        const lg = sw > Math.PI ? 1 : 0;
-        const d = `M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z`;
-        angle += sw;
-        return <path key={item.key} d={d} fill={item.color} stroke="rgba(15,23,42,.55)" strokeWidth={1.5} />;
+        const sweep = (item.value / total) * Math.PI * 2;
+        const x1 = cx + rOuter * Math.cos(angle);
+        const y1 = cy + rOuter * Math.sin(angle);
+        const x2 = cx + rOuter * Math.cos(angle + sweep);
+        const y2 = cy + rOuter * Math.sin(angle + sweep);
+        const xi1 = cx + rInner * Math.cos(angle);
+        const yi1 = cy + rInner * Math.sin(angle);
+        const xi2 = cx + rInner * Math.cos(angle + sweep);
+        const yi2 = cy + rInner * Math.sin(angle + sweep);
+        const lg = sweep > Math.PI ? 1 : 0;
+        const d = `M${x1},${y1} A${rOuter},${rOuter},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${rInner},${rInner},0,${lg},0,${xi1},${yi1} Z`;
+        angle += sweep;
+        return <path key={item.key} d={d} fill={item.color} stroke="rgba(15,23,42,.6)" strokeWidth={1.3} />;
       })}
     </>
   );
@@ -51,11 +50,11 @@ export default function TowerAlfaPanelClient() {
         const next = await fetchBuildingState();
         if (alive) setState(next);
       } catch {
-        // ignore in panel mode
+        // painel ignora erros transitórios
       }
     };
     load();
-    const refresh = window.setInterval(load, 30000);
+    const refresh = window.setInterval(load, 20000);
     return () => {
       alive = false;
       window.clearInterval(refresh);
@@ -63,169 +62,439 @@ export default function TowerAlfaPanelClient() {
   }, []);
 
   useEffect(() => {
-    const t = window.setInterval(() => setClock(new Date()), 1000);
-    const loop = window.setInterval(() => setLoopStep((s) => (s + 1) % 24), 4000);
+    const tClock = window.setInterval(() => setClock(new Date()), 1000);
+    const tLoop = window.setInterval(() => setLoopStep((s) => (s + 1) % 120), 2500);
     return () => {
-      window.clearInterval(t);
-      window.clearInterval(loop);
+      window.clearInterval(tClock);
+      window.clearInterval(tLoop);
     };
   }, []);
 
   const rooms = useMemo(() => Object.values(state?.snapshot.roomsById ?? {}), [state]);
   const totalRooms = rooms.length;
-  const sold = rooms.filter((r) => (r.statusSala ?? r.meta?.statusSalaOriginal ?? "").toUpperCase().includes("VENDIDO"));
-  const soldValue = sold.reduce((s, r) => s + (typeof r.meta?.valorVenda === "number" ? r.meta.valorVenda : typeof r.meta?.valorImovel === "number" ? r.meta.valorImovel : 0), 0);
+
+  const soldRooms = useMemo(
+    () => rooms.filter((r) => ((r.statusSala ?? r.meta?.statusSalaOriginal ?? "").trim().toUpperCase() || "").includes("VENDIDO")),
+    [rooms]
+  );
+  const soldTotal = soldRooms.length;
+  const soldRevenue = soldRooms.reduce((sum, r) => {
+    if (typeof r.meta?.valorVenda === "number" && Number.isFinite(r.meta.valorVenda)) return sum + r.meta.valorVenda;
+    if (typeof r.meta?.valorImovel === "number" && Number.isFinite(r.meta.valorImovel)) return sum + r.meta.valorImovel;
+    return sum;
+  }, 0);
 
   const statusBreakdown = useMemo(() => {
     const map = new Map<string, number>();
     for (const room of rooms) {
-      const k = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
-      map.set(k, (map.get(k) ?? 0) + 1);
+      const key = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
+      map.set(key, (map.get(key) ?? 0) + 1);
     }
     return Array.from(map.entries())
       .map(([name, count]) => ({ name, count, color: colorForStatusSala(name) }))
       .sort((a, b) => b.count - a.count);
   }, [rooms]);
 
-  const floorLeaders = useMemo(() => {
-    const byFloor = new Map<number, number>();
-    for (const room of rooms) byFloor.set(room.floor, (byFloor.get(room.floor) ?? 0) + 1);
-    return Array.from(byFloor.entries())
-      .map(([floor, count]) => ({ floor, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
-  }, [rooms]);
+  const floorsSorted = useMemo(() => {
+    return Object.keys(state?.snapshot.floors ?? {}).map(Number).sort((a, b) => b - a);
+  }, [state]);
 
-  const reserved = useMemo(
-    () =>
-      rooms
-        .filter((r) => isReservaStatusSalaForInbox(r.statusSala ?? r.meta?.statusSalaOriginal))
-        .sort((a, b) => (b.meta?.reservedAt ?? b.lastUpdatedAt) - (a.meta?.reservedAt ?? a.lastUpdatedAt))
-        .slice(0, 10),
-    [rooms]
-  );
+  const floorRows = useMemo(() => {
+    const base = statusBreakdown.slice(0, 6);
+    return floorsSorted.map((floor) => {
+      const ids = state?.snapshot.floors[floor] ?? [];
+      const map = new Map<string, number>();
+      for (const id of ids) {
+        const room = state?.snapshot.roomsById[id];
+        if (!room) continue;
+        const key = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
+        map.set(key, (map.get(key) ?? 0) + 1);
+      }
+      const total = ids.length || 1;
+      const segments = base
+        .map((x) => ({ ...x, floorCount: map.get(x.name) ?? 0 }))
+        .filter((x) => x.floorCount > 0);
+      return { floor, total, segments };
+    });
+  }, [floorsSorted, state, statusBreakdown]);
+
+  const recentUpdates = useMemo(() => {
+    const list = [...(state?.snapshot.notifications ?? [])].sort((a, b) => b.at - a.at);
+    return list.slice(0, 8);
+  }, [state]);
 
   return (
     <div className="panel-tv">
       <header className="panel-top">
         <BrandLogo />
+        <div className="panel-subtitle">Modo painel contínuo</div>
         <div className="panel-clock">{clock.toLocaleTimeString("pt-BR")}</div>
         <AuthLogoutButton />
       </header>
 
       <main className="panel-grid">
-        <section className="panel-card panel-kpis">
-          <div className="panel-title">Resumo Executivo</div>
-          <div className="panel-kpi-row">
-            <article>
-              <div className="kpi-label">Salas totais</div>
-              <div className="kpi-value">{totalRooms}</div>
-            </article>
-            <article>
-              <div className="kpi-label">Vendidas</div>
-              <div className="kpi-value">{sold.length}</div>
-            </article>
-            <article>
-              <div className="kpi-label">Faturamento</div>
-              <div className="kpi-money">{formatMoneyBRL(soldValue)}</div>
-            </article>
+        <section className="box floors">
+          <div className="box-title">Painel dos andares</div>
+          <div className="floor-head">
+            <span>Andar</span>
+            <span>Distribuição</span>
+            <span>Total</span>
           </div>
-        </section>
-
-        <section className="panel-card panel-status">
-          <div className="panel-title">Status (loop dinâmico)</div>
-          <div className="status-grid-tv">
-            {statusBreakdown.slice(0, 10).map((s, idx) => (
-              <div
-                key={s.name}
-                className={`status-pill-tv ${loopStep % 10 === idx ? "on" : ""}`}
-                style={{ borderLeft: `4px solid ${s.color}`, animationDelay: `${idx * 120}ms` }}
-              >
-                <span>{s.name}</span>
-                <strong>{s.count}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel-card panel-donut">
-          <div className="panel-title">Distribuição Geral</div>
-          <div className="donut-stage-tv">
-            <svg viewBox="0 0 220 220" aria-label="Distribuição por status">
-              <DonutPaths segments={statusBreakdown.map((x) => ({ key: x.name, value: x.count, color: x.color }))} />
-            </svg>
-          </div>
-          <div className="donut-total-tv">{totalRooms} salas</div>
-        </section>
-
-        <section className="panel-card panel-floors">
-          <div className="panel-title">Andares com mais salas</div>
-          <div className="floor-bars-tv">
-            {floorLeaders.map((f, idx) => (
-              <div key={f.floor} className="floor-line-tv">
-                <span>Andar {f.floor}</span>
-                <div className="bar-wrap">
-                  <div className="bar" style={{ width: `${(f.count / Math.max(1, floorLeaders[0]?.count ?? 1)) * 100}%`, animationDelay: `${idx * 140}ms` }} />
+          <div className="floor-list">
+            {floorRows.map((row, idx) => (
+              <div key={row.floor} className={`floor-row ${loopStep % Math.max(1, floorRows.length) === idx ? "on" : ""}`}>
+                <span className="f-label">Andar {row.floor}</span>
+                <div className="f-bar">
+                  {row.segments.map((seg) => (
+                    <div
+                      key={`${row.floor}-${seg.name}`}
+                      className="f-seg"
+                      style={{
+                        width: `${(seg.floorCount / row.total) * 100}%`,
+                        background: seg.color,
+                      }}
+                    />
+                  ))}
                 </div>
-                <strong>{f.count}</strong>
+                <span className="f-total">{row.total}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="panel-card panel-reservas">
-          <div className="panel-title">Reservas recentes</div>
-          <div className="reservas-tv">
-            {reserved.length === 0 ? <div className="empty">Nenhuma reserva no momento.</div> : null}
-            {reserved.map((r) => (
-              <Link key={r.id} href={`/rooms?floor=${r.floor}&room=${r.id}`} className="res-row-tv">
-                <span>Sala {r.id} · Andar {r.floor}</span>
-                <b>{formatMoneyBRL(r.meta?.valorImovel)}</b>
-              </Link>
+        <section className="box kpis">
+          <div className="box-title">Vendidas e faturamento</div>
+          <div className="kpi-cards">
+            <article>
+              <div className="kpi-label">Salas vendidas</div>
+              <div className="kpi-value">{soldTotal}</div>
+            </article>
+            <article>
+              <div className="kpi-label">Faturamento total</div>
+              <div className="kpi-money">{formatMoneyBRL(soldRevenue)}</div>
+            </article>
+          </div>
+        </section>
+
+        <section className="box summary">
+          <div className="box-title">Resumo de quantidades por status</div>
+          <div className="summary-grid">
+            <div className="status-list">
+              {statusBreakdown.slice(0, 8).map((s, idx) => (
+                <div key={s.name} className={`status-row ${loopStep % 8 === idx ? "on" : ""}`} style={{ borderLeft: `3px solid ${s.color}` }}>
+                  <span>{s.name}</span>
+                  <strong>{s.count}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="donut-area">
+              <svg viewBox="0 0 180 180" aria-label="Donut de status">
+                <DonutPaths segments={statusBreakdown.map((x) => ({ key: x.name, value: x.count, color: x.color }))} />
+              </svg>
+              <div className="donut-total">{totalRooms}</div>
+              <div className="donut-label">salas totais</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="box updates">
+          <div className="box-title">Atualizações recentes</div>
+          <div className="updates-list">
+            {recentUpdates.length === 0 ? <div className="update-empty">Sem eventos recentes.</div> : null}
+            {recentUpdates.map((evt, idx) => (
+              <div key={evt.id} className={`update-row ${loopStep % Math.max(1, recentUpdates.length) === idx ? "on" : ""}`}>
+                <div className="u-main">
+                  <b>{evt.title}</b>
+                  <span>{evt.message}</span>
+                </div>
+                <time>{new Date(evt.at).toLocaleTimeString("pt-BR")}</time>
+              </div>
             ))}
           </div>
         </section>
       </main>
 
       <style jsx>{`
-        .panel-tv { min-height: 100vh; background: radial-gradient(circle at 18% 12%, rgba(56,189,248,.16), transparent 40%), #060b16; color: #e2e8f0; padding: 14px; }
-        .panel-top { display:flex; align-items:center; gap:14px; border:1px solid rgba(148,163,184,.18); border-radius:14px; padding:12px 16px; background: rgba(15,23,42,.55); }
-        .panel-clock { margin-left:auto; font:600 22px "Syne",sans-serif; letter-spacing:.04em; color:#f8fafc; }
-        .panel-grid { margin-top:14px; display:grid; grid-template-columns: 1.2fr 1.2fr 1fr; gap:12px; }
-        .panel-card { border:1px solid rgba(148,163,184,.2); border-radius:14px; background: rgba(15,23,42,.58); padding:14px; backdrop-filter: blur(4px); }
-        .panel-title { font:700 15px "Syne",sans-serif; margin-bottom:10px; color:#f8fafc; letter-spacing:.02em; }
-        .panel-kpis { grid-column: 1 / span 2; }
-        .panel-kpi-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-        .panel-kpi-row article { border:1px solid rgba(148,163,184,.2); border-radius:12px; padding:10px; background: rgba(255,255,255,.02); }
-        .kpi-label { font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:.07em; }
-        .kpi-value { font:800 34px "Syne",sans-serif; color:#f8fafc; line-height:1.1; margin-top:4px; }
-        .kpi-money { font:800 28px "Syne",sans-serif; color:#f8fafc; line-height:1.1; margin-top:6px; }
-        .status-grid-tv { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:8px; }
-        .status-pill-tv { display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid rgba(148,163,184,.25); border-radius:10px; padding:8px 10px; animation: panelPulse 2.8s ease-in-out infinite; background: rgba(255,255,255,.02); }
-        .status-pill-tv span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; color:#cbd5e1; }
-        .status-pill-tv strong { font:800 24px "Syne",sans-serif; color:#f8fafc; }
-        .status-pill-tv.on { box-shadow: 0 0 0 1px rgba(56,189,248,.5), 0 0 28px rgba(56,189,248,.18); transform: translateY(-1px); }
-        .donut-stage-tv { display:flex; justify-content:center; padding-top:8px; animation: rotateSlow 42s linear infinite; }
-        .donut-stage-tv svg { width: 280px; height: 280px; }
-        .donut-total-tv { text-align:center; font:700 20px "Syne",sans-serif; margin-top:6px; color:#f8fafc; }
-        .floor-bars-tv { display:flex; flex-direction:column; gap:8px; }
-        .floor-line-tv { display:grid; grid-template-columns: 90px 1fr 36px; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; }
-        .bar-wrap { height:8px; border-radius:999px; background: rgba(148,163,184,.18); overflow:hidden; }
-        .bar { height:100%; background: linear-gradient(90deg, #22d3ee, #6366f1); animation: barGrow 1s ease both; }
-        .panel-reservas { grid-column: 2 / span 2; }
-        .reservas-tv { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:8px; }
-        .res-row-tv { border:1px solid rgba(148,163,184,.25); border-radius:10px; padding:10px; color:#e2e8f0; text-decoration:none; display:flex; justify-content:space-between; gap:8px; background: rgba(255,255,255,.02); }
-        .res-row-tv:hover { border-color: rgba(56,189,248,.5); background: rgba(56,189,248,.08); }
-        .res-row-tv span { font-size:12px; }
-        .res-row-tv b { font:700 13px "IBM Plex Mono",monospace; color:#fcd34d; }
-        .empty { grid-column: 1 / -1; color:#94a3b8; font-size:13px; }
-        @keyframes rotateSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes panelPulse { 0%,100% { opacity:.9; } 50% { opacity:1; } }
-        @keyframes barGrow { from { width:0; } to { } }
-        @media (max-width: 1200px) {
-          .panel-grid { grid-template-columns:1fr; }
-          .panel-kpis, .panel-reservas { grid-column: auto; }
-          .reservas-tv { grid-template-columns:1fr; }
+        .panel-tv {
+          height: 100vh;
+          overflow: hidden;
+          background: radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.16), transparent 42%), #070d1a;
+          color: #e2e8f0;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .panel-top {
+          border: 1px solid rgba(148, 163, 184, 0.22);
+          border-radius: 14px;
+          padding: 12px 16px;
+          background: rgba(15, 23, 42, 0.52);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-height: 62px;
+        }
+        .panel-subtitle {
+          font-size: 12px;
+          color: #94a3b8;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .panel-clock {
+          margin-left: auto;
+          font: 700 22px "Syne", sans-serif;
+          color: #f8fafc;
+        }
+        .panel-grid {
+          flex: 1;
+          min-height: 0;
+          display: grid;
+          grid-template-columns: 1.6fr 1fr;
+          grid-template-rows: 0.95fr 1.05fr;
+          gap: 12px;
+        }
+        .box {
+          min-height: 0;
+          border: 1px solid rgba(148, 163, 184, 0.22);
+          border-radius: 14px;
+          background: rgba(15, 23, 42, 0.58);
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .box-title {
+          font: 700 15px "Syne", sans-serif;
+          color: #f8fafc;
+          margin-bottom: 8px;
+          letter-spacing: 0.02em;
+        }
+        .floors {
+          grid-row: 1 / span 2;
+        }
+        .floor-head {
+          display: grid;
+          grid-template-columns: 90px 1fr 44px;
+          gap: 8px;
+          font-size: 10px;
+          letter-spacing: 0.11em;
+          text-transform: uppercase;
+          color: #93a4bd;
+          margin-bottom: 8px;
+        }
+        .floor-list {
+          min-height: 0;
+          display: grid;
+          grid-template-rows: repeat(17, minmax(0, 1fr));
+          gap: 6px;
+        }
+        .floor-row {
+          display: grid;
+          grid-template-columns: 90px 1fr 44px;
+          gap: 8px;
+          align-items: center;
+          border: 1px solid rgba(148, 163, 184, 0.15);
+          border-radius: 8px;
+          padding: 0 8px;
+          background: rgba(255, 255, 255, 0.015);
+          transition: box-shadow 0.35s ease, border-color 0.35s ease;
+        }
+        .floor-row.on {
+          border-color: rgba(56, 189, 248, 0.55);
+          box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+        .f-label {
+          font-size: 11px;
+          color: #cbd5e1;
+        }
+        .f-total {
+          text-align: right;
+          font: 700 13px "Syne", sans-serif;
+          color: #f8fafc;
+        }
+        .f-bar {
+          height: 16px;
+          border-radius: 6px;
+          background: rgba(148, 163, 184, 0.15);
+          overflow: hidden;
+          display: flex;
+        }
+        .f-seg {
+          height: 100%;
+          animation: segPulse 3.6s ease-in-out infinite;
+        }
+        .kpi-cards {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+        .kpi-cards article {
+          border: 1px solid rgba(148, 163, 184, 0.22);
+          border-radius: 10px;
+          padding: 10px;
+          background: rgba(255, 255, 255, 0.02);
+        }
+        .kpi-label {
+          font-size: 11px;
+          color: #94a3b8;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+        .kpi-value {
+          font: 800 44px "Syne", sans-serif;
+          color: #f8fafc;
+          line-height: 1;
+        }
+        .kpi-money {
+          font: 800 36px "Syne", sans-serif;
+          color: #f8fafc;
+          line-height: 1.05;
+        }
+        .summary-grid {
+          display: grid;
+          grid-template-columns: 1fr 180px;
+          gap: 10px;
+          min-height: 0;
+        }
+        .status-list {
+          min-height: 0;
+          display: grid;
+          grid-template-rows: repeat(8, minmax(0, 1fr));
+          gap: 6px;
+        }
+        .status-row {
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          border-radius: 8px;
+          padding: 0 10px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.02);
+          transition: transform 0.35s ease, box-shadow 0.35s ease;
+        }
+        .status-row.on {
+          transform: translateX(2px);
+          box-shadow: 0 0 16px rgba(56, 189, 248, 0.18);
+        }
+        .status-row span {
+          font-size: 11px;
+          color: #d4dcea;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .status-row strong {
+          font: 700 18px "Syne", sans-serif;
+          color: #f8fafc;
+        }
+        .donut-area {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          animation: spinLoop 30s linear infinite;
+        }
+        .donut-area svg {
+          width: 180px;
+          height: 180px;
+        }
+        .donut-total {
+          margin-top: 6px;
+          font: 800 34px "Syne", sans-serif;
+          color: #f8fafc;
+          line-height: 1;
+        }
+        .donut-label {
+          font-size: 10px;
+          letter-spacing: 0.11em;
+          text-transform: uppercase;
+          color: #94a3b8;
+          margin-top: 4px;
+        }
+        .updates-list {
+          min-height: 0;
+          display: grid;
+          grid-template-rows: repeat(8, minmax(0, 1fr));
+          gap: 6px;
+        }
+        .update-row {
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 8px;
+          padding: 6px 10px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.02);
+          animation: updateSlide 6.8s ease-in-out infinite;
+        }
+        .update-row.on {
+          border-color: rgba(56, 189, 248, 0.6);
+          box-shadow: 0 0 16px rgba(56, 189, 248, 0.16);
+        }
+        .u-main {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .u-main b {
+          font-size: 12px;
+          color: #f8fafc;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .u-main span {
+          font-size: 11px;
+          color: #a7b6cc;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        time {
+          font-size: 11px;
+          color: #93a4bd;
+          font-family: "IBM Plex Mono", monospace;
+        }
+        .update-empty {
+          border: 1px dashed rgba(148, 163, 184, 0.25);
+          border-radius: 8px;
+          color: #94a3b8;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        @keyframes segPulse {
+          0%,
+          100% {
+            filter: brightness(0.94);
+          }
+          50% {
+            filter: brightness(1.08);
+          }
+        }
+        @keyframes spinLoop {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes updateSlide {
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          50% {
+            transform: translateX(2px);
+          }
         }
       `}</style>
     </div>
