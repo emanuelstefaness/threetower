@@ -26,6 +26,8 @@ type BuildingStoreClient = {
   authRole: ClientAuthRole;
   /** Nome da sessão (ex.: Lariele, Pedro). */
   authName: string | null;
+  /** Login em minúsculas (APP_USERS_JSON), quando aplicável. */
+  authLogin: string | null;
 
   // UI
   selectedFloor: number | null;
@@ -50,7 +52,8 @@ type BuildingStoreClient = {
     appMode: AppMode,
     authEnabled?: boolean,
     authRole?: ClientAuthRole,
-    authName?: string | null
+    authName?: string | null,
+    authLogin?: string | null
   ) => void;
   applyEvent: (evt: RoomStatusChangedEvent) => void;
   setSelectedFloor: (floor: number | null) => void;
@@ -69,6 +72,7 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
   authEnabled: false,
   authRole: null,
   authName: null,
+  authLogin: null,
 
   selectedFloor: null,
   selectedRoomId: null,
@@ -80,13 +84,14 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
   realtime: { connected: false, lastEventAt: null, lastError: null },
   notifications: [],
 
-  setBuilding: (snapshot, appMode, authEnabled = false, authRole = null, authName = null) =>
+  setBuilding: (snapshot, appMode, authEnabled = false, authRole = null, authName = null, authLogin = null) =>
     set(() => ({
       building: snapshot,
       appMode,
       authEnabled,
       authRole: authRole ?? null,
       authName: authName ?? null,
+      authLogin: authLogin ?? null,
       selectedFloor: null,
       selectedRoomId: null,
       roomModalOpen: false,

@@ -163,8 +163,9 @@ export default function RoomFloorWorkbench({
         prazoPagamento: editPrazoPagamento.trim() || null,
       });
 
-      const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an } = await fetchBuildingState();
-      setBuilding(snapshot, mode, authEnabled, r, an);
+      const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an, authLogin: al } =
+        await fetchBuildingState();
+      setBuilding(snapshot, mode, authEnabled, r, an, al);
       showToast("Dados da sala atualizados", "✅");
       closeEdit();
     } catch (e) {

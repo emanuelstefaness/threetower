@@ -9,7 +9,7 @@ import RoomFloorWorkbench from "@/features/dashboard/RoomFloorWorkbench";
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
-import { canAccessInbox, canAccessReports } from "@/lib/authUi";
+import { canAccessInbox, canAccessReports, canAccessTvPanel } from "@/lib/authUi";
 import { colorForStatusSala } from "@/lib/treeTowerStatusSala";
 
 function formatClock(d: Date) {
@@ -65,7 +65,8 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
 }
 
 export default function TowerAlfaDashboardClient() {
-  const { building, appMode, authRole, authEnabled, setBuilding, applyEvent, setRealtime } = useBuildingStoreClient();
+  const { building, appMode, authRole, authEnabled, authLogin, setBuilding, applyEvent, setRealtime } =
+    useBuildingStoreClient();
   const pathname = usePathname();
   const [clock, setClock] = useState(() => new Date());
   const [toast, setToast] = useState<{ msg: string; icon: string } | null>(null);
@@ -79,8 +80,8 @@ export default function TowerAlfaDashboardClient() {
   useEffect(() => {
     let alive = true;
     fetchBuildingState()
-      .then(({ snapshot, appMode: mode, authEnabled, authRole, authName }) =>
-        alive && setBuilding(snapshot, mode, authEnabled, authRole, authName)
+      .then(({ snapshot, appMode: mode, authEnabled, authRole, authName, authLogin: al }) =>
+        alive && setBuilding(snapshot, mode, authEnabled, authRole, authName, al)
       )
       .catch((e) => alive && setRealtime({ lastError: e instanceof Error ? e.message : "Erro ao carregar" }));
     return () => {
@@ -167,7 +168,11 @@ export default function TowerAlfaDashboardClient() {
           <div className="sb-nav">
             <Link href="/" className={`sb-item ${pathname === "/" ? "active" : ""}`}>Dashboard</Link>
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>Salas</Link>
-            <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>Painel TV</Link>
+            {canAccessTvPanel(authLogin) ? (
+              <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>
+                Painel TV
+              </Link>
+            ) : null}
             {canAccessInbox(authRole, authEnabled) ? (
               <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
                 Reservas

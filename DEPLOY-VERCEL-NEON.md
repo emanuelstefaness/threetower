@@ -179,7 +179,7 @@ O deploy **não** substitui sozinho o JSON antigo na base. Depois de um deploy q
 ## Resumo ultra-curto
 
 1. **Neon:** projeto → copiar **connection string pooled** → guardar password.  
-2. **Vercel:** importar repo → `DATABASE_URL` + `AUTH_SECRET` + `APP_LOGIN_PASSWORD` → **Deploy**.  
+2. **Vercel:** importar repo → `DATABASE_URL` + `AUTH_SECRET` + `"APP_LOGIN_"PASSWORD` → **Deploy**.  
 3. Abrir o URL `.vercel.app` e testar login.
 
 ---

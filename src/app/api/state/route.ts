@@ -21,6 +21,7 @@ export async function GET() {
     authEnabled: isAuthEnabled(),
     authRole: role ?? undefined,
     authName: session?.name,
+    authLogin: session?.login,
   });
 }
 

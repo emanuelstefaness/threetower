@@ -8,20 +8,20 @@ import { useBuildingStoreClient } from "@/features/building/buildingStoreClient"
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
-import { canAccessInbox, canAccessReports } from "@/lib/authUi";
+import { canAccessInbox, canAccessReports, canAccessTvPanel } from "@/lib/authUi";
 import { formatMoneyBRL } from "@/lib/formatMoney";
 import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
 import { colorForStatusSala, isReservaStatusSalaForInbox } from "@/lib/treeTowerStatusSala";
 
 export default function InboxReservedClient() {
   const pathname = usePathname();
-  const { building, appMode, authRole, authEnabled, setBuilding, setRealtime } = useBuildingStoreClient();
+  const { building, appMode, authRole, authEnabled, authLogin, setBuilding, setRealtime } = useBuildingStoreClient();
 
   useEffect(() => {
     let alive = true;
     fetchBuildingState()
-      .then(({ snapshot, appMode: mode, authEnabled: ae, authRole: r, authName }) =>
-        alive && setBuilding(snapshot, mode, ae, r, authName)
+      .then(({ snapshot, appMode: mode, authEnabled: ae, authRole: r, authName, authLogin: al }) =>
+        alive && setBuilding(snapshot, mode, ae, r, authName, al)
       )
       .catch((e) => alive && setRealtime({ lastError: e instanceof Error ? e.message : "Erro ao carregar" }));
     return () => {
@@ -59,9 +59,11 @@ export default function InboxReservedClient() {
             <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>
               Salas
             </Link>
-            <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>
-              Painel TV
-            </Link>
+            {canAccessTvPanel(authLogin) ? (
+              <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>
+                Painel TV
+              </Link>
+            ) : null}
             {canAccessInbox(authRole, authEnabled) ? (
               <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
                 Reservas

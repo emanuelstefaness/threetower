@@ -14,6 +14,8 @@ export type BuildingStatePayload = {
   authEnabled?: boolean;
   authRole?: ClientAuthRole;
   authName?: string;
+  /** Login da sessão (APP_USERS_JSON), para regras de UI (ex. Painel TV). */
+  authLogin?: string;
 };
 
 export async function fetchBuildingState(): Promise<BuildingStatePayload> {
@@ -40,6 +42,7 @@ export async function fetchBuildingState(): Promise<BuildingStatePayload> {
       authEnabled?: boolean;
       authRole?: string;
       authName?: string;
+      authLogin?: string;
     };
     return {
       snapshot: d.snapshot,
@@ -47,6 +50,7 @@ export async function fetchBuildingState(): Promise<BuildingStatePayload> {
       authEnabled: d.authEnabled === true,
       authRole: normalizeClientAuthRole(d.authRole),
       authName: typeof d.authName === "string" ? d.authName : undefined,
+      authLogin: typeof d.authLogin === "string" ? d.authLogin : undefined,
     };
   }
   return { snapshot: data as BuildingSnapshot, appMode: "edit" };

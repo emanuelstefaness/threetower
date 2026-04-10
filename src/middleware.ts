@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAuthSecret } from "@/lib/authConfig";
 import { verifyJwtHs256Edge } from "@/lib/jwtHs256Edge";
+import { TV_PANEL_LOGIN } from "@/lib/authUi";
 import { AUTH_COOKIE_NAME } from "@/server/auth/constants";
 
 export async function middleware(request: NextRequest) {
@@ -39,6 +40,24 @@ export async function middleware(request: NextRequest) {
       if (v.ok) {
         const mr = middlewareRole(v.payload);
         if (mr === "viewer" || mr === "secretaria") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          url.search = "";
+          return NextResponse.redirect(url);
+        }
+      }
+    }
+  }
+
+  // Painel TV (/panel): só o utilizador com login configurado (ex.: dubena no APP_USERS_JSON)
+  if (pathname.startsWith("/panel") && secret) {
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (token) {
+      const v = await verifyJwtHs256Edge(token, secret);
+      if (v.ok) {
+        const raw = v.payload.login;
+        const login = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+        if (login !== TV_PANEL_LOGIN) {
           const url = request.nextUrl.clone();
           url.pathname = "/";
           url.search = "";
