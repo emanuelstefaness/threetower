@@ -110,6 +110,20 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
         room.lastUpdatedAt = evt.updatedAt;
         room.history.unshift(evt.historyEntry);
         room.history = room.history.slice(0, 60);
+        if (evt.planilha) {
+          room.statusSala = evt.planilha.statusSala;
+          if (!room.meta) room.meta = {};
+          room.meta.statusSalaOriginal = evt.planilha.statusSala;
+          if (evt.planilha.reservation === null) {
+            delete room.meta.reservedAt;
+            delete room.meta.reservedByName;
+            delete room.meta.reservedByLogin;
+          } else {
+            room.meta.reservedAt = evt.planilha.reservation.reservedAt;
+            room.meta.reservedByName = evt.planilha.reservation.reservedByName;
+            room.meta.reservedByLogin = evt.planilha.reservation.reservedByLogin;
+          }
+        }
       }
 
       building.floorAggregates[evt.floor] = evt.floorAggregate;

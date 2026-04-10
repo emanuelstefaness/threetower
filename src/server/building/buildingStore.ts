@@ -9,6 +9,7 @@ import type {
   StatusSalaHistoryEntry,
 } from "@/lib/buildingTypes";
 import { STATUS_META, STATUS_ORDER } from "@/lib/status";
+import { normalizeStatusSala } from "@/lib/treeTowerStatusSala";
 import { generateBuildingFromSeed, generateInitialBuilding } from "./generateBuilding";
 import { loadPersistedSnapshotAsync, savePersistedSnapshotUniversal } from "./loadPersisted";
 /** Dados do empreendimento (copiados da planilha de referência para o repo; sem ligação direta ao Excel em runtime). */
@@ -19,7 +20,12 @@ type Listener = (evt: RoomStatusChangedEvent) => void;
 type Store = {
   state: BuildingSnapshot;
   listeners: Set<Listener>;
-  updateRoomStatus: (roomId: number, newStatus: RoomStatus, by: string) => RoomStatusChangedEvent;
+  updateRoomStatus: (
+    roomId: number,
+    newStatus: RoomStatus,
+    by: string,
+    opts?: { reserveBy?: { name: string; login: string } }
+  ) => RoomStatusChangedEvent;
   createRooms: (args: { floor: number; status: RoomStatus; count: number; area: number; namePrefix: string; by: string; planSlot?: string }) => RoomRecord[];
   updateRoomDetails: (args: {
     roomId: number;
@@ -349,11 +355,12 @@ async function createStore(): Promise<Store> {
         delete room.meta.reservedByName;
         delete room.meta.reservedByLogin;
       }
-    } else if (!wasReserved && typeof statusSala === "string" && reserveBy) {
+    } else if (!wasReserved && isReservedNow) {
       if (!room.meta) room.meta = {};
+      const rb = reserveBy ?? { name: by, login: "" };
       room.meta.reservedAt = Date.now();
-      room.meta.reservedByName = reserveBy.name;
-      room.meta.reservedByLogin = reserveBy.login;
+      room.meta.reservedByName = rb.name;
+      room.meta.reservedByLogin = rb.login;
     }
 
     const metaPriceKeys =
@@ -465,7 +472,12 @@ async function createStore(): Promise<Store> {
     return { ok: true as const, deletedRoomId: roomId, floor };
   };
 
-  const updateRoomStatus = (roomId: number, newStatus: RoomStatus, by: string): RoomStatusChangedEvent => {
+  const updateRoomStatus = (
+    roomId: number,
+    newStatus: RoomStatus,
+    by: string,
+    opts?: { reserveBy?: { name: string; login: string } }
+  ): RoomStatusChangedEvent => {
     const room = state.roomsById[roomId];
     if (!room) throw new Error("Sala não encontrada");
     if (room.status === newStatus) {
@@ -490,7 +502,10 @@ async function createStore(): Promise<Store> {
     }
 
     const oldStatus = room.status;
+    const statusSalaAtStart = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "").trim();
     const at = Date.now();
+
+    let planilha: RoomStatusChangedEvent["planilha"];
 
     // Atualiza sala
     room.status = newStatus;
@@ -503,6 +518,57 @@ async function createStore(): Promise<Store> {
       reason: "atualização de status",
     });
     room.history = room.history.slice(0, 60);
+
+    /** Alinha STATUS SALA e metadados à reserva (igual ao fluxo Salas → planilha = RESERVADA). */
+    if (newStatus === "reservada" && oldStatus !== "reservada") {
+      room.statusSala = "RESERVADA";
+      if (!room.meta) room.meta = {};
+      room.meta.statusSalaOriginal = "RESERVADA";
+      const rb = opts?.reserveBy ?? { name: by, login: "" };
+      room.meta.reservedAt = at;
+      room.meta.reservedByName = rb.name;
+      room.meta.reservedByLogin = rb.login;
+      if (statusSalaAtStart !== "RESERVADA") {
+        const entry: StatusSalaHistoryEntry = {
+          at,
+          by,
+          from: statusSalaAtStart || "init",
+          to: "RESERVADA",
+          reason: "reserva (status operacional → planilha)",
+        };
+        room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
+      }
+      planilha = {
+        statusSala: "RESERVADA",
+        reservation: {
+          reservedAt: at,
+          reservedByName: rb.name,
+          reservedByLogin: rb.login,
+        },
+      };
+    } else if (oldStatus === "reservada" && newStatus !== "reservada") {
+      let statusSalaOut = (room.statusSala ?? statusSalaAtStart).trim() || "ESTOQUE";
+      if (normalizeStatusSala(statusSalaAtStart) === "RESERVADA") {
+        room.statusSala = "ESTOQUE";
+        if (!room.meta) room.meta = {};
+        room.meta.statusSalaOriginal = "ESTOQUE";
+        statusSalaOut = "ESTOQUE";
+        const entry: StatusSalaHistoryEntry = {
+          at,
+          by,
+          from: statusSalaAtStart || "init",
+          to: "ESTOQUE",
+          reason: "libertação de reserva (status operacional → planilha)",
+        };
+        room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
+      }
+      if (room.meta) {
+        delete room.meta.reservedAt;
+        delete room.meta.reservedByName;
+        delete room.meta.reservedByLogin;
+      }
+      planilha = { statusSala: statusSalaOut, reservation: null };
+    }
 
     const floorAgg = state.floorAggregates[room.floor];
     const wasFull = floorAgg.counts["ocupada"] === floorAgg.totalRooms;
@@ -561,6 +627,7 @@ async function createStore(): Promise<Store> {
       floorAggregate: floorAgg as FloorAggregate,
       summary: state.summary,
       notifications,
+      ...(planilha ? { planilha } : {}),
     };
 
     emit(evt);

@@ -91,6 +91,13 @@ export type NotificationEvent = {
   at: number;
 };
 
+/** Patch do STATUS SALA / metadados de reserva quando o status operacional muda pelo fluxo rápido (modal 3D). */
+export type RoomPlanilhaPatchEvent = {
+  statusSala: string;
+  /** `null` = remover reservedAt / reservedBy* */
+  reservation: { reservedAt: number; reservedByName: string; reservedByLogin: string } | null;
+};
+
 export type RoomStatusChangedEvent = {
   type: "room_status_changed";
   roomId: number;
@@ -102,6 +109,8 @@ export type RoomStatusChangedEvent = {
   floorAggregate: FloorAggregate;
   summary: SummaryCounts;
   notifications: NotificationEvent[];
+  /** Presente quando o servidor alinhou a planilha à reserva / libertação. */
+  planilha?: RoomPlanilhaPatchEvent;
 };
 
 export type BuildingSnapshot = {

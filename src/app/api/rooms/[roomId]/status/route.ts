@@ -1,6 +1,8 @@
+import { isAuthEnabled } from "@/lib/authConfig";
+import type { RoomStatus } from "@/lib/buildingTypes";
+import { getAuthSession } from "@/server/auth/getAuthRole";
 import { getBuildingStore } from "@/server/building/buildingStore";
 import { rejectIfSecretaria, rejectIfViewMode } from "@/server/mutationGuard";
-import type { RoomStatus } from "@/lib/buildingTypes";
 
 export async function PATCH(
   req: Request,
@@ -20,8 +22,21 @@ export async function PATCH(
   if (!newStatus) return Response.json({ error: "status é obrigatório" }, { status: 400 });
 
   const by = typeof body.by === "string" && body.by.trim() ? body.by.trim() : "admin";
+  const session = await getAuthSession();
+  const reserveBy =
+    session && (session.role === "gestor" || session.role === "secretaria")
+      ? { name: session.name, login: session.login }
+      : !isAuthEnabled()
+        ? { name: by, login: "local" }
+        : { name: by, login: "" };
+
   try {
-    const evt = store.updateRoomStatus(roomId, newStatus, by);
+    const evt = store.updateRoomStatus(
+      roomId,
+      newStatus,
+      by,
+      newStatus === "reservada" ? { reserveBy } : undefined
+    );
     return Response.json(evt);
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 400 });

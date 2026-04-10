@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function RoomModal({ roomId, open, onClose }: Props) {
-  const { building, appMode, authRole } = useBuildingStoreClient();
+  const { building, appMode, authRole, authName } = useBuildingStoreClient();
   const readOnly = appMode === "view";
   const room = building?.roomsById?.[roomId] ?? null;
 
@@ -251,7 +251,7 @@ export function RoomModal({ roomId, open, onClose }: Props) {
                         onClick={async () => {
                           setSaving(true);
                           try {
-                            await updateRoomStatus(room.id, pendingStatus, "admin");
+                            await updateRoomStatus(room.id, pendingStatus, authName?.trim() || "Gestor");
                             setConfirmOpen(false);
                             setEditOpen(false);
                           } finally {
