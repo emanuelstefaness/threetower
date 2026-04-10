@@ -1,4 +1,8 @@
-import { getBuildingStore } from "@/server/building/buildingStore";
+import {
+  ensureBuildingStoreSyncedFromDb,
+  flushBuildingPersistence,
+} from "@/server/building/buildingStore";
+import { savePersistedSnapshotUniversal } from "@/server/building/loadPersisted";
 import { rejectIfSecretaria, rejectIfViewMode } from "@/server/mutationGuard";
 import type { RoomStatus, RoomRecord } from "@/lib/buildingTypes";
 
@@ -13,7 +17,7 @@ export async function POST(
   const sec = await rejectIfSecretaria();
   if (sec) return sec;
 
-  const store = await getBuildingStore();
+  const store = await ensureBuildingStoreSyncedFromDb();
   const floor = Number(params.floor);
   if (!Number.isFinite(floor)) return Response.json({ error: "floor inválido" }, { status: 400 });
 
@@ -54,7 +58,9 @@ export async function POST(
     // (Mantém compatibilidade com o endpoint mesmo sem uma template completa.)
     if (providedName && created[0]) {
       created[0].name = providedName;
+      savePersistedSnapshotUniversal(store.getState());
     }
+    await flushBuildingPersistence();
     return Response.json({ created });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro";

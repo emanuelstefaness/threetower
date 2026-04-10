@@ -1,4 +1,7 @@
-import { getBuildingStore } from "@/server/building/buildingStore";
+import {
+  ensureBuildingStoreSyncedFromDb,
+  flushBuildingPersistence,
+} from "@/server/building/buildingStore";
 import { rejectIfSecretaria, rejectIfViewMode } from "@/server/mutationGuard";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +15,7 @@ export async function DELETE(
   const sec = await rejectIfSecretaria();
   if (sec) return sec;
 
-  const store = await getBuildingStore();
+  const store = await ensureBuildingStoreSyncedFromDb();
   const roomId = Number(params.roomId);
   if (!Number.isFinite(roomId)) return Response.json({ error: "roomId inválido" }, { status: 400 });
 
@@ -21,6 +24,7 @@ export async function DELETE(
 
   try {
     const result = store.deleteRoom({ roomId, by });
+    await flushBuildingPersistence();
     return Response.json(result);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro";

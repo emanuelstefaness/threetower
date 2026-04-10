@@ -32,22 +32,29 @@ export async function loadFromPostgres(): Promise<BuildingSnapshot | null> {
   return parsed;
 }
 
-let writeChain: Promise<void> = Promise.resolve();
+/** Fila serial por processo; cada item grava o JSON capturado no momento do persist (evita estado mutável). */
+let persistChain: Promise<void> = Promise.resolve();
 
 export function queuePostgresSave(state: BuildingSnapshot): void {
-  writeChain = writeChain
+  const frozenJson = JSON.stringify(state);
+  persistChain = persistChain
     .then(async () => {
       const pool = getPool();
       await ensureTable(pool);
       await pool.query(
         `INSERT INTO building_state (id, snapshot) VALUES (1, $1::jsonb)
          ON CONFLICT (id) DO UPDATE SET snapshot = EXCLUDED.snapshot, updated_at = now()`,
-        [JSON.stringify(state)]
+        [frozenJson]
       );
     })
     .catch(() => {
       // Falha silenciosa como no disco; não expor conteúdo do estado em logs.
     });
+}
+
+/** Espera a fila de gravação PostgreSQL (Vercel: garantir persistência antes de responder). */
+export async function awaitPostgresPersistenceQueue(): Promise<void> {
+  await persistChain;
 }
 
 /** Gravação imediata (ex.: import Excel) — evita perder dados em serverless antes da fila correr. */

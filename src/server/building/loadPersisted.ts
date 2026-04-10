@@ -4,7 +4,12 @@ import {
   loadPersistedSnapshot,
   savePersistedSnapshot,
 } from "./persistBuildingState";
-import { loadFromPostgres, queuePostgresSave, savePostgresSnapshotNow } from "./persistPostgres";
+import {
+  awaitPostgresPersistenceQueue,
+  loadFromPostgres,
+  queuePostgresSave,
+  savePostgresSnapshotNow,
+} from "./persistPostgres";
 
 function persistenceIsPostgres(): boolean {
   return Boolean(process.env.DATABASE_URL?.trim());
@@ -35,6 +40,7 @@ export function savePersistedSnapshotUniversal(state: BuildingSnapshot): void {
 export async function persistSnapshotNow(state: BuildingSnapshot): Promise<void> {
   if (!isPersistenceEnabled()) return;
   if (persistenceIsPostgres()) {
+    await awaitPostgresPersistenceQueue();
     await savePostgresSnapshotNow(state);
     return;
   }

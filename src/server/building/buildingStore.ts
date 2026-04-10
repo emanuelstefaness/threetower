@@ -12,6 +12,8 @@ import { STATUS_META, STATUS_ORDER } from "@/lib/status";
 import { normalizeStatusSala } from "@/lib/treeTowerStatusSala";
 import { generateBuildingFromSeed, generateInitialBuilding } from "./generateBuilding";
 import { loadPersistedSnapshotAsync, savePersistedSnapshotUniversal } from "./loadPersisted";
+import { isPersistenceEnabled } from "./persistBuildingState";
+import { awaitPostgresPersistenceQueue, loadFromPostgres } from "./persistPostgres";
 /** Dados do empreendimento (copiados da planilha de referência para o repo; sem ligação direta ao Excel em runtime). */
 import seedRooms from "./treeTowerSeed.json";
 
@@ -669,5 +671,26 @@ export async function getBuildingStore(): Promise<Store> {
     });
   }
   return g.__buildingStoreInit;
+}
+
+/** Antes de mutar: com Postgres, alinha esta instância com a BD (evita sobrescrever com snapshot desatualizado em serverless). */
+export async function ensureBuildingStoreSyncedFromDb(): Promise<Store> {
+  const store = await getBuildingStore();
+  if (!process.env.DATABASE_URL?.trim() || !isPersistenceEnabled()) {
+    return store;
+  }
+  const fresh = await loadFromPostgres();
+  if (fresh) {
+    store.replaceSnapshotFromImport(fresh);
+  }
+  return store;
+}
+
+/** Após mutação: com Postgres, espera a gravação na fila antes de responder (resposta só após persistir). */
+export async function flushBuildingPersistence(): Promise<void> {
+  if (!process.env.DATABASE_URL?.trim() || !isPersistenceEnabled()) {
+    return;
+  }
+  await awaitPostgresPersistenceQueue();
 }
 

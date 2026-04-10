@@ -1,7 +1,10 @@
 import { isAuthEnabled } from "@/lib/authConfig";
 import type { RoomStatus } from "@/lib/buildingTypes";
 import { getAuthSession } from "@/server/auth/getAuthRole";
-import { getBuildingStore } from "@/server/building/buildingStore";
+import {
+  ensureBuildingStoreSyncedFromDb,
+  flushBuildingPersistence,
+} from "@/server/building/buildingStore";
 import { rejectIfSecretaria, rejectIfViewMode } from "@/server/mutationGuard";
 
 export async function PATCH(
@@ -13,7 +16,7 @@ export async function PATCH(
   const sec = await rejectIfSecretaria();
   if (sec) return sec;
 
-  const store = await getBuildingStore();
+  const store = await ensureBuildingStoreSyncedFromDb();
   const roomId = Number(params.roomId);
   if (!Number.isFinite(roomId)) return Response.json({ error: "roomId inválido" }, { status: 400 });
 
@@ -37,6 +40,7 @@ export async function PATCH(
       by,
       newStatus === "reservada" ? { reserveBy } : undefined
     );
+    await flushBuildingPersistence();
     return Response.json(evt);
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 400 });

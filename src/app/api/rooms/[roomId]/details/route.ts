@@ -1,5 +1,8 @@
 import { isAuthEnabled } from "@/lib/authConfig";
-import { getBuildingStore } from "@/server/building/buildingStore";
+import {
+  ensureBuildingStoreSyncedFromDb,
+  flushBuildingPersistence,
+} from "@/server/building/buildingStore";
 import { getAuthSession } from "@/server/auth/getAuthRole";
 import { rejectIfViewMode } from "@/server/mutationGuard";
 import type { RoomRecord } from "@/lib/buildingTypes";
@@ -13,7 +16,7 @@ export async function PATCH(
   const denied = await rejectIfViewMode();
   if (denied) return denied;
 
-  const store = await getBuildingStore();
+  const store = await ensureBuildingStoreSyncedFromDb();
   const roomId = Number(params.roomId);
   if (!Number.isFinite(roomId)) return Response.json({ error: "roomId inválido" }, { status: 400 });
 
@@ -97,6 +100,7 @@ export async function PATCH(
       descontos: optFinite(body.descontos, "Descontos"),
       reserveBy,
     });
+    await flushBuildingPersistence();
     return Response.json({ updated });
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 400 });
