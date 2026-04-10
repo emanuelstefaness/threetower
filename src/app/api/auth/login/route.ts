@@ -54,6 +54,17 @@ export async function POST(req: Request) {
     return jsonWithSessionCookie(token);
   }
 
+  const loginAttempt = typeof body.login === "string" ? body.login.trim() : "";
+  if (loginAttempt) {
+    return NextResponse.json(
+      {
+        error:
+          "Este servidor não tem APP_USERS_JSON (utilizadores nomeados). Configure a variável no Vercel/Docker com dubena e outros, ou deixe o utilizador em branco e use só a palavra-passe global (APP_LOGIN_PASSWORD).",
+      },
+      { status: 400 }
+    );
+  }
+
   const expected = process.env.APP_LOGIN_PASSWORD?.trim();
   if (!expected) {
     return NextResponse.json(

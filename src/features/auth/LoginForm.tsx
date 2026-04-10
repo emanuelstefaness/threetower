@@ -55,8 +55,7 @@ export default function LoginForm() {
     setLoading("password");
     setError(null);
     try {
-      const body = namedUsers ? { login, password } : { password };
-      if (await postLogin(body)) goNext();
+      if (await postLogin({ login: login.trim(), password })) goNext();
     } finally {
       setLoading(null);
     }
@@ -93,21 +92,25 @@ export default function LoginForm() {
         </div>
 
         <form className="login-form" onSubmit={onSubmitPassword}>
-          {namedUsers ? (
-            <>
-              <label className="login-label" htmlFor="login-user">
-                Utilizador
-              </label>
-              <input
-                id="login-user"
-                type="text"
-                autoComplete="username"
-                className="login-input"
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                disabled={loading !== null}
-              />
-            </>
+          <label className="login-label" htmlFor="login-user">
+            Utilizador
+          </label>
+          <input
+            id="login-user"
+            type="text"
+            autoComplete="username"
+            className="login-input"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
+            placeholder={namedUsers ? "" : "Opcional no modo de uma só palavra-passe"}
+            required={namedUsers === true}
+            disabled={loading !== null || namedUsers === null}
+          />
+          {namedUsers === false ? (
+            <p className="login-hint">
+              Sem <code>APP_USERS_JSON</code> no servidor: deixe o utilizador em branco e use a palavra-passe global. Para entrar como dubena, configure{" "}
+              <code>APP_USERS_JSON</code> nas variáveis de ambiente (ex.: Vercel).
+            </p>
           ) : null}
           <label className="login-label" htmlFor="login-password">
             Palavra-passe
@@ -115,7 +118,7 @@ export default function LoginForm() {
           <input
             id="login-password"
             type="password"
-            autoComplete={namedUsers ? "current-password" : "current-password"}
+            autoComplete="current-password"
             className="login-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -123,7 +126,7 @@ export default function LoginForm() {
             disabled={loading !== null}
           />
           <button type="submit" className="login-btn login-btn-primary" disabled={loading !== null || namedUsers === null}>
-            {loading === "password" ? "A entrar…" : namedUsers ? "Entrar" : "Entrar com palavra-passe"}
+            {loading === "password" ? "A entrar…" : "Entrar"}
           </button>
         </form>
 
