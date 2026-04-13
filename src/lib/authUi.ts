@@ -10,6 +10,7 @@ export function canAccessTvPanel(authLogin: string | null | undefined): boolean 
 }
 
 export function canAccessReports(role: ClientAuthRole): boolean {
+  if (process.env.NODE_ENV === "development") return true;
   return role !== "viewer" && role !== "secretaria";
 }
 

@@ -32,8 +32,8 @@ export async function middleware(request: NextRequest) {
     return null;
   }
 
-  // Visitante e secretaria de vendas não acedem a Relatórios
-  if (pathname.startsWith("/reports") && secret) {
+  // Visitante e secretaria não acedem a Relatórios em produção; em `next dev` todos podem ver (visualização local).
+  if (pathname.startsWith("/reports") && secret && process.env.NODE_ENV !== "development") {
     const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (token) {
       const v = await verifyJwtHs256Edge(token, secret);

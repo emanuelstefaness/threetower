@@ -27,7 +27,7 @@ export async function GET() {
     const store = await getBuildingStore();
     snapshot = store.getState();
   }
-  if (role === "viewer") {
+  if (role === "viewer" && process.env.NODE_ENV !== "development") {
     snapshot = sanitizeSnapshotForViewer(snapshot);
   }
   return Response.json({

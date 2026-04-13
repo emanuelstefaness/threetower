@@ -98,6 +98,13 @@ function valorImovelMeta(r: RoomRecord): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
+/** Tipologia ~40 m² vs esquina ~140 m² (planilha ~39 / ~139 m²; limiar 100 m²). */
+function bucketAreaTipologia40vs140(area: number): "40" | "140" | null {
+  if (!Number.isFinite(area) || area <= 0) return null;
+  if (area < 100) return "40";
+  return "140";
+}
+
 export default function TowerAlfaReportsClient() {
   const pathname = usePathname();
   const { building, appMode, authRole, authEnabled, authLogin, applyEvent, setBuilding, setRealtime } =
@@ -218,6 +225,18 @@ export default function TowerAlfaReportsClient() {
     return filteredRooms.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
   }, [filteredRooms]);
 
+  /** Salas com status da planilha ESTOQUE (à venda), respeitando o filtro atual. */
+  const mediaM2AVender = useMemo(() => {
+    const aVender = filteredRooms.filter(
+      (r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "ESTOQUE",
+    );
+    const soma = aVender.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
+    return {
+      count: aVender.length,
+      media: aVender.length ? soma / aVender.length : 0,
+    };
+  }, [filteredRooms]);
+
   const statusSalaOptions = useMemo(() => {
     const set = new Set<string>();
     for (const r of Object.values(building?.roomsById ?? {})) {
@@ -240,17 +259,31 @@ export default function TowerAlfaReportsClient() {
       faturamento,
       areaTotal,
       ticketMedio: sold.length ? faturamento / sold.length : 0,
+      /** Ponderado pelo total de m²: faturamento ÷ área vendida. */
+      valorMedioM2: areaTotal > 0 ? faturamento / areaTotal : 0,
     };
   }, [filteredRooms]);
 
   const statusSalaBreakdown = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { count: number; n40: number; n140: number }>();
     for (const room of filteredRooms) {
       const key = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
-      map.set(key, (map.get(key) ?? 0) + 1);
+      const cur = map.get(key) ?? { count: 0, n40: 0, n140: 0 };
+      cur.count += 1;
+      const b = bucketAreaTipologia40vs140(room.area);
+      if (b === "40") cur.n40 += 1;
+      else if (b === "140") cur.n140 += 1;
+      map.set(key, cur);
     }
     return Array.from(map.entries())
-      .map(([name, count]) => ({ name, count, color: colorForStatusSala(name) }))
+      .map(([name, v]) => ({
+        name,
+        count: v.count,
+        n40: v.n40,
+        n140: v.n140,
+        soma40e140: v.n40 + v.n140,
+        color: colorForStatusSala(name),
+      }))
       .sort((a, b) => b.count - a.count);
   }, [filteredRooms]);
   const statusSalaDonutSegments = useMemo(
@@ -260,6 +293,17 @@ export default function TowerAlfaReportsClient() {
         .map((item) => ({ key: item.name, value: item.count, color: item.color })),
     [statusSalaBreakdown]
   );
+
+  const statusSalaDetailFooter = useMemo(() => {
+    return statusSalaBreakdown.reduce(
+      (acc, item) => ({
+        n40: acc.n40 + item.n40,
+        n140: acc.n140 + item.n140,
+        soma: acc.soma + item.soma40e140,
+      }),
+      { n40: 0, n140: 0, soma: 0 },
+    );
+  }, [statusSalaBreakdown]);
 
   const floorsSorted = useMemo(() => {
     if (!building) return [];
@@ -588,11 +632,11 @@ export default function TowerAlfaReportsClient() {
                 <div className="report-kpi-card-sub">m² somados</div>
               </div>
               <div className="report-kpi-card">
-                <div className="report-kpi-card-label">Área média</div>
-                <div className="report-kpi-card-value">
-                  {filteredRooms.length ? Math.round((totalArea / filteredRooms.length) * 10) / 10 : 0}
+                <div className="report-kpi-card-label">Média m² a vender</div>
+                <div className="report-kpi-card-value">{Math.round(mediaM2AVender.media * 10) / 10}</div>
+                <div className="report-kpi-card-sub">
+                  {mediaM2AVender.count} sala{mediaM2AVender.count !== 1 ? "s" : ""} · status ESTOQUE
                 </div>
-                <div className="report-kpi-card-sub">m² por sala</div>
               </div>
               <div className="report-kpi-card">
                 <div className="report-kpi-card-label">Faturamento (vendas)</div>
@@ -612,16 +656,14 @@ export default function TowerAlfaReportsClient() {
                     <div className="report-kpi-value">{vendidas.count}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Valor de venda / faturamento</div>
-                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
-                  </div>
-                  <div className="report-kpi-row">
-                    <div className="report-kpi-label">Ticket médio (valor de venda)</div>
-                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.ticketMedio) || "—"}</div>
-                  </div>
-                  <div className="report-kpi-row">
-                    <div className="report-kpi-label">Área total vendida (m²)</div>
+                    <div className="report-kpi-label">m² vendidos</div>
                     <div className="report-kpi-value">{Math.round(vendidas.areaTotal * 10) / 10}</div>
+                  </div>
+                  <div className="report-kpi-row">
+                    <div className="report-kpi-label">Média valor do m² vendido</div>
+                    <div className="report-kpi-value">
+                      {vendidas.areaTotal > 0 ? formatMoneyBRL(vendidas.valorMedioM2) : "—"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -656,21 +698,66 @@ export default function TowerAlfaReportsClient() {
                 </div>
               </div>
 
-              <div className="report-panel">
-                <div className="report-panel-head">Distribuição (detalhada)</div>
-                <div className="report-kpi-list report-kpi-list--scroll">
-                  {statusSalaBreakdown.map((item) => {
-                    const pct = filteredRooms.length ? Math.round((item.count / filteredRooms.length) * 100) : 0;
-                    return (
-                      <div key={`rk-${item.name}`} className="report-kpi-row">
-                        <div className="report-kpi-label" title={item.name}>
-                          <span className="report-status-dot" style={{ background: item.color }} />
-                          <span className="report-ellipsis">{item.name}</span>
-                        </div>
-                        <div className="report-kpi-value">{item.count} ({pct}%)</div>
-                      </div>
-                    );
-                  })}
+              <div className="report-panel report-panel--detail-table">
+                <div className="report-panel-head">Distribuição detalhada</div>
+                <div className="report-detail-table-wrap">
+                  <table className="report-detail-table" aria-label="Distribuição por status e tipologia de área">
+                    <thead>
+                      <tr>
+                        <th scope="col">Status</th>
+                        <th scope="col" className="report-detail-th-num">
+                          <abbr title="Área privativa inferior a 100 m² (tipologia ~40 m²)">40 m²</abbr>
+                        </th>
+                        <th scope="col" className="report-detail-th-num">
+                          <abbr title="Área privativa a partir de 100 m² (~140 m², esquinas)">140 m²</abbr>
+                        </th>
+                        <th scope="col" className="report-detail-th-num">
+                          <abbr title="Soma das colunas 40 m² e 140 m²">Σ</abbr>
+                        </th>
+                        <th scope="col" className="report-detail-th-num report-detail-th-total">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statusSalaBreakdown.map((item) => {
+                        const pct = filteredRooms.length ? Math.round((item.count / filteredRooms.length) * 100) : 0;
+                        return (
+                          <tr key={`rk-${item.name}`}>
+                            <th scope="row" className="report-detail-td-status">
+                              <span className="report-detail-status-cell">
+                                <span className="report-status-dot" style={{ background: item.color }} aria-hidden />
+                                <span className="report-ellipsis" title={item.name}>
+                                  {item.name}
+                                </span>
+                              </span>
+                            </th>
+                            <td className="report-detail-td-num">{item.n40}</td>
+                            <td className="report-detail-td-num">{item.n140}</td>
+                            <td className="report-detail-td-num report-detail-td-num--emph">{item.soma40e140}</td>
+                            <td className="report-detail-td-total">
+                              <span className="report-detail-total-n">{item.count}</span>
+                              <span className="report-detail-total-pct">{pct}%</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    {statusSalaBreakdown.length > 0 ? (
+                      <tfoot>
+                        <tr>
+                          <th scope="row">Total</th>
+                          <td className="report-detail-td-num">{statusSalaDetailFooter.n40}</td>
+                          <td className="report-detail-td-num">{statusSalaDetailFooter.n140}</td>
+                          <td className="report-detail-td-num report-detail-td-num--emph">{statusSalaDetailFooter.soma}</td>
+                          <td className="report-detail-td-total">
+                            <span className="report-detail-total-n">{filteredRooms.length}</span>
+                            <span className="report-detail-total-pct">100%</span>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    ) : null}
+                  </table>
                 </div>
               </div>
             </div>
