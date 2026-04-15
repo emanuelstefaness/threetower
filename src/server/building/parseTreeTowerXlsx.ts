@@ -1,10 +1,11 @@
 /**
- * Leitura ocasional de ficheiros .xlsx (referência offline).
- * O sistema em produção usa `treeTowerSeed.json` — não há ligação em tempo real ao Excel.
+ * Leitura pontual de .xlsx só para **carga ou migração** (ex.: primeira importação).
+ * O estado em produção vive na persistência / UI — não há sincronização contínua com Excel.
  */
 import * as XLSX from "xlsx";
 import type { RoomStatus } from "@/lib/buildingTypes";
 import type { SeedRoom } from "./generateBuilding";
+import { parseExcelCellToUtcMs } from "./parseExcelDateCell";
 
 /**
  * Mantém o seed completo (aba **Pedro**) e substitui apenas as linhas cujo STATUS SALA na aba **Oficial** é **VENDIDO**.
@@ -220,8 +221,9 @@ function parseWorksheet(ws: XLSX.WorkSheet): SeedRoom[] {
           return c !== undefined ? toNumber(row[c]) : undefined;
         })(),
         dataVenda: (() => {
-          const c = col("DATA DA VENDA");
-          return c !== undefined ? toNumber(row[c]) : undefined;
+          const c =
+            col("DATA DA VENDA") ?? col("DATA VENDA") ?? col("DATA DE VENDA") ?? col("DATA VENDA OFICIAL");
+          return c !== undefined ? parseExcelCellToUtcMs(row[c]) : undefined;
         })(),
         competencia: (() => {
           const c = col("COMPETENCIA");

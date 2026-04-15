@@ -7,9 +7,33 @@ import FloorPlanHotspots from "@/features/floorplan/FloorPlanHotspots";
 import type { RoomRecord } from "@/lib/buildingTypes";
 import { formatDecimalBRL, formatMoneyBRL } from "@/lib/formatMoney";
 import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
-import { TREE_TOWER_STATUS_SALA_OPTIONS } from "@/lib/treeTowerStatusSala";
+import {
+  canonicalStatusSalaForSelect,
+  looksLikeRentedStatusSala,
+  looksLikeSoldStatusSala,
+  statusSalaRequiresFechamentoCompleto,
+  statusSalaShowsDataVendaField,
+  TREE_TOWER_STATUS_SALA_OPTIONS,
+} from "@/lib/treeTowerStatusSala";
+import { formatSaleDateIsoLocal } from "@/lib/vendasMensaisAgg";
 
 /** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
+function formatDateInputFromMs(ms: number | undefined): string {
+  return formatSaleDateIsoLocal(ms);
+}
+
+function parseDateInputLocal(s: string): number {
+  const t = s.trim();
+  if (!t) throw new Error("Indique a data (AAAA-MM-DD) ou deixe em branco.");
+  const [y, mo, da] = t.split("-").map((x) => Number(x));
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(da)) {
+    throw new Error("Data: use o formato AAAA-MM-DD.");
+  }
+  const ms = new Date(y, mo - 1, da, 12, 0, 0, 0).getTime();
+  if (Number.isNaN(ms)) throw new Error("Data inválida.");
+  return ms;
+}
+
 function parseOptionalMoney(raw: string): number | null {
   const t = raw.trim().replace(/\s/g, "");
   if (!t) return null;
@@ -28,8 +52,10 @@ function statusSelectOptions(current: string): string[] {
   return base;
 }
 
-function looksLikeSoldStatus(statusSala: string): boolean {
-  return /\bvend/i.test(statusSala.trim());
+function parseOptionalSaleDate(s: string): number | null {
+  const t = s.trim();
+  if (!t) return null;
+  return parseDateInputLocal(t);
 }
 
 export type RoomFloorWorkbenchProps = {
@@ -72,14 +98,50 @@ export default function RoomFloorWorkbench({
   const [editComprador, setEditComprador] = useState("");
   const [editFormaPagamento, setEditFormaPagamento] = useState("");
   const [editPrazoPagamento, setEditPrazoPagamento] = useState("");
+  const [editDataVenda, setEditDataVenda] = useState("");
 
   const [selectedPlanSlot, setSelectedPlanSlot] = useState<string | null>(null);
 
   const [toast, setToast] = useState<{ msg: string; icon: string } | null>(null);
-  const showToast = (msg: string, icon = "✅") => {
+  const [savingCardSaleDateId, setSavingCardSaleDateId] = useState<number | null>(null);
+  const showToast = useCallback((msg: string, icon = "✅") => {
     setToast({ msg, icon });
     window.setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), 3000);
-  };
+  }, []);
+
+  const saveCardSaleDate = useCallback(
+    async (room: RoomRecord, dateStr: string) => {
+      if (readOnly) return;
+      const st = room.statusSala ?? room.meta?.statusSalaOriginal;
+      if (!statusSalaShowsDataVendaField(st)) return;
+      const prevStr = formatSaleDateIsoLocal(room.meta?.dataVenda);
+      const nextStr = dateStr.trim();
+      if (prevStr === nextStr) return;
+      let dataVenda: number | null;
+      try {
+        dataVenda = parseOptionalSaleDate(dateStr);
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Data inválida", "⚠️");
+        return;
+      }
+      setSavingCardSaleDateId(room.id);
+      try {
+        await updateRoomDetails(room.id, {
+          by: authName?.trim() || "admin",
+          dataVenda,
+        });
+        const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an, authLogin: al } =
+          await fetchBuildingState();
+        setBuilding(snapshot, mode, authEnabled, r, an, al);
+        showToast(dataVenda != null ? "Data da venda guardada" : "Data da venda removida", "✅");
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Falha ao guardar data", "⚠️");
+      } finally {
+        setSavingCardSaleDateId(null);
+      }
+    },
+    [authName, readOnly, setBuilding, showToast],
+  );
 
   const floorRooms = useMemo(() => {
     if (!building) return [];
@@ -90,7 +152,7 @@ export default function RoomFloorWorkbench({
   const openEdit = useCallback((room: RoomRecord) => {
     setEditRoomId(room.id);
     setEditName(room.name ?? "");
-    setEditStatusSala(room.statusSala ?? room.meta?.statusSalaOriginal ?? "");
+    setEditStatusSala(canonicalStatusSalaForSelect(room.statusSala ?? room.meta?.statusSalaOriginal ?? ""));
     const m = room.meta;
     setEditValorImovel(m?.valorImovel != null && Number.isFinite(m.valorImovel) ? String(m.valorImovel) : "");
     setEditValorM2(m?.valorM2 != null && Number.isFinite(m.valorM2) ? String(m.valorM2) : "");
@@ -102,6 +164,7 @@ export default function RoomFloorWorkbench({
     setEditComprador(m?.comprador ?? "");
     setEditFormaPagamento(m?.formaPagamento ?? "");
     setEditPrazoPagamento(m?.prazoPagamento ?? "");
+    setEditDataVenda(formatDateInputFromMs(m?.dataVenda));
   }, []);
 
   const closeEdit = () => setEditRoomId(null);
@@ -135,15 +198,45 @@ export default function RoomFloorWorkbench({
       const nextName = editName.trim();
       if (!nextName) throw new Error("Informe o nome da sala.");
 
+      if (statusSalaRequiresFechamentoCompleto(next)) {
+        if (!editCorretor.trim()) {
+          showToast("Para VENDIDO ou ALUGADA, indique o corretor.", "⚠️");
+          return;
+        }
+        if (!editImobiliaria.trim()) {
+          showToast("Para VENDIDO ou ALUGADA, indique a imobiliária.", "⚠️");
+          return;
+        }
+        if (!editComprador.trim()) {
+          showToast("Para VENDIDO ou ALUGADA, indique o comprador ou locatário.", "⚠️");
+          return;
+        }
+        if (!editDataVenda.trim()) {
+          showToast("Para VENDIDO ou ALUGADA, indique a data (venda ou início do aluguel).", "⚠️");
+          return;
+        }
+      }
+
       let valorImovel: number | null;
       let valorM2: number | null;
       let baseCalculoVenda: number | null;
+      let dataVenda: number | null;
       try {
         valorImovel = parseOptionalMoney(editValorImovel);
         valorM2 = parseOptionalMoney(editValorM2);
         baseCalculoVenda = parseOptionalMoney(editBaseCalculo);
+        if (statusSalaShowsDataVendaField(next)) {
+          dataVenda = editDataVenda.trim() ? parseDateInputLocal(editDataVenda) : null;
+        } else {
+          dataVenda = null;
+        }
       } catch (e) {
         showToast(e instanceof Error ? e.message : "Valor inválido", "⚠️");
+        return;
+      }
+
+      if (statusSalaRequiresFechamentoCompleto(next) && (dataVenda == null || !Number.isFinite(dataVenda))) {
+        showToast("Para VENDIDO ou ALUGADA, use uma data válida.", "⚠️");
         return;
       }
 
@@ -161,6 +254,7 @@ export default function RoomFloorWorkbench({
         comprador: editComprador.trim() || null,
         formaPagamento: editFormaPagamento.trim() || null,
         prazoPagamento: editPrazoPagamento.trim() || null,
+        dataVenda,
       });
 
       const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an, authLogin: al } =
@@ -205,6 +299,13 @@ export default function RoomFloorWorkbench({
             <div className="rooms-grid">
               {floorRooms.map((r) => {
                 const ss = r.statusSala ?? r.meta?.statusSalaOriginal ?? "—";
+                const showCardDate = statusSalaShowsDataVendaField(ss);
+                const cardDateLabel =
+                  looksLikeSoldStatusSala(ss) && !looksLikeRentedStatusSala(ss)
+                    ? "Data venda"
+                    : looksLikeRentedStatusSala(ss) && !looksLikeSoldStatusSala(ss)
+                      ? "Data aluguel"
+                      : "Data";
                 return (
                   <div
                     key={r.id}
@@ -221,6 +322,38 @@ export default function RoomFloorWorkbench({
                     <div className="rc-status" style={{ marginTop: 4, opacity: 0.85 }}>
                       {formatMoneyBRL(r.meta?.valorImovel)}
                     </div>
+                    {showCardDate ? (
+                      <div
+                        className="rc-date-row"
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <div className="rc-date-label">{cardDateLabel}</div>
+                        {readOnly ? (
+                          <div className="rc-date-value">
+                            {(() => {
+                              const ms = r.meta?.dataVenda;
+                              if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "—";
+                              return new Date(ms).toLocaleDateString("pt-BR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              });
+                            })()}
+                          </div>
+                        ) : (
+                          <input
+                            type="date"
+                            className="rc-input-date"
+                            disabled={savingCardSaleDateId === r.id}
+                            title="Editável quando o status é venda ou aluguel"
+                            key={`dv-card-${r.id}-${formatSaleDateIsoLocal(r.meta?.dataVenda)}`}
+                            defaultValue={formatSaleDateIsoLocal(r.meta?.dataVenda)}
+                            onBlur={(e) => void saveCardSaleDate(r, e.currentTarget.value)}
+                          />
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -265,7 +398,7 @@ export default function RoomFloorWorkbench({
 
                   <div className="em-field" style={{ marginBottom: 0 }}>
                     <label className="em-label" htmlFor="status-sala-select">
-                      Status da sala (planilha)
+                      Status da sala
                     </label>
                     <select
                       id="status-sala-select"
@@ -283,6 +416,52 @@ export default function RoomFloorWorkbench({
                   </div>
                 </div>
               </div>
+
+              {(() => {
+                const statusForDateUi = readOnly
+                  ? (editingRoom.statusSala ?? editingRoom.meta?.statusSalaOriginal ?? "")
+                  : editStatusSala;
+                if (!statusSalaShowsDataVendaField(statusForDateUi)) return null;
+                const sold = looksLikeSoldStatusSala(statusForDateUi);
+                const rented = looksLikeRentedStatusSala(statusForDateUi);
+                const dataLabel =
+                  sold && !rented ? "Data da venda" : rented && !sold ? "Data do aluguel" : "Data";
+                return (
+                  <div className="em-section">
+                    <div className="em-section-title">Data · relatório</div>
+                    <div className="em-field" style={{ marginBottom: 0 }}>
+                      <label className="em-label" htmlFor="room-data-venda-main">
+                        {dataLabel}
+                      </label>
+                      {readOnly ? (
+                        <div id="room-data-venda-main" className="em-input em-readonly">
+                          {formatDateInputFromMs(editingRoom.meta?.dataVenda) || "—"}
+                        </div>
+                      ) : (
+                        <>
+                          <input
+                            id="room-data-venda-main"
+                            className="em-input"
+                            type="date"
+                            value={editDataVenda}
+                            onChange={(e) => setEditDataVenda(e.target.value)}
+                            autoComplete="off"
+                          />
+                          <div style={{ marginTop: 6, fontSize: 11, opacity: 0.85, lineHeight: 1.4 }}>
+                            {sold ? (
+                              <>
+                                Usada no relatório <strong>Vendas por período</strong> (mês da venda).
+                              </>
+                            ) : (
+                              <>Registo da data de <strong>posse ou contrato</strong> de aluguel.</>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {editingRoom?.status === "reservada" && (editingRoom.meta?.reservedByName || editingRoom.meta?.reservedAt) ? (
                 <div className="em-section">
@@ -304,7 +483,11 @@ export default function RoomFloorWorkbench({
 
               <div className="em-section">
                 <div className="em-section-title">
-                  {looksLikeSoldStatus(editStatusSala) ? "Venda — corretagem e comprador" : "Corretagem e comprador (preencher ao vender)"}
+                  {looksLikeSoldStatusSala(editStatusSala)
+                    ? "Venda — corretagem e comprador"
+                    : looksLikeRentedStatusSala(editStatusSala)
+                      ? "Aluguel — corretagem e locatário (obrigatório em ALUGADA, como na venda)"
+                      : "Corretagem e comprador (preencher ao vender ou alugar)"}
                 </div>
                 <div className="em-grid em-grid-2">
                   <div className="em-field">
@@ -343,7 +526,11 @@ export default function RoomFloorWorkbench({
                   </div>
                   <div className="em-field" style={{ gridColumn: "1 / -1" }}>
                     <label className="em-label" htmlFor="room-comprador">
-                      Comprador
+                      {looksLikeSoldStatusSala(editStatusSala)
+                        ? "Comprador"
+                        : looksLikeRentedStatusSala(editStatusSala)
+                          ? "Locatário"
+                          : "Comprador"}
                     </label>
                     {readOnly ? (
                       <div className="em-input em-readonly">{editingRoom.meta?.comprador?.trim() || "—"}</div>
@@ -353,7 +540,11 @@ export default function RoomFloorWorkbench({
                         className="em-input"
                         value={editComprador}
                         onChange={(e) => setEditComprador(e.target.value)}
-                        placeholder="Pode coincidir com o nome da sala"
+                        placeholder={
+                          looksLikeRentedStatusSala(editStatusSala) && !looksLikeSoldStatusSala(editStatusSala)
+                            ? "Nome do locatário"
+                            : "Pode coincidir com o nome da sala"
+                        }
                         autoComplete="off"
                       />
                     )}

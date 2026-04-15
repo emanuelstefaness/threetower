@@ -57,7 +57,7 @@ export async function awaitPostgresPersistenceQueue(): Promise<void> {
   await persistChain;
 }
 
-/** Gravação imediata (ex.: import Excel) — evita perder dados em serverless antes da fila correr. */
+/** Gravação imediata (ex.: import administrativo) — evita perder dados em serverless antes da fila correr. */
 export async function savePostgresSnapshotNow(state: BuildingSnapshot): Promise<void> {
   const pool = getPool();
   await ensureTable(pool);

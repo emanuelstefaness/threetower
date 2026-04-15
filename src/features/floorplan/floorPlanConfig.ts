@@ -13,7 +13,7 @@ type SlotCoords = Omit<FloorPlanSlot, "label">;
 
 /**
  * Geometria dos vãos (F-01…F-22). O rótulo exibido é sempre “Sala {andar}{01–22}”
- * (ex.: andar 1 + F-01 → Sala 101), alinhado à numeração da planilha.
+ * (ex.: andar 1 + F-01 → Sala 101), alinhado à numeração das unidades no empreendimento.
  */
 const TEMPLATE_COORDS: SlotCoords[] = [
   { id: "F-01", x: 63.8, y: 5.5, w: 5.3, h: 40.3 },

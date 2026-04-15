@@ -178,10 +178,15 @@ export default function TowerAlfaDashboardClient() {
                 Reservas
               </Link>
             ) : null}
-            {canAccessReports(authRole) ? (
-              <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
-                Relatórios
-              </Link>
+            {canAccessReports(authRole, authEnabled) ? (
+              <>
+                <Link href="/reports" className={`sb-item ${pathname === "/reports" ? "active" : ""}`}>
+                  Relatórios
+                </Link>
+                <Link href="/reports/vendas" className={`sb-item ${pathname.startsWith("/reports/vendas") ? "active" : ""}`}>
+                  Vendas por período
+                </Link>
+              </>
             ) : null}
           </div>
           <div className="sb-divider" />
@@ -209,7 +214,7 @@ export default function TowerAlfaDashboardClient() {
             <div className="main-sub">
               {appMode === "view"
                 ? "Visualização: clique num andar para ver a planta e os dados das salas (sem alterações)."
-                : "Clique num andar para gerir a planta: criar, editar ou excluir salas sem sair do dashboard."}
+                : "Clique num andar para ver a planta e editar os dados de negócio das salas (layout e cadastro de vãos são fixos)."}
             </div>
           </div>
 
@@ -224,7 +229,7 @@ export default function TowerAlfaDashboardClient() {
 
           <div className="floors-wrap">
             <div className="floors-head">
-              <span>Andar</span><span /><span>Distribuição (status da planilha)</span><span style={{ textAlign: "right" }}>Total</span>
+              <span>Andar</span><span /><span>Distribuição (status da sala)</span><span style={{ textAlign: "right" }}>Total</span>
             </div>
             {floorsSorted.map((f) => {
               const statusSalaCounts = statusSalaCountsForFloor(f);

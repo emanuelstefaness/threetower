@@ -117,6 +117,8 @@ export type UpdateRoomDetailsPayload = {
   prazoPagamento?: string | null;
   valorVenda?: number | null;
   descontos?: number | null;
+  /** Epoch ms — data da venda (status VENDIDO). */
+  dataVenda?: number | null;
 };
 
 export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsPayload): Promise<{ updated: RoomRecord }> {
@@ -141,6 +143,7 @@ export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsP
       prazoPagamento: args.prazoPagamento,
       valorVenda: args.valorVenda,
       descontos: args.descontos,
+      dataVenda: args.dataVenda,
     }),
   });
   if (!res.ok) {

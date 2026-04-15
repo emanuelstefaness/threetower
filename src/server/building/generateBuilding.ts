@@ -10,6 +10,36 @@ import type {
   SummaryCounts,
 } from "@/lib/buildingTypes";
 import { STATUS_ORDER, STATUS_META } from "@/lib/status";
+import { normalizeStatusSala } from "@/lib/treeTowerStatusSala";
+import * as XLSX from "xlsx";
+
+/** Abaixo disto, `meta.dataVenda` legado costuma ser serial Excel (seed), não epoch ms. */
+const DATA_VENDA_EPOCH_MS_MIN = 1_000_000_000_000;
+
+/**
+ * Converte `meta.dataVenda` de serial Excel para epoch ms (meio-dia local), quando aplicável.
+ * Valores já em ms (tipicamente ≥ 2001) mantêm-se. Usado ao hidratar seed ou snapshot persistido.
+ */
+export function normalizeMetaDataVendaEpochInPlace(meta: RoomMeta | undefined): void {
+  if (!meta || typeof meta.dataVenda !== "number" || !Number.isFinite(meta.dataVenda)) return;
+  const dv = meta.dataVenda;
+  if (dv <= 0 || dv >= DATA_VENDA_EPOCH_MS_MIN) return;
+  try {
+    const parse = XLSX.SSF?.parse_date_code as ((n: number) => { y: number; m: number; d: number } | null) | undefined;
+    const p = parse?.(dv);
+    if (p && Number.isFinite(p.y) && Number.isFinite(p.m) && Number.isFinite(p.d)) {
+      meta.dataVenda = new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0).getTime();
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function normalizeSnapshotDataVendaEpoch(snapshot: BuildingSnapshot): void {
+  for (const room of Object.values(snapshot.roomsById)) {
+    normalizeMetaDataVendaEpochInPlace(room.meta);
+  }
+}
 
 type Config = {
   floors: number;
@@ -131,13 +161,42 @@ export type SeedRoom = {
   id: number;
   floor: number;
   status?: string;
-  /** Texto idêntico à coluna STATUS SALA da planilha */
+  /** STATUS SALA (texto de negócio; pode vir do seed/import). */
   statusSala?: string;
   name: string;
   area: number;
   planSlot?: string;
   meta?: RoomMeta;
 };
+
+/**
+ * Quando existe snapshot persistido sem `dataVenda` válida mas o seed já traz a data,
+ * copia do seed para o estado em memória (e o arranque pode gravar de seguida).
+ * Evita que o relatório use só o `lastUpdatedAt`/histórico de importação (todas no mesmo mês).
+ */
+export function mergeSeedDataVendaIntoSnapshot(snapshot: BuildingSnapshot, seedRooms: SeedRoom[]): boolean {
+  const seedById = new Map<number, SeedRoom>();
+  for (const sr of seedRooms) {
+    if (Number.isFinite(sr.id)) seedById.set(sr.id, sr);
+  }
+  let changed = false;
+  for (const room of Object.values(snapshot.roomsById)) {
+    if (normalizeStatusSala(room.statusSala ?? room.meta?.statusSalaOriginal) !== "VENDIDO") continue;
+    const seed = seedById.get(room.id);
+    const dvSeed = seed?.meta?.dataVenda;
+    if (typeof dvSeed !== "number" || !Number.isFinite(dvSeed) || dvSeed <= 0) continue;
+
+    const dv = room.meta?.dataVenda;
+    const hasValidMs =
+      typeof dv === "number" && Number.isFinite(dv) && dv > 0 && dv >= DATA_VENDA_EPOCH_MS_MIN;
+    if (hasValidMs) continue;
+
+    if (!room.meta) room.meta = {};
+    room.meta.dataVenda = dvSeed;
+    changed = true;
+  }
+  return changed;
+}
 
 export function generateBuildingFromSeed(seedRooms: SeedRoom[]): BuildingSnapshot {
   const now = Date.now();
@@ -194,7 +253,7 @@ export function generateBuildingFromSeed(seedRooms: SeedRoom[]): BuildingSnapsho
           by: "import",
           from: "init",
           to: statusSalaRaw,
-          reason: "importação de planilha",
+          reason: "importação inicial",
         }
       : null;
 

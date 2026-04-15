@@ -26,8 +26,8 @@ function syncSecretOk(header: string | null): boolean {
 }
 
 /**
- * Alinha Neon/ficheiro ao **`treeTowerSeed.json` do repositório** (dados já copiados da referência; não lê Excel).
- * Use quando a base ainda tiver snapshot antigo após atualizar o JSON no Git.
+ * Alinha Neon/ficheiro ao **`treeTowerSeed.json` do repositório** (snapshot de referência no Git).
+ * Use quando quiser repor o estado inicial a partir do JSON — o dia a dia continua na persistência e na UI.
  *
  * `Authorization: Bearer <EXCEL_SYNC_SECRET>` (igual ao sync-excel).
  */

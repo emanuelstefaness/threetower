@@ -9,12 +9,28 @@ import type {
   StatusSalaHistoryEntry,
 } from "@/lib/buildingTypes";
 import { STATUS_META, STATUS_ORDER } from "@/lib/status";
-import { normalizeStatusSala } from "@/lib/treeTowerStatusSala";
-import { generateBuildingFromSeed, generateInitialBuilding } from "./generateBuilding";
+import {
+  looksLikeRentedStatusSala,
+  looksLikeSoldStatusSala,
+  normalizeStatusSala,
+  statusSalaRequiresFechamentoCompleto,
+  statusSalaShowsDataVendaField,
+} from "@/lib/treeTowerStatusSala";
+import type { SeedRoom } from "./generateBuilding";
+import {
+  generateBuildingFromSeed,
+  generateInitialBuilding,
+  mergeSeedDataVendaIntoSnapshot,
+  normalizeSnapshotDataVendaEpoch,
+} from "./generateBuilding";
 import { loadPersistedSnapshotAsync, savePersistedSnapshotUniversal } from "./loadPersisted";
 import { isPersistenceEnabled } from "./persistBuildingState";
 import { awaitPostgresPersistenceQueue, loadFromPostgres } from "./persistPostgres";
-/** Dados do empreendimento (copiados da planilha de referência para o repo; sem ligação direta ao Excel em runtime). */
+/**
+ * Estado inicial opcional (`treeTowerSeed.json`): com seed, layout (salas/área/posição na planta) é fixo.
+ * Dados de negócio (`meta`, incl. `dataVenda` em ms) vivem na persistência (ficheiro ou Postgres) depois
+ * do primeiro arranque: alteram-se na app (modal/cartões + API PATCH) e mantêm-se entre reinícios.
+ */
 import seedRooms from "./treeTowerSeed.json";
 
 type Listener = (evt: RoomStatusChangedEvent) => void;
@@ -48,13 +64,15 @@ type Store = {
     prazoPagamento?: string | null;
     valorVenda?: number | null;
     descontos?: number | null;
+    /** Data da venda (epoch ms) — usada em “Vendas por período”. */
+    dataVenda?: number | null;
     /** Preenchido pelo servidor ao entrar em reservada (quem registou). */
     reserveBy?: { name: string; login: string };
   }) => RoomRecord;
   deleteRoom: (args: { roomId: number; by: string }) => { ok: true; deletedRoomId: number; floor: number };
   subscribe: (listener: Listener) => () => void;
   getState: () => BuildingSnapshot;
-  /** Substitui todo o estado em memória (ex.: reimport da planilha). Não grava disco/BD — use `persistSnapshotNow` depois. */
+  /** Substitui todo o estado em memória (ex.: import administrativo). Não grava disco/BD — use `persistSnapshotNow` depois. */
   replaceSnapshotFromImport: (snapshot: BuildingSnapshot) => void;
 };
 
@@ -75,7 +93,7 @@ function createNotification(type: NotificationEvent["type"], title: string, mess
 function operationalStatusFromStatusSala(statusSala: string): RoomStatus {
   const u = statusSala.trim().toUpperCase();
   if (u === "INDISPONIVEL" || u === "INDISPONÍVEL") return "ocupada";
-  if (u === "VENDIDO") return "ocupada";
+  if (looksLikeSoldStatusSala(statusSala) || looksLikeRentedStatusSala(statusSala)) return "ocupada";
   if (u.includes("RESERV")) return "reservada";
   if (u.includes("MANUT")) return "manutencao";
   if (u.includes("DBN")) return "reservada";
@@ -144,10 +162,19 @@ async function createStore(): Promise<Store> {
         }));
 
   const state = initialState;
+  normalizeSnapshotDataVendaEpoch(state);
+  let mergedSeedDates = false;
+  if (persisted && hasSeed) {
+    mergedSeedDates = mergeSeedDataVendaIntoSnapshot(state, seedRooms as SeedRoom[]);
+    if (mergedSeedDates) normalizeSnapshotDataVendaEpoch(state);
+  }
 
   const persist = () => {
     savePersistedSnapshotUniversal(state);
   };
+  if (mergedSeedDates && isPersistenceEnabled()) {
+    persist();
+  }
 
   const listeners = new Set<Listener>();
 
@@ -187,10 +214,14 @@ async function createStore(): Promise<Store> {
     by: string;
     planSlot?: string;
   }) => {
-    if (hasSeed) throw new Error("Não é possível criar novas salas neste empreendimento.");
     if (!Number.isFinite(floor)) throw new Error("floor inválido");
     if (!Number.isFinite(count) || count <= 0) throw new Error("count inválido");
     if (!Number.isFinite(area) || area <= 0) throw new Error("area inválida");
+    if (hasSeed) {
+      throw new Error(
+        "Não é possível criar novas salas: o layout da torre vem da importação (plantas/Excel) e o cadastro de vãos é fixo."
+      );
+    }
 
     const floorAgg = state.floorAggregates[floor];
     if (!floorAgg) throw new Error("Andar não encontrado");
@@ -261,6 +292,7 @@ async function createStore(): Promise<Store> {
     prazoPagamento,
     valorVenda,
     descontos,
+    dataVenda,
     reserveBy,
   }: {
     roomId: number;
@@ -281,6 +313,7 @@ async function createStore(): Promise<Store> {
     prazoPagamento?: string | null;
     valorVenda?: number | null;
     descontos?: number | null;
+    dataVenda?: number | null;
     reserveBy?: { name: string; login: string };
   }) => {
     const room = state.roomsById[roomId];
@@ -291,27 +324,37 @@ async function createStore(): Promise<Store> {
     const statusSalaAtStart = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "").trim();
 
     const cleanName = typeof name === "string" ? name.trim() : undefined;
+    if (cleanName) room.name = cleanName;
+
     if (hasSeed) {
-      if (typeof area === "number" && Number.isFinite(area) && area > 0) {
-        throw new Error("A área vem da planilha e não pode ser alterada.");
+      if (typeof area === "number" && Number.isFinite(area) && area > 0 && area !== room.area) {
+        throw new Error(
+          "Não é possível alterar a área da sala: o layout da torre vem da importação (plantas/Excel) e este dado é fixo."
+        );
       }
-      if (typeof planSlot === "string") throw new Error("A posição na planta vem da planilha e não pode ser alterada.");
-      if (cleanName) room.name = cleanName;
-    } else {
-      if (cleanName) room.name = cleanName;
-
-      if (typeof area === "number" && Number.isFinite(area) && area > 0) {
-        room.area = area;
-      }
-
       if (typeof planSlot === "string") {
         const cleanSlot = planSlot.trim();
-        if (cleanSlot) {
-          const occupied = Object.values(state.roomsById).some((r) => r.id !== roomId && r.floor === room.floor && r.planSlot === cleanSlot);
-          if (occupied) throw new Error("Este slot da planta já está vinculado a outra sala");
+        const nextNorm = cleanSlot || undefined;
+        const curNorm = room.planSlot?.trim() || undefined;
+        if (nextNorm !== curNorm) {
+          throw new Error(
+            "Não é possível alterar a posição na planta: o layout da torre vem da importação (plantas/Excel) e este dado é fixo."
+          );
         }
-        room.planSlot = cleanSlot || undefined;
       }
+    }
+
+    if (typeof area === "number" && Number.isFinite(area) && area > 0) {
+      room.area = area;
+    }
+
+    if (typeof planSlot === "string") {
+      const cleanSlot = planSlot.trim();
+      if (cleanSlot) {
+        const occupied = Object.values(state.roomsById).some((r) => r.id !== roomId && r.floor === room.floor && r.planSlot === cleanSlot);
+        if (occupied) throw new Error("Este slot da planta já está vinculado a outra sala");
+      }
+      room.planSlot = cleanSlot || undefined;
     }
 
     if (typeof statusSala === "string") {
@@ -322,7 +365,7 @@ async function createStore(): Promise<Store> {
       if (room.meta) room.meta.statusSalaOriginal = cleanStatusSala;
       else room.meta = { statusSalaOriginal: cleanStatusSala };
 
-      // Mantemos o status operacional internamente, mas para o produto o status "correto" é o da planilha.
+      // Mantemos o status operacional internamente; o texto de negócio é o STATUS SALA (sistema).
       // Ainda assim, se quiser compatibilidade com o status operacional, mantemos a sincronização.
       const nextOp = operationalStatusFromStatusSala(cleanStatusSala);
       const oldOp = room.status;
@@ -344,9 +387,12 @@ async function createStore(): Promise<Store> {
           by,
           from: statusSalaAtStart || "init",
           to: statusSalaNow,
-          reason: "atualização de status da sala (planilha)",
+          reason: "atualização de status da sala",
         };
         room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
+      }
+      if (!statusSalaShowsDataVendaField(statusSalaNow) && room.meta?.dataVenda != null) {
+        delete room.meta.dataVenda;
       }
     }
 
@@ -377,7 +423,8 @@ async function createStore(): Promise<Store> {
       formaPagamento !== undefined ||
       prazoPagamento !== undefined ||
       valorVenda !== undefined ||
-      descontos !== undefined;
+      descontos !== undefined ||
+      dataVenda !== undefined;
     if (metaPriceKeys) {
       if (!room.meta) room.meta = {};
       const m = room.meta;
@@ -419,15 +466,34 @@ async function createStore(): Promise<Store> {
         if (descontos === null) delete m.descontos;
         else m.descontos = descontos;
       }
+      if (dataVenda !== undefined) {
+        if (dataVenda === null) delete m.dataVenda;
+        else m.dataVenda = dataVenda;
+      }
     }
 
-    // registra histórico (inclui transição quando status operacional muda por causa do status da planilha)
+    const statusSalaFinal = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "").trim();
+    if (statusSalaRequiresFechamentoCompleto(statusSalaFinal)) {
+      const m = room.meta;
+      const parts: string[] = [];
+      if (!String(m?.comprador ?? "").trim()) parts.push("comprador ou locatário");
+      if (!String(m?.imobiliaria ?? "").trim()) parts.push("imobiliária");
+      if (!String(m?.corretor ?? "").trim()) parts.push("corretor");
+      if (typeof m?.dataVenda !== "number" || !Number.isFinite(m.dataVenda) || m.dataVenda <= 0) {
+        parts.push("data (venda ou início do aluguel)");
+      }
+      if (parts.length) {
+        throw new Error(`Para VENDIDO ou ALUGADA, preencha: ${parts.join(", ")}.`);
+      }
+    }
+
+    // registra histórico (inclui transição quando o status operacional muda por causa do STATUS SALA)
     room.history.unshift({
       at: Date.now(),
       by,
       from: statusAtStart,
       to: room.status,
-      reason: typeof statusSala === "string" ? "atualização de status da sala (planilha)" : "atualização de detalhes",
+      reason: typeof statusSala === "string" ? "atualização de status da sala" : "atualização de detalhes",
     });
     room.history = room.history.slice(0, 60);
 
@@ -444,9 +510,13 @@ async function createStore(): Promise<Store> {
     roomId: number;
     by: string;
   }) => {
-    if (hasSeed) throw new Error("Não é possível excluir salas neste empreendimento.");
     const room = state.roomsById[roomId];
     if (!room) throw new Error("Sala não encontrada");
+    if (hasSeed) {
+      throw new Error(
+        "Não é possível excluir salas: o layout da torre vem da importação (plantas/Excel) e o cadastro de vãos é fixo."
+      );
+    }
 
     const floor = room.floor;
     const floorAgg = state.floorAggregates[floor];
@@ -521,7 +591,7 @@ async function createStore(): Promise<Store> {
     });
     room.history = room.history.slice(0, 60);
 
-    /** Alinha STATUS SALA e metadados à reserva (igual ao fluxo Salas → planilha = RESERVADA). */
+    /** Alinha STATUS SALA e metadados à reserva (fluxo Salas → RESERVADA). */
     if (newStatus === "reservada" && oldStatus !== "reservada") {
       room.statusSala = "RESERVADA";
       if (!room.meta) room.meta = {};
@@ -536,7 +606,7 @@ async function createStore(): Promise<Store> {
           by,
           from: statusSalaAtStart || "init",
           to: "RESERVADA",
-          reason: "reserva (status operacional → planilha)",
+          reason: "reserva (status operacional → STATUS SALA)",
         };
         room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
       }
@@ -560,7 +630,7 @@ async function createStore(): Promise<Store> {
           by,
           from: statusSalaAtStart || "init",
           to: "ESTOQUE",
-          reason: "libertação de reserva (status operacional → planilha)",
+          reason: "libertação de reserva (status operacional → STATUS SALA)",
         };
         room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
       }
@@ -637,6 +707,7 @@ async function createStore(): Promise<Store> {
   };
 
   const replaceSnapshotFromImport = (snapshot: BuildingSnapshot) => {
+    normalizeSnapshotDataVendaEpoch(snapshot);
     state.floors = snapshot.floors;
     state.roomsById = snapshot.roomsById;
     state.floorAggregates = snapshot.floorAggregates;

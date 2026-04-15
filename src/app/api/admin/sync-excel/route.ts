@@ -26,8 +26,8 @@ function syncSecretOk(header: string | null): boolean {
 }
 
 /**
- * Importação **pontual** a partir de um ficheiro .xlsx (cópia da planilha de referência).
- * Não existe integração contínua com Excel; o estado normal vem de `treeTowerSeed.json` + persistência.
+ * Importação **pontual** a partir de um ficheiro .xlsx (migração ou reset administrativo).
+ * O dia a dia é sempre persistência + alterações na aplicação; este endpoint não substitui o uso normal da UI.
  *
  * Abas: **Pedro** (lista completa) e opcionalmente **Oficial** (só **VENDIDO** sobrescreve dados de venda).
  * `Authorization: Bearer <EXCEL_SYNC_SECRET>`. Body: `multipart/form-data`, campo `file`.
@@ -92,6 +92,6 @@ export async function POST(req: Request) {
     ok: true,
     roomsTotal: seed.length,
     vendidasNoEstado: vendidoCount,
-    nota: "Base = aba Pedro; dados extra de venda nas linhas VENDIDO vêm da aba Oficial quando existir.",
+    nota: "Import grava no servidor; depois disso, edite salas e datas de venda na aplicação.",
   });
 }

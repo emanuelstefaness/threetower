@@ -34,7 +34,7 @@ export default function FloorPlanHotspots({
   }
 
   const subLine =
-    subCaption === undefined ? "Clique em uma sala na planta para ver os dados da planilha." : subCaption;
+    subCaption === undefined ? "Clique em uma sala na planta para ver os dados da sala." : subCaption;
 
   return (
     <div className="floorplan-wrap">

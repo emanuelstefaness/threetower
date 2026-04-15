@@ -69,10 +69,15 @@ export default function InboxReservedClient() {
                 Reservas
               </Link>
             ) : null}
-            {canAccessReports(authRole) ? (
-              <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
-                Relatórios
-              </Link>
+            {canAccessReports(authRole, authEnabled) ? (
+              <>
+                <Link href="/reports" className={`sb-item ${pathname === "/reports" ? "active" : ""}`}>
+                  Relatórios
+                </Link>
+                <Link href="/reports/vendas" className={`sb-item ${pathname.startsWith("/reports/vendas") ? "active" : ""}`}>
+                  Vendas por período
+                </Link>
+              </>
             ) : null}
           </div>
           <div className="sb-divider" />

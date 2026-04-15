@@ -11,7 +11,12 @@ import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { canAccessInbox, canAccessReports, canAccessTvPanel } from "@/lib/authUi";
 import { formatDecimalBRL, formatMoneyBRL } from "@/lib/formatMoney";
-import { colorForStatusSala, normalizeStatusSala } from "@/lib/treeTowerStatusSala";
+import {
+  colorForStatusSala,
+  normalizeStatusSala,
+  TREE_TOWER_STATUS_SALA_OPTIONS,
+} from "@/lib/treeTowerStatusSala";
+import { bucketAreaTipologia40vs140 } from "@/lib/vendasMensaisAgg";
 
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
   const totalAll = segments.reduce((s, item) => s + item.value, 0);
@@ -98,13 +103,6 @@ function valorImovelMeta(r: RoomRecord): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
-/** Tipologia ~40 m² vs esquina ~140 m² (planilha ~39 / ~139 m²; limiar 100 m²). */
-function bucketAreaTipologia40vs140(area: number): "40" | "140" | null {
-  if (!Number.isFinite(area) || area <= 0) return null;
-  if (area < 100) return "40";
-  return "140";
-}
-
 export default function TowerAlfaReportsClient() {
   const pathname = usePathname();
   const { building, appMode, authRole, authEnabled, authLogin, applyEvent, setBuilding, setRealtime } =
@@ -122,6 +120,9 @@ export default function TowerAlfaReportsClient() {
   const [sortBy, setSortBy] = useState<"lastUpdatedDesc" | "areaDesc" | "floorAsc">("lastUpdatedDesc");
   const [page, setPage] = useState<number>(1);
   const pageSize = 25;
+
+  /** Comparação vendido × outro status: R$/m² (vendido) fixo vs R$/m² tabela do status escolhido. */
+  const [compareWithStatus, setCompareWithStatus] = useState<string>(() => "ESTOQUE");
 
   // Snapshot inicial
   useEffect(() => {
@@ -216,6 +217,33 @@ export default function TowerAlfaReportsClient() {
     return rooms;
   }, [building, statusSalaFilter, floorFilter, areaMin, areaMax, search, recentOnly, recentDays, sortBy]);
 
+  /** Base da comparação: ignora o filtro lateral "Status da sala". */
+  const compareBaseRooms = useMemo(() => {
+    if (!building) return [];
+
+    const q = search.trim().toLowerCase();
+    const now = Date.now();
+    const maxAge = recentOnly ? startOfDay(now) - recentDays * 24 * 60 * 60 * 1000 : null;
+
+    let rooms = Object.values(building.roomsById);
+
+    if (floorFilter !== "all") rooms = rooms.filter((r) => r.floor === floorFilter);
+
+    rooms = rooms.filter((r) => r.area >= areaMin && r.area <= areaMax);
+
+    if (q) rooms = rooms.filter((r) => String(r.id).includes(q) || r.name.toLowerCase().includes(q));
+
+    if (maxAge != null) rooms = rooms.filter((r) => r.lastUpdatedAt >= maxAge);
+
+    rooms.sort((a, b) => {
+      if (sortBy === "lastUpdatedDesc") return b.lastUpdatedAt - a.lastUpdatedAt;
+      if (sortBy === "areaDesc") return b.area - a.area;
+      return a.floor - b.floor;
+    });
+
+    return rooms;
+  }, [building, floorFilter, areaMin, areaMax, search, recentOnly, recentDays, sortBy]);
+
   // Reset de pagina quando filtros mudam
   useEffect(() => {
     setPage(1);
@@ -225,16 +253,13 @@ export default function TowerAlfaReportsClient() {
     return filteredRooms.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
   }, [filteredRooms]);
 
-  /** Salas com status da planilha ESTOQUE (à venda), respeitando o filtro atual. */
-  const mediaM2AVender = useMemo(() => {
-    const aVender = filteredRooms.filter(
+  /** Salas ESTOQUE no filtro: contagem e soma de m² (área total disponível). */
+  const estoqueStats = useMemo(() => {
+    const estoque = filteredRooms.filter(
       (r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "ESTOQUE",
     );
-    const soma = aVender.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
-    return {
-      count: aVender.length,
-      media: aVender.length ? soma / aVender.length : 0,
-    };
+    const areaTotal = estoque.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
+    return { count: estoque.length, areaTotal };
   }, [filteredRooms]);
 
   const statusSalaOptions = useMemo(() => {
@@ -246,12 +271,25 @@ export default function TowerAlfaReportsClient() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [building]);
 
+  const compareStatusPillOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of statusSalaOptions) set.add(s);
+    for (const s of TREE_TOWER_STATUS_SALA_OPTIONS) set.add(s);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [statusSalaOptions]);
+
   const totalValorImovel = useMemo(() => {
     return filteredRooms.reduce((s, r) => s + valorImovelMeta(r), 0);
   }, [filteredRooms]);
 
+  /** Valor médio R$/m² de tabela no filtro: Σ valor imóvel ÷ Σ m². */
+  const mediaValorM2Tabela = useMemo(() => {
+    if (totalArea <= 0) return 0;
+    return totalValorImovel / totalArea;
+  }, [totalArea, totalValorImovel]);
+
   const vendidas = useMemo(() => {
-    const sold = filteredRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO");
+    const sold = compareBaseRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO");
     const faturamento = sold.reduce((s, r) => s + valorFaturamentoVenda(r), 0);
     const areaTotal = sold.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
     return {
@@ -262,7 +300,34 @@ export default function TowerAlfaReportsClient() {
       /** Ponderado pelo total de m²: faturamento ÷ área vendida. */
       valorMedioM2: areaTotal > 0 ? faturamento / areaTotal : 0,
     };
-  }, [filteredRooms]);
+  }, [compareBaseRooms]);
+
+  const compareOtherRooms = useMemo(() => {
+    const n = normalizeStatusSala(compareWithStatus);
+    return compareBaseRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === n);
+  }, [compareBaseRooms, compareWithStatus]);
+
+  const compareOtherArea = useMemo(() => {
+    return compareOtherRooms.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
+  }, [compareOtherRooms]);
+
+  const compareOtherValorImovel = useMemo(() => {
+    return compareOtherRooms.reduce((s, r) => s + valorImovelMeta(r), 0);
+  }, [compareOtherRooms]);
+
+  /** R$/m² de tabela (Σ valor imóvel ÷ Σ m²) só nas salas do status escolhido. */
+  const compareOtherMediaM2Tabela = useMemo(() => {
+    if (compareOtherArea <= 0) return 0;
+    return compareOtherValorImovel / compareOtherArea;
+  }, [compareOtherArea, compareOtherValorImovel]);
+
+  const compareWithStatusLabel = useMemo(() => {
+    const n = normalizeStatusSala(compareWithStatus);
+    for (const label of compareStatusPillOptions) {
+      if (normalizeStatusSala(label) === n) return label;
+    }
+    return compareWithStatus;
+  }, [compareStatusPillOptions, compareWithStatus]);
 
   const statusSalaBreakdown = useMemo(() => {
     const map = new Map<string, { count: number; n40: number; n140: number }>();
@@ -312,50 +377,6 @@ export default function TowerAlfaReportsClient() {
       .sort((a, b) => b - a);
   }, [building]);
 
-  const floorDistributionByStatusSala = useMemo(() => {
-    const out = new Map<number, Map<string, number>>();
-    for (const f of floorsSorted) out.set(f, new Map<string, number>());
-    for (const r of filteredRooms) {
-      const statusSala = (r.statusSala ?? r.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
-      const bucket = out.get(r.floor) ?? new Map<string, number>();
-      bucket.set(statusSala, (bucket.get(statusSala) ?? 0) + 1);
-      out.set(r.floor, bucket);
-    }
-    return out;
-  }, [filteredRooms, floorsSorted]);
-
-  const trend = useMemo(() => {
-    // Tendência por semana (últimas 12 semanas) baseada em mudanças do status da planilha (statusSalaHistory)
-    const weeks = 12;
-    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-    const buckets: Array<Map<string, number>> = Array.from({ length: weeks }, () => new Map<string, number>());
-    const now = Date.now();
-
-    for (const room of Object.values(building?.roomsById ?? {})) {
-      for (const h of room.statusSalaHistory ?? []) {
-        if (h.from === "init") continue;
-        if (h.from === h.to) continue;
-        const age = now - h.at;
-        const idxFromEnd = Math.floor(age / msPerWeek);
-        if (idxFromEnd < 0 || idxFromEnd >= weeks) continue;
-        const idx = (weeks - 1) - idxFromEnd;
-        const key = (h.to ?? "").trim() || "Sem status";
-        const bucket = buckets[idx] ?? new Map<string, number>();
-        bucket.set(key, (bucket.get(key) ?? 0) + 1);
-        buckets[idx] = bucket;
-      }
-    }
-
-    const topKeys = statusSalaBreakdown.slice(0, 4).map((x) => x.name);
-    const series = topKeys.map((key) => ({
-      key,
-      color: colorForStatusSala(key),
-      values: buckets.map((b) => b.get(key) ?? 0),
-    }));
-
-    return { buckets, series };
-  }, [building, statusSalaBreakdown]);
-
   const recentChanges = useMemo(() => {
     // Lista de eventos recentes (statusSalaHistory entries)
     const changes: { at: number; roomId: number; floor: number; from: string; to: string; by: string }[] = [];
@@ -390,7 +411,7 @@ export default function TowerAlfaReportsClient() {
         "nome",
         "andar",
         "area",
-        "status_sala_planilha",
+        "status_sala",
         "posicao",
         "matricula",
         "valor_m2",
@@ -408,6 +429,7 @@ export default function TowerAlfaReportsClient() {
         "area_descoberta_m2",
         "area_privativa_m2",
         "lastUpdatedAt",
+        "data_venda_iso",
       ],
       ...filteredRooms.map((r) => [
         String(r.id),
@@ -432,6 +454,9 @@ export default function TowerAlfaReportsClient() {
         r.meta?.areaDescobertaM2 != null ? String(r.meta.areaDescobertaM2) : "",
         r.meta?.areaPrivativaM2 != null ? String(r.meta.areaPrivativaM2) : "",
         String(r.lastUpdatedAt),
+        r.meta?.dataVenda != null && Number.isFinite(r.meta.dataVenda) && r.meta.dataVenda > 0
+          ? new Date(r.meta.dataVenda).toISOString()
+          : "",
       ]),
     ];
     downloadCSV(`relatorio-salas.csv`, rows);
@@ -472,10 +497,15 @@ export default function TowerAlfaReportsClient() {
                 Reservas
               </Link>
             ) : null}
-            {canAccessReports(authRole) ? (
-              <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
-                Relatórios
-              </Link>
+            {canAccessReports(authRole, authEnabled) ? (
+              <>
+                <Link href="/reports" className={`sb-item ${pathname === "/reports" ? "active" : ""}`}>
+                  Relatórios
+                </Link>
+                <Link href="/reports/vendas" className={`sb-item ${pathname.startsWith("/reports/vendas") ? "active" : ""}`}>
+                  Vendas por período
+                </Link>
+              </>
             ) : null}
           </div>
 
@@ -484,7 +514,7 @@ export default function TowerAlfaReportsClient() {
 
           <div className="sb-manage reports-sb-manage">
             <div className="em-field">
-              <div className="em-label">Status da sala (planilha)</div>
+              <div className="em-label">Status da sala</div>
               <div className="report-status-grid">
                 <label className={`report-status-pill ${statusSalaFilter === "all" ? "chosen" : ""}`}>
                   <input
@@ -586,6 +616,7 @@ export default function TowerAlfaReportsClient() {
                   setRecentOnly(false);
                   setRecentDays(90);
                   setSortBy("lastUpdatedDesc");
+                  setCompareWithStatus("ESTOQUE");
                 }}
               >
                 Limpar filtros
@@ -605,9 +636,6 @@ export default function TowerAlfaReportsClient() {
             <div className="report-hero">
               <div className="report-hero-left">
                 <div className="report-title">Relatórios</div>
-                <div className="report-sub">
-                  Vendas: mostra só faturamento (valor de venda; se faltar, valor do imóvel). O somatório de valor imóvel no filtro está no painel à direita. Tabela e CSV = estado do prédio.
-                </div>
               </div>
               <div className="report-hero-right">
                 <div className="report-chip">
@@ -632,10 +660,10 @@ export default function TowerAlfaReportsClient() {
                 <div className="report-kpi-card-sub">m² somados</div>
               </div>
               <div className="report-kpi-card">
-                <div className="report-kpi-card-label">Média m² a vender</div>
-                <div className="report-kpi-card-value">{Math.round(mediaM2AVender.media * 10) / 10}</div>
+                <div className="report-kpi-card-label">Área total disponível</div>
+                <div className="report-kpi-card-value">{Math.round(estoqueStats.areaTotal * 10) / 10}</div>
                 <div className="report-kpi-card-sub">
-                  {mediaM2AVender.count} sala{mediaM2AVender.count !== 1 ? "s" : ""} · status ESTOQUE
+                  m² em ESTOQUE · {estoqueStats.count} sala{estoqueStats.count !== 1 ? "s" : ""}
                 </div>
               </div>
               <div className="report-kpi-card">
@@ -647,20 +675,72 @@ export default function TowerAlfaReportsClient() {
               </div>
             </div>
 
+            <div className="report-compare-card">
+              <div className="report-compare-head">Comparação · vendido × outro status</div>
+              <div className="report-compare-toolbar">
+                <div className="report-compare-field report-compare-field--narrow">
+                  <label className="report-compare-field-label" htmlFor="report-compare-with">
+                    Comparar vendido com
+                  </label>
+                  <select
+                    id="report-compare-with"
+                    className="em-select"
+                    value={normalizeStatusSala(compareWithStatus)}
+                    onChange={(e) => setCompareWithStatus(e.target.value)}
+                  >
+                    {compareStatusPillOptions.map((label) => {
+                      const v = normalizeStatusSala(label);
+                      return (
+                        <option key={`cw-${label}`} value={v}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+              <div className="report-compare-grid report-compare-grid--two">
+                <div className="report-compare-item">
+                  <div className="report-compare-label">R$/m² médio ({compareWithStatusLabel})</div>
+                  <div className="report-compare-value">
+                    {compareOtherArea > 0 ? formatMoneyBRL(compareOtherMediaM2Tabela) : "—"}
+                  </div>
+                  <div className="report-compare-hint">
+                    Σ valor imóvel ÷ Σ m² (tabela) · {compareOtherRooms.length} sala{compareOtherRooms.length !== 1 ? "s" : ""} ·{" "}
+                    {Math.round(compareOtherArea * 10) / 10} m²
+                  </div>
+                </div>
+                <div className="report-compare-item report-compare-item--fixed">
+                  <div className="report-compare-label">R$/m² médio (vendido)</div>
+                  <div className="report-compare-value">
+                    {vendidas.areaTotal > 0 ? formatMoneyBRL(vendidas.valorMedioM2) : "—"}
+                  </div>
+                  <div className="report-compare-hint">
+                    Faturamento vendas ÷ m² · VENDIDO · {vendidas.count} sala{vendidas.count !== 1 ? "s" : ""} ·{" "}
+                    {Math.round(vendidas.areaTotal * 10) / 10} m²
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="report-grid-2">
               <div className="report-panel">
                 <div className="report-panel-head">Vendas (status VENDIDO no filtro)</div>
                 <div className="report-kpi-list">
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Quantidade</div>
+                    <div className="report-kpi-label">Quantidade de vendas</div>
                     <div className="report-kpi-value">{vendidas.count}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">m² vendidos</div>
+                    <div className="report-kpi-label">Valor de vendas</div>
+                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
+                  </div>
+                  <div className="report-kpi-row">
+                    <div className="report-kpi-label">Área total de vendas (m²)</div>
                     <div className="report-kpi-value">{Math.round(vendidas.areaTotal * 10) / 10}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Média valor do m² vendido</div>
+                    <div className="report-kpi-label">Média R$/m² vendido</div>
                     <div className="report-kpi-value">
                       {vendidas.areaTotal > 0 ? formatMoneyBRL(vendidas.valorMedioM2) : "—"}
                     </div>
@@ -675,9 +755,13 @@ export default function TowerAlfaReportsClient() {
                     <div className="report-kpi-value">{formatMoneyBRL(totalValorImovel) || "—"}</div>
                   </div>
                   <div className="report-kpi-row">
-                    <div className="report-kpi-label">Média por sala (filtro)</div>
+                    <div className="report-kpi-label">Área total (m²)</div>
+                    <div className="report-kpi-value">{Math.round(totalArea * 10) / 10}</div>
+                  </div>
+                  <div className="report-kpi-row">
+                    <div className="report-kpi-label">Média R$/m² (tabela)</div>
                     <div className="report-kpi-value">
-                      {filteredRooms.length ? formatMoneyBRL(totalValorImovel / filteredRooms.length) : "—"}
+                      {totalArea > 0 ? formatMoneyBRL(mediaValorM2Tabela) : "—"}
                     </div>
                   </div>
                 </div>
@@ -762,8 +846,6 @@ export default function TowerAlfaReportsClient() {
               </div>
             </div>
 
-            {/* Removido a pedido: tendência + distribuições extras */}
-
             <div className="report-panel">
               <div className="report-panel-head">Lista completa de salas (filtrada)</div>
 
@@ -775,7 +857,7 @@ export default function TowerAlfaReportsClient() {
                       <th>Nome</th>
                       <th>Andar</th>
                       <th>Área</th>
-                      <th>Status (planilha)</th>
+                      <th>Status da sala</th>
                       <th>Posição</th>
                       <th>Valor imóvel</th>
                       <th>Valor venda</th>
@@ -845,7 +927,7 @@ export default function TowerAlfaReportsClient() {
             </div>
 
             <div className="report-panel">
-              <div className="report-panel-head">Últimas mudanças (status da planilha)</div>
+              <div className="report-panel-head">Últimas mudanças (STATUS SALA)</div>
               <div className="report-recent-changes">
                 {recentChanges.length === 0 ? (
                   <div className="sb-count">Sem mudanças ainda.</div>

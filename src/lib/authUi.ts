@@ -9,9 +9,10 @@ export function canAccessTvPanel(authLogin: string | null | undefined): boolean 
   return l === TV_PANEL_LOGIN;
 }
 
-export function canAccessReports(role: ClientAuthRole): boolean {
-  if (process.env.NODE_ENV === "development") return true;
-  return role !== "viewer" && role !== "secretaria";
+/** Relatórios e “Vendas por período”: só gestor quando a autenticação está ativa (como a caixa de entrada). */
+export function canAccessReports(role: ClientAuthRole, authEnabled: boolean): boolean {
+  if (!authEnabled) return true;
+  return role === "gestor";
 }
 
 /** Caixa de entrada de reservas: só gestores quando a auth está ativa. */

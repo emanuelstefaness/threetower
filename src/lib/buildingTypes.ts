@@ -26,6 +26,7 @@ export type RoomMeta = {
   prazoPagamento?: string;
   valorVenda?: number;
   descontos?: number;
+  /** Data da venda (ou contrato) em epoch ms — editável na app; persistida; seed só arranque inicial. */
   dataVenda?: number;
   competencia?: number;
   /** Momento em que a sala passou a reservada (epoch ms). */
@@ -59,9 +60,9 @@ export type RoomRecord = {
   name: string;
   area: number;
   planSlot?: string;
-  /** Status exatamente como na planilha (STATUS SALA); editável na UI. */
+  /** STATUS SALA (texto de negócio); guardado e editável no sistema. */
   statusSala?: string;
-  /** Histórico de alterações do status da planilha. */
+  /** Histórico de alterações do STATUS SALA. */
   statusSalaHistory?: StatusSalaHistoryEntry[];
   meta?: RoomMeta;
   lastUpdatedAt: number;
@@ -109,7 +110,7 @@ export type RoomStatusChangedEvent = {
   floorAggregate: FloorAggregate;
   summary: SummaryCounts;
   notifications: NotificationEvent[];
-  /** Presente quando o servidor alinhou a planilha à reserva / libertação. */
+  /** Presente quando o servidor alinhou o STATUS SALA à reserva / libertação. */
   planilha?: RoomPlanilhaPatchEvent;
 };
 

@@ -97,7 +97,7 @@ export function RoomModal({ roomId, open, onClose }: Props) {
                           readOnly
                             ? "Modo somente leitura"
                             : isSecretaria(authRole)
-                              ? "Secretaria de vendas: use Salas → editar sala e o status da planilha (ex.: RESERVADA)."
+                              ? "Secretaria de vendas: use Salas → editar sala e o STATUS SALA (ex.: RESERVADA)."
                               : undefined
                         }
                         onClick={() => {

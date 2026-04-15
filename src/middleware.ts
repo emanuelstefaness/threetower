@@ -32,14 +32,14 @@ export async function middleware(request: NextRequest) {
     return null;
   }
 
-  // Visitante e secretaria não acedem a Relatórios em produção; em `next dev` todos podem ver (visualização local).
-  if (pathname.startsWith("/reports") && secret && process.env.NODE_ENV !== "development") {
+  // Relatórios e vendas por período: apenas papel `gestor`.
+  if (pathname.startsWith("/reports") && secret) {
     const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (token) {
       const v = await verifyJwtHs256Edge(token, secret);
       if (v.ok) {
         const mr = middlewareRole(v.payload);
-        if (mr === "viewer" || mr === "secretaria") {
+        if (mr !== "gestor") {
           const url = request.nextUrl.clone();
           url.pathname = "/";
           url.search = "";

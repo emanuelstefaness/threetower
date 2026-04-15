@@ -43,7 +43,7 @@ function statusLabelForRoom(r: RoomRecord): string {
   return (r.statusSala ?? r.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
 }
 
-/** Igual aos Relatórios: só status da planilha normalizado === "VENDIDO" (não usa .includes, para não contar ex. "PRÉ-VENDIDO"). */
+/** Igual aos Relatórios: só STATUS SALA normalizado === "VENDIDO" (não usa .includes, para não contar ex. "PRÉ-VENDIDO"). */
 function isVendidoRoom(r: RoomRecord): boolean {
   return normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO";
 }
@@ -243,7 +243,7 @@ export default function TowerAlfaPanelClient() {
               <div className="floors-head-tv">
                 <span>Andar</span>
                 <span />
-                <span>Distribuição (status da planilha)</span>
+                <span>Distribuição (status da sala)</span>
                 <span className="ta-r">Total</span>
               </div>
               <div className="floors-scroll">

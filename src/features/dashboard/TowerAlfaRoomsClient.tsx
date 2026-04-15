@@ -115,10 +115,15 @@ export default function TowerAlfaRoomsClient() {
                 Reservas
               </Link>
             ) : null}
-            {canAccessReports(authRole) ? (
-              <Link href="/reports" className={`sb-item ${pathname.startsWith("/reports") ? "active" : ""}`}>
-                Relatórios
-              </Link>
+            {canAccessReports(authRole, authEnabled) ? (
+              <>
+                <Link href="/reports" className={`sb-item ${pathname === "/reports" ? "active" : ""}`}>
+                  Relatórios
+                </Link>
+                <Link href="/reports/vendas" className={`sb-item ${pathname.startsWith("/reports/vendas") ? "active" : ""}`}>
+                  Vendas por período
+                </Link>
+              </>
             ) : null}
           </div>
           <div className="sb-divider" />
@@ -138,7 +143,7 @@ export default function TowerAlfaRoomsClient() {
             <div className="main-sub">
               {appMode === "view"
                 ? "Visualização dos dados por andar e pela planta. Alterações estão desativadas."
-                : "Criação, edição e exclusão centralizadas por andar."}
+                : "Edição dos dados de negócio por andar. Layout, área e posição na planta vêm da importação e não podem ser alterados aqui."}
             </div>
           </div>
 

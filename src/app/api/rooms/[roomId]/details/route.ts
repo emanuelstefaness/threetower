@@ -38,6 +38,8 @@ export async function PATCH(
     prazoPagamento?: string | null;
     valorVenda?: number | null;
     descontos?: number | null;
+    /** Epoch ms — data em que a sala foi vendida (relatório “Vendas por período”). */
+    dataVenda?: number | null;
   };
   const session = await getAuthSession();
   const by =
@@ -98,6 +100,7 @@ export async function PATCH(
       prazoPagamento: strOrUndef(body.prazoPagamento),
       valorVenda: optFinite(body.valorVenda, "Valor da venda"),
       descontos: optFinite(body.descontos, "Descontos"),
+      dataVenda: optFinite(body.dataVenda, "Data da venda"),
       reserveBy,
     });
     await flushBuildingPersistence();
