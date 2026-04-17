@@ -195,8 +195,19 @@ export default function RoomFloorWorkbench({
     setEditName(room.name ?? "");
     setEditStatusSala(canonicalStatusSalaForSelect(room.statusSala ?? room.meta?.statusSalaOriginal ?? ""));
     const m = room.meta;
-    setEditValorImovel(m?.valorImovel != null && Number.isFinite(m.valorImovel) ? formatMoneyInputBR(m.valorImovel) : "");
-    setEditValorM2(m?.valorM2 != null && Number.isFinite(m.valorM2) ? formatNumberInputBR(m.valorM2) : "");
+    const imovelVal = m?.valorImovel != null && Number.isFinite(m.valorImovel) ? m.valorImovel : null;
+    const m2FromImovel =
+      imovelVal != null && imovelVal > 0
+        ? computeValorM2FromValorImovel(imovelVal, areaBasePrecificacaoM2(room.area))
+        : null;
+    setEditValorImovel(imovelVal != null ? formatMoneyInputBR(imovelVal) : "");
+    setEditValorM2(
+      m2FromImovel != null
+        ? formatNumberInputBR(m2FromImovel)
+        : m?.valorM2 != null && Number.isFinite(m.valorM2)
+          ? formatNumberInputBR(m.valorM2)
+          : "",
+    );
     setEditValorVenda(m?.valorVenda != null && Number.isFinite(m.valorVenda) ? formatMoneyInputBR(m.valorVenda) : "");
     setEditPrecificacao(m?.precificacao ?? "");
     setEditFaixa(m?.faixa ?? "");
@@ -348,9 +359,14 @@ export default function RoomFloorWorkbench({
         return;
       }
 
-      if (!isViewer && !editValorM2.trim()) {
-        showToast("Indique o valor do m² — a partir dele o sistema calcula o valor do imóvel.", "⚠️");
+      if (!isViewer && !editValorImovel.trim()) {
+        showToast("Indique o valor do imóvel — o sistema recalcula o valor do m² automaticamente.", "⚠️");
         return;
+      }
+
+      const unitBase = areaBasePrecificacaoM2(current.area);
+      if (valorImovel != null && Number.isFinite(valorImovel) && valorImovel > 0) {
+        valorM2 = computeValorM2FromValorImovel(valorImovel, unitBase);
       }
 
       await updateRoomDetails(editRoomId, {
@@ -364,7 +380,8 @@ export default function RoomFloorWorkbench({
           valorImovel != null && valorVenda != null && Number.isFinite(valorImovel) && Number.isFinite(valorVenda)
             ? valorImovel - valorVenda
             : null,
-        priceSource: lastEditedPriceSource,
+        priceSource:
+          valorImovel != null && Number.isFinite(valorImovel) && valorImovel > 0 ? "valorImovel" : lastEditedPriceSource,
         precificacao: editPrecificacao.trim() || null,
         faixa: editFaixa.trim() || null,
         corretor: editCorretor.trim() || null,
