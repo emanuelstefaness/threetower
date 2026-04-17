@@ -290,15 +290,19 @@ export default function TowerAlfaReportsClient() {
 
   const vendidas = useMemo(() => {
     const sold = compareBaseRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO");
-    const faturamento = sold.reduce((s, r) => s + valorFaturamentoVenda(r), 0);
+    const valorVendas = sold.reduce((s, r) => s + valorImovelMeta(r), 0);
+    const valorVendido = sold.reduce((s, r) => s + valorFaturamentoVenda(r), 0);
+    const descontoTotal = valorVendas - valorVendido;
     const areaTotal = sold.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
     return {
       count: sold.length,
-      faturamento,
+      valorVendas,
+      valorVendido,
+      descontoTotal,
       areaTotal,
-      ticketMedio: sold.length ? faturamento / sold.length : 0,
-      /** Ponderado pelo total de m²: faturamento ÷ área vendida. */
-      valorMedioM2: areaTotal > 0 ? faturamento / areaTotal : 0,
+      ticketMedio: sold.length ? valorVendido / sold.length : 0,
+      /** Ponderado pelo total de m²: valor vendido ÷ área vendida. */
+      valorMedioM2: areaTotal > 0 ? valorVendido / areaTotal : 0,
     };
   }, [compareBaseRooms]);
 
@@ -668,7 +672,7 @@ export default function TowerAlfaReportsClient() {
               </div>
               <div className="report-kpi-card">
                 <div className="report-kpi-card-label">Faturamento (vendas)</div>
-                <div className="report-kpi-card-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
+                <div className="report-kpi-card-value">{formatMoneyBRL(vendidas.valorVendido) || "—"}</div>
                 <div className="report-kpi-card-sub">
                   {vendidas.count} unidade{vendidas.count !== 1 ? "s" : ""} · Ticket méd. {formatMoneyBRL(vendidas.ticketMedio) || "—"}
                 </div>
@@ -716,7 +720,7 @@ export default function TowerAlfaReportsClient() {
                     {vendidas.areaTotal > 0 ? formatMoneyBRL(vendidas.valorMedioM2) : "—"}
                   </div>
                   <div className="report-compare-hint">
-                    Faturamento vendas ÷ m² · VENDIDO · {vendidas.count} sala{vendidas.count !== 1 ? "s" : ""} ·{" "}
+                    Valor vendido ÷ m² · VENDIDO · {vendidas.count} sala{vendidas.count !== 1 ? "s" : ""} ·{" "}
                     {Math.round(vendidas.areaTotal * 10) / 10} m²
                   </div>
                 </div>
@@ -733,7 +737,15 @@ export default function TowerAlfaReportsClient() {
                   </div>
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Valor de vendas</div>
-                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.faturamento) || "—"}</div>
+                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.valorVendas) || "—"}</div>
+                  </div>
+                  <div className="report-kpi-row">
+                    <div className="report-kpi-label">Valor vendido</div>
+                    <div className="report-kpi-value">{formatMoneyBRL(vendidas.valorVendido) || "—"}</div>
+                  </div>
+                  <div className="report-kpi-row">
+                    <div className="report-kpi-label">{vendidas.descontoTotal >= 0 ? "Desconto total" : "Acréscimo total"}</div>
+                    <div className="report-kpi-value">{formatMoneyBRL(Math.abs(vendidas.descontoTotal)) || "—"}</div>
                   </div>
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Área total de vendas (m²)</div>
