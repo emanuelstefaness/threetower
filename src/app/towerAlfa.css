@@ -1800,7 +1800,28 @@ html.tower-minimal .report-vendas-legend--month {
 }
 
 .report-vendas-metas-panel {
-  margin-bottom: 20px;
+  width: min(1080px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  margin: 0;
+}
+.report-vendas-metas-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(2px);
+}
+.report-vendas-metas-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .report-vendas-metas-intro {
   margin: 0 0 12px;
@@ -1881,6 +1902,11 @@ html.tower-minimal .report-vendas-legend--month {
   color: var(--text3);
 }
 
+.report-vendas-dash-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
 .report-panel--vendas-dash {
   margin-bottom: 20px;
 }

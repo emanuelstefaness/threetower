@@ -32,6 +32,7 @@ import {
 import VendasPeriodDashboardCharts from "./VendasPeriodDashboardCharts";
 
 const PERIOD_OPTIONS = [6, 12, 18, 24, 36] as const;
+const TARGETS_START_KEY = "2026-04";
 
 type MetasDraftRow = { quantidade: string; faturamento: string; n40: string; n140: string };
 
@@ -145,15 +146,17 @@ export default function TowerAlfaVendasMensaisClient() {
   }, [reloadTargets]);
 
   const vendasPorMes = useMemo(() => aggregateVendasPorMes(building, periodMonths), [building, periodMonths]);
+  const metasRows = useMemo(() => vendasPorMes.rows.filter((r) => r.monthKey >= TARGETS_START_KEY), [vendasPorMes.rows]);
 
   const [metasDraft, setMetasDraft] = useState<Record<string, MetasDraftRow>>({});
   const [metasSaving, setMetasSaving] = useState(false);
   const [metasMessage, setMetasMessage] = useState<string | null>(null);
+  const [metasModalOpen, setMetasModalOpen] = useState(false);
 
-  const metasRowsKey = useMemo(() => vendasPorMes.rows.map((r) => r.monthKey).join("|"), [vendasPorMes.rows]);
+  const metasRowsKey = useMemo(() => metasRows.map((r) => r.monthKey).join("|"), [metasRows]);
 
   useEffect(() => {
-    setMetasDraft(buildMetasDraftFromApi(vendasPorMes.rows, apiTargets));
+    setMetasDraft(buildMetasDraftFromApi(metasRows, apiTargets));
   }, [metasRowsKey, apiTargets]);
 
   const canEditMetas = !authEnabled || authRole === "gestor";
@@ -162,7 +165,7 @@ export default function TowerAlfaVendasMensaisClient() {
     if (!canEditMetas) return;
     setMetasMessage(null);
     const merged: TargetsMap = { ...apiTargets };
-    for (const r of vendasPorMes.rows) {
+    for (const r of metasRows) {
       const rowDraft = metasDraft[r.monthKey] ?? emptyMetasDraftRow();
       const entry = draftRowToStored(rowDraft);
       if (entry == null) delete merged[r.monthKey];
@@ -185,7 +188,7 @@ export default function TowerAlfaVendasMensaisClient() {
     } finally {
       setMetasSaving(false);
     }
-  }, [apiTargets, canEditMetas, metasDraft, vendasPorMes.rows]);
+  }, [apiTargets, canEditMetas, metasDraft, metasRows]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -211,10 +214,18 @@ export default function TowerAlfaVendasMensaisClient() {
     return rows;
   }, [building, selectedMonthKey]);
 
-  const { targets: targetsEffective, simulated: targetsSimulated } = useMemo(
-    () => mergeTargetsWithSimulation(vendasPorMes.rows, apiTargets),
-    [vendasPorMes.rows, apiTargets],
-  );
+  const { targets: targetsEffective, simulated: targetsSimulated } = useMemo(() => {
+    const merged = mergeTargetsWithSimulation(vendasPorMes.rows, apiTargets);
+    const targets: TargetsMap = { ...merged.targets };
+    const simulated: SimulatedByMonth = { ...merged.simulated };
+    for (const r of vendasPorMes.rows) {
+      if (r.monthKey < TARGETS_START_KEY) {
+        delete targets[r.monthKey];
+        delete simulated[r.monthKey];
+      }
+    }
+    return { targets, simulated };
+  }, [vendasPorMes.rows, apiTargets]);
 
   useEffect(() => {
     const keys = vendasPorMes.rows.map((r) => r.monthKey);
@@ -327,9 +338,13 @@ export default function TowerAlfaVendasMensaisClient() {
               </p>
             ) : null}
 
-            {vendasPorMes.rows.length > 0 ? (
-              <div className="report-panel report-vendas-metas-panel">
-                <div className="report-panel-head">Metas do período (gestão)</div>
+            {metasModalOpen && metasRows.length > 0 ? (
+              <div className="report-vendas-metas-modal-backdrop" onClick={() => setMetasModalOpen(false)}>
+                <div className="report-panel report-vendas-metas-panel" onClick={(e) => e.stopPropagation()}>
+                <div className="report-vendas-metas-modal-head">
+                  <div className="report-panel-head">Definir metas (a partir de abril/2026)</div>
+                  <button type="button" className="em-btn em-cancel" onClick={() => setMetasModalOpen(false)}>Fechar</button>
+                </div>
                 <p className="report-vendas-metas-intro">
                   Defina, por mês civil, a meta de <strong>salas vendidas</strong> e o <strong>faturamento</strong> alvo
                   (valor vendido somado). Opcional: metas por tipologia (~40 m² e ~140 m²). Os gráficos e a tabela usam estes
@@ -354,7 +369,7 @@ export default function TowerAlfaVendasMensaisClient() {
                       </tr>
                     </thead>
                     <tbody>
-                      {vendasPorMes.rows.map((r) => {
+                      {metasRows.map((r) => {
                         const d = metasDraft[r.monthKey] ?? emptyMetasDraftRow();
                         return (
                           <tr key={`meta-${r.monthKey}`}>
@@ -452,6 +467,7 @@ export default function TowerAlfaVendasMensaisClient() {
                   )}
                 </div>
               </div>
+            </div>
             ) : null}
 
             <div className="report-vendas-month-toolbar">
@@ -473,9 +489,23 @@ export default function TowerAlfaVendasMensaisClient() {
             </div>
 
             {vendasPorMes.rows.length > 0 ? (
-              <div className="report-panel report-panel--vendas-dash">
-                <VendasPeriodDashboardCharts building={building} rows={vendasPorMes.rows} targets={targetsEffective} />
-              </div>
+              <>
+                <div className="report-vendas-dash-toolbar">
+                  <button
+                    type="button"
+                    className="em-btn em-save"
+                    onClick={() => {
+                      setMetasMessage(null);
+                      setMetasModalOpen(true);
+                    }}
+                  >
+                    Definir metas
+                  </button>
+                </div>
+                <div className="report-panel report-panel--vendas-dash">
+                  <VendasPeriodDashboardCharts building={building} rows={vendasPorMes.rows} targets={targetsEffective} />
+                </div>
+              </>
             ) : null}
 
             {selectedMonthKey && vendasPorMes.rows.length > 0 ? (
@@ -561,7 +591,7 @@ export default function TowerAlfaVendasMensaisClient() {
                     </tr>
                   </thead>
                   <tbody>
-                    {vendasPorMes.rows.map((r) => {
+                    {metasRows.map((r) => {
                       const tm = targetsEffective[r.monthKey];
                       const sim = targetsSimulated[r.monthKey];
                       const isSel = r.monthKey === selectedMonthKey;
