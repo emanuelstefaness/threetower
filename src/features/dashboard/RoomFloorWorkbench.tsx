@@ -51,6 +51,16 @@ function parseOptionalMoney(raw: string): number | null {
   return v;
 }
 
+function formatMoneyInputBR(v: number): string {
+  if (!Number.isFinite(v)) return "";
+  return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+}
+
+function formatNumberInputBR(v: number): string {
+  if (!Number.isFinite(v)) return "";
+  return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(v);
+}
+
 function statusSelectOptions(current: string): string[] {
   const cur = current.trim();
   const base = [...TREE_TOWER_STATUS_SALA_OPTIONS];
@@ -185,9 +195,9 @@ export default function RoomFloorWorkbench({
     setEditName(room.name ?? "");
     setEditStatusSala(canonicalStatusSalaForSelect(room.statusSala ?? room.meta?.statusSalaOriginal ?? ""));
     const m = room.meta;
-    setEditValorImovel(m?.valorImovel != null && Number.isFinite(m.valorImovel) ? String(m.valorImovel) : "");
-    setEditValorM2(m?.valorM2 != null && Number.isFinite(m.valorM2) ? String(m.valorM2) : "");
-    setEditValorVenda(m?.valorVenda != null && Number.isFinite(m.valorVenda) ? String(m.valorVenda) : "");
+    setEditValorImovel(m?.valorImovel != null && Number.isFinite(m.valorImovel) ? formatMoneyInputBR(m.valorImovel) : "");
+    setEditValorM2(m?.valorM2 != null && Number.isFinite(m.valorM2) ? formatNumberInputBR(m.valorM2) : "");
+    setEditValorVenda(m?.valorVenda != null && Number.isFinite(m.valorVenda) ? formatMoneyInputBR(m.valorVenda) : "");
     setEditPrecificacao(m?.precificacao ?? "");
     setEditFaixa(m?.faixa ?? "");
     setEditCorretor(m?.corretor ?? "");
@@ -211,7 +221,7 @@ export default function RoomFloorWorkbench({
           return;
         }
         const nextImovel = computeValorImovelFromValorM2(m2, areaBasePrecificacaoM2(editingRoom.area));
-        setEditValorImovel(String(nextImovel));
+        setEditValorImovel(formatMoneyInputBR(nextImovel));
       } catch {
         // mantém input livre até ficar válido
       }
@@ -231,7 +241,7 @@ export default function RoomFloorWorkbench({
           return;
         }
         const nextM2 = computeValorM2FromValorImovel(imovel, areaBasePrecificacaoM2(editingRoom.area));
-        setEditValorM2(String(nextM2));
+        setEditValorM2(formatNumberInputBR(nextM2));
       } catch {
         // mantém input livre até ficar válido
       }
@@ -240,6 +250,32 @@ export default function RoomFloorWorkbench({
   );
 
   const closeEdit = () => setEditRoomId(null);
+
+  const normalizeMoneyInput = useCallback((raw: string, setter: (v: string) => void) => {
+    try {
+      const n = parseOptionalMoney(raw);
+      if (n == null) {
+        setter("");
+        return;
+      }
+      setter(formatMoneyInputBR(n));
+    } catch {
+      // mantém livre se inválido
+    }
+  }, []);
+
+  const normalizeM2Input = useCallback((raw: string, setter: (v: string) => void) => {
+    try {
+      const n = parseOptionalMoney(raw);
+      if (n == null) {
+        setter("");
+        return;
+      }
+      setter(formatNumberInputBR(n));
+    } catch {
+      // mantém livre se inválido
+    }
+  }, []);
 
   useEffect(() => {
     if (skipNextPlanClear.current) {
@@ -692,6 +728,7 @@ export default function RoomFloorWorkbench({
                           placeholder="Ex.: 560000"
                           value={editValorImovel}
                           onChange={(e) => handleValorImovelChange(e.target.value)}
+                          onBlur={(e) => normalizeMoneyInput(e.currentTarget.value, setEditValorImovel)}
                         />
                       )}
                     </div>
@@ -711,6 +748,7 @@ export default function RoomFloorWorkbench({
                           placeholder="Ex.: 370000"
                           value={editValorVenda}
                           onChange={(e) => setEditValorVenda(e.target.value)}
+                          onBlur={(e) => normalizeMoneyInput(e.currentTarget.value, setEditValorVenda)}
                         />
                       )}
                     </div>
@@ -758,6 +796,7 @@ export default function RoomFloorWorkbench({
                           placeholder="Ex.: 12500,50"
                           value={editValorM2}
                           onChange={(e) => handleValorM2Change(e.target.value)}
+                          onBlur={(e) => normalizeM2Input(e.currentTarget.value, setEditValorM2)}
                         />
                       )}
                       {!readOnly ? (
