@@ -512,6 +512,13 @@ async function createStore(): Promise<Store> {
         m.baseCalculoVenda = unitBase;
       }
 
+      const imovelFinal =
+        typeof m.valorImovel === "number" && Number.isFinite(m.valorImovel) ? m.valorImovel : 0;
+      if (imovelFinal > 0) {
+        m.valorM2 = computeValorM2FromValorImovel(imovelFinal, unitBase);
+        m.baseCalculoVenda = unitBase;
+      }
+
       const m2Final = m.valorM2;
       const faixaNow = m.faixa;
       const m2Changed = prevM2 !== m2Final;
