@@ -1799,6 +1799,88 @@ html.tower-minimal .report-vendas-legend--month {
   color: rgba(148, 163, 184, 0.95);
 }
 
+.report-vendas-metas-panel {
+  margin-bottom: 20px;
+}
+.report-vendas-metas-intro {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text2);
+}
+.report-vendas-metas-feedback {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: var(--text1);
+}
+.report-vendas-metas-feedback--err {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+.report-vendas-metas-scroll {
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.report-vendas-metas-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.report-vendas-metas-table th,
+.report-vendas-metas-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  text-align: left;
+  vertical-align: middle;
+}
+.report-vendas-metas-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(15, 23, 42, 0.96);
+  font-weight: 600;
+  color: var(--text2);
+}
+.report-vendas-metas-table th.num,
+.report-vendas-metas-table td.num {
+  text-align: right;
+}
+.report-vendas-metas-input {
+  width: 4.5rem;
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.55);
+  color: var(--text1);
+  font-size: 12px;
+  text-align: right;
+}
+.report-vendas-metas-input--wide {
+  width: 8.5rem;
+}
+.report-vendas-metas-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.report-vendas-metas-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.report-vendas-metas-readonly {
+  font-size: 12px;
+  color: var(--text3);
+}
+
 .report-panel--vendas-dash {
   margin-bottom: 20px;
 }

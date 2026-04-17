@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { fetchBuildingState } from "@/features/building/apiClient";
@@ -14,6 +14,7 @@ import {
   mergeTargetsWithSimulation,
   isTargetSimulated,
   type SimulatedByMonth,
+  type SalesTargetEntry,
   type TargetsMap,
 } from "@/lib/vendasReportTargets";
 import type { RoomRecord } from "@/lib/buildingTypes";
@@ -25,11 +26,64 @@ import {
   valorVendaBase,
   valorVendido,
   vendidoMomentoRelatorio,
+  type VendaMesRow,
   type VendaReportDateFonte,
 } from "@/lib/vendasMensaisAgg";
 import VendasPeriodDashboardCharts from "./VendasPeriodDashboardCharts";
 
 const PERIOD_OPTIONS = [6, 12, 18, 24, 36] as const;
+
+type MetasDraftRow = { quantidade: string; faturamento: string; n40: string; n140: string };
+
+function emptyMetasDraftRow(): MetasDraftRow {
+  return { quantidade: "", faturamento: "", n40: "", n140: "" };
+}
+
+function buildMetasDraftFromApi(rows: VendaMesRow[], api: TargetsMap): Record<string, MetasDraftRow> {
+  const out: Record<string, MetasDraftRow> = {};
+  for (const r of rows) {
+    const t = api[r.monthKey];
+    out[r.monthKey] = {
+      quantidade: t?.quantidade != null && Number.isFinite(t.quantidade) ? String(t.quantidade) : "",
+      faturamento: t?.faturamento != null && Number.isFinite(t.faturamento) ? String(t.faturamento) : "",
+      n40: t?.n40 != null && Number.isFinite(t.n40) ? String(t.n40) : "",
+      n140: t?.n140 != null && Number.isFinite(t.n140) ? String(t.n140) : "",
+    };
+  }
+  return out;
+}
+
+function parseMoneyDraft(raw: string): number | undefined {
+  const t = raw.trim().replace(/\s/g, "");
+  if (!t) return undefined;
+  let n = t;
+  if (n.includes(",") && n.includes(".")) n = n.replace(/\./g, "").replace(",", ".");
+  else if (n.includes(",")) n = n.replace(",", ".");
+  const v = Number(n);
+  if (!Number.isFinite(v) || v <= 0) return undefined;
+  return v;
+}
+
+function parseCountDraft(raw: string): number | undefined {
+  const t = raw.trim();
+  if (!t) return undefined;
+  const v = Number(t.replace(/\./g, "").replace(",", "."));
+  if (!Number.isFinite(v) || v < 0) return undefined;
+  return Math.floor(v);
+}
+
+function draftRowToStored(d: MetasDraftRow): SalesTargetEntry | null {
+  const out: SalesTargetEntry = {};
+  const q = parseCountDraft(d.quantidade);
+  if (q !== undefined && q > 0) out.quantidade = q;
+  const fat = parseMoneyDraft(d.faturamento);
+  if (fat !== undefined) out.faturamento = fat;
+  const n40 = parseCountDraft(d.n40);
+  if (n40 !== undefined && n40 > 0) out.n40 = n40;
+  const n140 = parseCountDraft(d.n140);
+  if (n140 !== undefined && n140 > 0) out.n140 = n140;
+  return Object.keys(out).length > 0 ? out : null;
+}
 
 export default function TowerAlfaVendasMensaisClient() {
   const pathname = usePathname();
@@ -76,21 +130,62 @@ export default function TowerAlfaVendasMensaisClient() {
     return () => window.clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/reports/sales-targets", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : Promise.resolve({ targets: {} })))
-      .then((j: { targets?: TargetsMap }) => {
-        if (!alive) return;
-        setApiTargets(j?.targets && typeof j.targets === "object" ? j.targets : {});
-      })
-      .catch(() => {
-        if (alive) setApiTargets({});
-      });
-    return () => {
-      alive = false;
-    };
+  const reloadTargets = useCallback(async () => {
+    try {
+      const r = await fetch("/api/reports/sales-targets", { credentials: "include" });
+      const j: { targets?: TargetsMap } = r.ok ? await r.json() : { targets: {} };
+      setApiTargets(j?.targets && typeof j.targets === "object" ? j.targets : {});
+    } catch {
+      setApiTargets({});
+    }
   }, []);
+
+  useEffect(() => {
+    void reloadTargets();
+  }, [reloadTargets]);
+
+  const vendasPorMes = useMemo(() => aggregateVendasPorMes(building, periodMonths), [building, periodMonths]);
+
+  const [metasDraft, setMetasDraft] = useState<Record<string, MetasDraftRow>>({});
+  const [metasSaving, setMetasSaving] = useState(false);
+  const [metasMessage, setMetasMessage] = useState<string | null>(null);
+
+  const metasRowsKey = useMemo(() => vendasPorMes.rows.map((r) => r.monthKey).join("|"), [vendasPorMes.rows]);
+
+  useEffect(() => {
+    setMetasDraft(buildMetasDraftFromApi(vendasPorMes.rows, apiTargets));
+  }, [metasRowsKey, apiTargets]);
+
+  const canEditMetas = !authEnabled || authRole === "gestor";
+
+  const saveMetas = useCallback(async () => {
+    if (!canEditMetas) return;
+    setMetasMessage(null);
+    const merged: TargetsMap = { ...apiTargets };
+    for (const r of vendasPorMes.rows) {
+      const rowDraft = metasDraft[r.monthKey] ?? emptyMetasDraftRow();
+      const entry = draftRowToStored(rowDraft);
+      if (entry == null) delete merged[r.monthKey];
+      else merged[r.monthKey] = entry;
+    }
+    setMetasSaving(true);
+    try {
+      const res = await fetch("/api/reports/sales-targets", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targets: merged }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { error?: string; targets?: TargetsMap };
+      if (!res.ok) throw new Error(typeof j?.error === "string" ? j.error : "Falha ao gravar");
+      setApiTargets(j.targets && typeof j.targets === "object" ? j.targets : merged);
+      setMetasMessage("Metas guardadas.");
+    } catch (e) {
+      setMetasMessage(e instanceof Error ? e.message : "Erro ao guardar");
+    } finally {
+      setMetasSaving(false);
+    }
+  }, [apiTargets, canEditMetas, metasDraft, vendasPorMes.rows]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -102,8 +197,6 @@ export default function TowerAlfaVendasMensaisClient() {
     }, 20000);
     return () => window.clearInterval(id);
   }, [setBuilding]);
-
-  const vendasPorMes = useMemo(() => aggregateVendasPorMes(building, periodMonths), [building, periodMonths]);
 
   const salasNoMesGrafico = useMemo(() => {
     if (!building?.roomsById || !selectedMonthKey) return [];
@@ -201,8 +294,8 @@ export default function TowerAlfaVendasMensaisClient() {
             <p className="report-vendas-sidebar-hint">
               Cada venda entra no <strong>mês civil da data de venda</strong> da sala (Salas). O eixo prolonga-se para trás
               se houver vendas com data antes dos “últimos N meses” (até 72 meses no total). Quantidade, tipologia (~40 / ~140
-              m²) e valor vendido somam por esse mês. Metas: <code>data/sales-targets.json</code> — onde faltar,{" "}
-              <strong>prévia simulada</strong>.
+              m²) e valor vendido somam por esse mês. As <strong>metas</strong> são definidas no cartão “Metas do período”
+              (gestores); onde não houver meta, o gráfico usa uma <strong>prévia simulada</strong>.
             </p>
           </div>
 
@@ -232,6 +325,133 @@ export default function TowerAlfaVendasMensaisClient() {
                 Nesta janela de meses não há vendas contabilizadas. O relatório usa o mês da <strong>data de venda</strong> em
                 cada sala (status VENDIDO). Aumenta a janela ou confere as datas no módulo Salas.
               </p>
+            ) : null}
+
+            {vendasPorMes.rows.length > 0 ? (
+              <div className="report-panel report-vendas-metas-panel">
+                <div className="report-panel-head">Metas do período (gestão)</div>
+                <p className="report-vendas-metas-intro">
+                  Defina, por mês civil, a meta de <strong>salas vendidas</strong> e o <strong>faturamento</strong> alvo
+                  (valor vendido somado). Opcional: metas por tipologia (~40 m² e ~140 m²). Os gráficos e a tabela usam estes
+                  valores em vez da prévia simulada.
+                </p>
+                {metasMessage ? (
+                  <div
+                    className={`report-vendas-metas-feedback${metasMessage.includes("Erro") || metasMessage.includes("Falha") ? " report-vendas-metas-feedback--err" : ""}`}
+                  >
+                    {metasMessage}
+                  </div>
+                ) : null}
+                <div className="report-vendas-metas-scroll">
+                  <table className="report-vendas-metas-table">
+                    <thead>
+                      <tr>
+                        <th>Mês</th>
+                        <th className="num">Meta salas</th>
+                        <th className="num">Meta faturamento (R$)</th>
+                        <th className="num">Meta ~40 m²</th>
+                        <th className="num">Meta ~140 m²</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vendasPorMes.rows.map((r) => {
+                        const d = metasDraft[r.monthKey] ?? emptyMetasDraftRow();
+                        return (
+                          <tr key={`meta-${r.monthKey}`}>
+                            <td>{formatMonthLabelPt(r.monthKey)}</td>
+                            <td className="num">
+                              <input
+                                className="report-vendas-metas-input"
+                                type="text"
+                                inputMode="numeric"
+                                disabled={!canEditMetas}
+                                value={d.quantidade}
+                                onChange={(e) =>
+                                  setMetasDraft((prev) => ({
+                                    ...prev,
+                                    [r.monthKey]: { ...d, quantidade: e.target.value },
+                                  }))
+                                }
+                                placeholder="—"
+                              />
+                            </td>
+                            <td className="num">
+                              <input
+                                className="report-vendas-metas-input report-vendas-metas-input--wide"
+                                type="text"
+                                inputMode="decimal"
+                                disabled={!canEditMetas}
+                                value={d.faturamento}
+                                onChange={(e) =>
+                                  setMetasDraft((prev) => ({
+                                    ...prev,
+                                    [r.monthKey]: { ...d, faturamento: e.target.value },
+                                  }))
+                                }
+                                placeholder="—"
+                              />
+                            </td>
+                            <td className="num">
+                              <input
+                                className="report-vendas-metas-input"
+                                type="text"
+                                inputMode="numeric"
+                                disabled={!canEditMetas}
+                                value={d.n40}
+                                onChange={(e) =>
+                                  setMetasDraft((prev) => ({
+                                    ...prev,
+                                    [r.monthKey]: { ...d, n40: e.target.value },
+                                  }))
+                                }
+                                placeholder="—"
+                              />
+                            </td>
+                            <td className="num">
+                              <input
+                                className="report-vendas-metas-input"
+                                type="text"
+                                inputMode="numeric"
+                                disabled={!canEditMetas}
+                                value={d.n140}
+                                onChange={(e) =>
+                                  setMetasDraft((prev) => ({
+                                    ...prev,
+                                    [r.monthKey]: { ...d, n140: e.target.value },
+                                  }))
+                                }
+                                placeholder="—"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="report-vendas-metas-actions">
+                  {canEditMetas ? (
+                    <>
+                      <button type="button" className="em-btn em-save" disabled={metasSaving} onClick={() => void saveMetas()}>
+                        {metasSaving ? "A guardar…" : "Guardar metas"}
+                      </button>
+                      <button
+                        type="button"
+                        className="em-btn em-cancel"
+                        disabled={metasSaving}
+                        onClick={() => {
+                          setMetasMessage(null);
+                          void reloadTargets();
+                        }}
+                      >
+                        Recarregar do servidor
+                      </button>
+                    </>
+                  ) : (
+                    <span className="report-vendas-metas-readonly">Apenas gestores podem editar metas.</span>
+                  )}
+                </div>
+              </div>
             ) : null}
 
             <div className="report-vendas-month-toolbar">
@@ -345,7 +565,7 @@ export default function TowerAlfaVendasMensaisClient() {
                       const tm = targetsEffective[r.monthKey];
                       const sim = targetsSimulated[r.monthKey];
                       const isSel = r.monthKey === selectedMonthKey;
-                      const titlePrev = "Prévia (simulação); substitua em sales-targets.json";
+                      const titlePrev = "Prévia simulada (sem meta definida pelo gestor)";
                       return (
                         <tr
                           key={`vm-${r.monthKey}`}
