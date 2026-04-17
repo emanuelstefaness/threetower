@@ -62,10 +62,9 @@ function buildMetasDraftFromKeys(monthKeys: string[], api: TargetsMap): Record<s
   return out;
 }
 
-function initMetaEditorKeys(rows: VendaMesRow[], api: TargetsMap): string[] {
-  const fromRows = rows.map((r) => r.monthKey);
-  const fromApi = Object.keys(api).filter((k) => MONTH_KEY_RE.test(k));
-  return Array.from(new Set([...fromRows, ...fromApi])).sort();
+/** Chaves de mês presentes nas metas guardadas (servidor). */
+function monthKeysFromSavedTargets(api: TargetsMap): string[] {
+  return Object.keys(api).filter((k) => MONTH_KEY_RE.test(k)).sort();
 }
 
 function parseMoneyDraft(raw: string): number | undefined {
@@ -177,16 +176,14 @@ export default function TowerAlfaVendasMensaisClient() {
     const opened = metasModalOpen && !prevMetasModalOpen.current;
     prevMetasModalOpen.current = metasModalOpen;
     if (!opened) return;
-    const keys = initMetaEditorKeys(vendasPorMes.rows, apiTargets);
-    const nextKeys = keys.length ? keys : [TARGETS_START_KEY];
-    setMetasEditorKeys(nextKeys);
-    setMetasDraft(buildMetasDraftFromKeys(nextKeys, apiTargets));
+    setMetasEditorKeys([]);
+    setMetasDraft({});
     const last = vendasPorMes.rows.at(-1)?.monthKey;
     const y = last ? Number(last.slice(0, 4)) : new Date().getFullYear();
     const m = last ? Number(last.slice(5, 7)) : new Date().getMonth() + 1;
     setMetaPickYear(Number.isFinite(y) ? y : 2026);
     setMetaPickMonth(Number.isFinite(m) && m >= 1 && m <= 12 ? m : 4);
-  }, [metasModalOpen, vendasPorMes.rows, apiTargets]);
+  }, [metasModalOpen, vendasPorMes.rows]);
 
   const canEditMetas = !authEnabled || authRole === "gestor";
 
@@ -206,10 +203,7 @@ export default function TowerAlfaVendasMensaisClient() {
   }, [apiTargets, metaPickMonth, metaPickYear]);
 
   const removeMetaMonthFromEditor = useCallback((mk: string) => {
-    setMetasEditorKeys((prev) => {
-      if (prev.length <= 1 || !prev.includes(mk)) return prev;
-      return prev.filter((k) => k !== mk);
-    });
+    setMetasEditorKeys((prev) => prev.filter((k) => k !== mk));
     setMetasDraft((prev) => {
       if (!(mk in prev)) return prev;
       const { [mk]: _removed, ...rest } = prev;
@@ -404,10 +398,11 @@ export default function TowerAlfaVendasMensaisClient() {
                   <button type="button" className="em-btn em-cancel" onClick={() => setMetasModalOpen(false)}>Fechar</button>
                 </div>
                 <p className="report-vendas-metas-intro">
-                  Escolha o <strong>mês e ano</strong> e use <strong>Incluir mês</strong> para acrescentar linhas. Defina, por
-                  mês civil, a meta de <strong>salas vendidas</strong> e o <strong>faturamento</strong> alvo (valor vendido
-                  somado). Opcional: metas por tipologia (~40 m² e ~140 m²). Nos gráficos, meses antes de abril/2026 continuam
-                  só com realizado (sem meta oficial).
+                  A lista começa <strong>vazia</strong>: escolha <strong>mês e ano</strong> e use <strong>Incluir mês</strong>{" "}
+                  para cada meta. Depois de <strong>Guardar metas</strong>, os gráficos de «Vendas por período» usam esses
+                  valores (junto com o que já estava no servidor para outros meses). <strong>Recarregar do servidor</strong>{" "}
+                  preenche a tabela só com meses que já têm metas guardadas. Opcional: metas por tipologia (~40 m² e ~140 m²).
+                  Nos gráficos, meses antes de abril/2026 continuam só com realizado (sem linha de meta oficial).
                 </p>
                 {canEditMetas ? (
                   <div className="report-vendas-metas-pick">
@@ -470,6 +465,17 @@ export default function TowerAlfaVendasMensaisClient() {
                       </tr>
                     </thead>
                     <tbody>
+                      {metasEditorKeys.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={canEditMetas ? 6 : 5}
+                            className="report-vendas-metas-empty"
+                          >
+                            Nenhum mês na lista. Use <strong>Incluir mês</strong> para adicionar. Para editar o que já está
+                            gravado, use <strong>Recarregar do servidor</strong>.
+                          </td>
+                        </tr>
+                      ) : null}
                       {metasEditorKeys.map((monthKey) => {
                         const d = metasDraft[monthKey] ?? emptyMetasDraftRow();
                         return (
@@ -545,7 +551,6 @@ export default function TowerAlfaVendasMensaisClient() {
                                   type="button"
                                   className="em-btn em-cancel report-vendas-metas-remove"
                                   title="Remover mês da lista"
-                                  disabled={metasEditorKeys.length <= 1}
                                   onClick={() => removeMetaMonthFromEditor(monthKey)}
                                 >
                                   Remover
@@ -572,8 +577,7 @@ export default function TowerAlfaVendasMensaisClient() {
                           setMetasMessage(null);
                           void (async () => {
                             const next = await reloadTargets();
-                            const keys = initMetaEditorKeys(vendasPorMes.rows, next);
-                            const nextKeys = keys.length ? keys : [TARGETS_START_KEY];
+                            const nextKeys = monthKeysFromSavedTargets(next);
                             setMetasEditorKeys(nextKeys);
                             setMetasDraft(buildMetasDraftFromKeys(nextKeys, next));
                           })();
