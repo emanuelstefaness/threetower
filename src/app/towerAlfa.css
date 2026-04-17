@@ -1130,6 +1130,25 @@ body::before {
 .em-select:focus {
   border-color: var(--disp);
 }
+.em-field--value-spotlight .em-label {
+  color: rgba(226, 232, 240, 0.95);
+  letter-spacing: 2.2px;
+}
+.em-input--value-spotlight {
+  border: 1px solid rgba(245, 208, 126, 0.42);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.9));
+  box-shadow: inset 0 0 0 1px rgba(245, 208, 126, 0.06);
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: rgba(250, 232, 196, 0.98);
+  font-family: "JetBrains Mono", "IBM Plex Mono", monospace;
+}
+.em-input--value-spotlight:focus {
+  border-color: rgba(245, 208, 126, 0.88);
+  box-shadow: 0 0 0 2px rgba(245, 208, 126, 0.18);
+}
 .em-select option {
   background: #1e293b;
 }

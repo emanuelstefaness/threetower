@@ -712,16 +712,18 @@ export default function RoomFloorWorkbench({
                 <div className="em-section">
                   <div className="em-section-title">Valores</div>
                   <div className="em-grid em-grid-2">
-                    <div className="em-field">
+                    <div className="em-field em-field--value-spotlight">
                       <label className="em-label" htmlFor="room-valor-imovel">
                         Valor do imóvel
                       </label>
                       {readOnly ? (
-                        <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorImovel)}</div>
+                        <div className="em-input em-readonly em-input--value-spotlight">
+                          {formatMoneyBRL(editingRoom.meta?.valorImovel)}
+                        </div>
                       ) : (
                         <input
                           id="room-valor-imovel"
-                          className="em-input"
+                          className="em-input em-input--value-spotlight"
                           type="text"
                           inputMode="decimal"
                           autoComplete="off"
@@ -732,16 +734,18 @@ export default function RoomFloorWorkbench({
                         />
                       )}
                     </div>
-                    <div className="em-field">
+                    <div className="em-field em-field--value-spotlight">
                       <label className="em-label" htmlFor="room-valor-venda">
                         Valor vendido
                       </label>
                       {readOnly ? (
-                        <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorVenda)}</div>
+                        <div className="em-input em-readonly em-input--value-spotlight">
+                          {formatMoneyBRL(editingRoom.meta?.valorVenda)}
+                        </div>
                       ) : (
                         <input
                           id="room-valor-venda"
-                          className="em-input"
+                          className="em-input em-input--value-spotlight"
                           type="text"
                           inputMode="decimal"
                           autoComplete="off"
@@ -776,12 +780,12 @@ export default function RoomFloorWorkbench({
                           : formatMoneyBRL(valoresPreview.acrescimo)}
                       </div>
                     </div>
-                    <div className="em-field" style={{ gridColumn: "1 / -1" }}>
+                    <div className="em-field em-field--value-spotlight" style={{ gridColumn: "1 / -1" }}>
                       <label className="em-label" htmlFor="room-valor-m2">
                         Valor do m²
                       </label>
                       {readOnly ? (
-                        <div className="em-input em-readonly">
+                        <div className="em-input em-readonly em-input--value-spotlight">
                           {editingRoom.meta?.valorM2 != null && Number.isFinite(editingRoom.meta.valorM2)
                             ? formatDecimalBRL(editingRoom.meta.valorM2)
                             : "—"}
@@ -789,7 +793,7 @@ export default function RoomFloorWorkbench({
                       ) : (
                         <input
                           id="room-valor-m2"
-                          className="em-input"
+                          className="em-input em-input--value-spotlight"
                           type="text"
                           inputMode="decimal"
                           autoComplete="off"
