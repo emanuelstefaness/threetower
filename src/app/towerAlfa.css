@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 :root {
   /* Tree Tower: carvão + dourado (logo) */
@@ -1828,6 +1828,34 @@ html.tower-minimal .report-vendas-legend--month {
   font-size: 12px;
   line-height: 1.5;
   color: var(--text2);
+}
+.report-vendas-metas-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+.report-vendas-metas-pick .em-field {
+  margin: 0;
+}
+.report-vendas-metas-pick-btn {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .report-vendas-metas-pick-btn {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+.report-vendas-metas-col-remove {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+.report-vendas-metas-remove {
+  padding: 4px 8px;
+  font-size: 11px;
 }
 .report-vendas-metas-feedback {
   margin-bottom: 10px;

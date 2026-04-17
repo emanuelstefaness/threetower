@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { fetchBuildingState } from "@/features/building/apiClient";
@@ -33,6 +33,14 @@ import VendasPeriodDashboardCharts from "./VendasPeriodDashboardCharts";
 
 const PERIOD_OPTIONS = [6, 12, 18, 24, 36] as const;
 const TARGETS_START_KEY = "2026-04";
+const MONTH_KEY_RE = /^\d{4}-\d{2}$/;
+const META_PICK_YEAR_MIN = 2018;
+const META_PICK_YEAR_MAX = 2040;
+const META_PICK_YEARS = Array.from(
+  { length: META_PICK_YEAR_MAX - META_PICK_YEAR_MIN + 1 },
+  (_, i) => META_PICK_YEAR_MIN + i
+);
+const META_PICK_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
 type MetasDraftRow = { quantidade: string; faturamento: string; n40: string; n140: string };
 
@@ -40,11 +48,11 @@ function emptyMetasDraftRow(): MetasDraftRow {
   return { quantidade: "", faturamento: "", n40: "", n140: "" };
 }
 
-function buildMetasDraftFromApi(rows: VendaMesRow[], api: TargetsMap): Record<string, MetasDraftRow> {
+function buildMetasDraftFromKeys(monthKeys: string[], api: TargetsMap): Record<string, MetasDraftRow> {
   const out: Record<string, MetasDraftRow> = {};
-  for (const r of rows) {
-    const t = api[r.monthKey];
-    out[r.monthKey] = {
+  for (const mk of monthKeys) {
+    const t = api[mk];
+    out[mk] = {
       quantidade: t?.quantidade != null && Number.isFinite(t.quantidade) ? String(t.quantidade) : "",
       faturamento: t?.faturamento != null && Number.isFinite(t.faturamento) ? String(t.faturamento) : "",
       n40: t?.n40 != null && Number.isFinite(t.n40) ? String(t.n40) : "",
@@ -52,6 +60,12 @@ function buildMetasDraftFromApi(rows: VendaMesRow[], api: TargetsMap): Record<st
     };
   }
   return out;
+}
+
+function initMetaEditorKeys(rows: VendaMesRow[], api: TargetsMap): string[] {
+  const fromRows = rows.map((r) => r.monthKey);
+  const fromApi = Object.keys(api).filter((k) => MONTH_KEY_RE.test(k));
+  return Array.from(new Set([...fromRows, ...fromApi])).sort();
 }
 
 function parseMoneyDraft(raw: string): number | undefined {
@@ -131,13 +145,16 @@ export default function TowerAlfaVendasMensaisClient() {
     return () => window.clearInterval(t);
   }, []);
 
-  const reloadTargets = useCallback(async () => {
+  const reloadTargets = useCallback(async (): Promise<TargetsMap> => {
     try {
       const r = await fetch("/api/reports/sales-targets", { credentials: "include" });
       const j: { targets?: TargetsMap } = r.ok ? await r.json() : { targets: {} };
-      setApiTargets(j?.targets && typeof j.targets === "object" ? j.targets : {});
+      const next = j?.targets && typeof j.targets === "object" ? j.targets : {};
+      setApiTargets(next);
+      return next;
     } catch {
       setApiTargets({});
+      return {};
     }
   }, []);
 
@@ -146,30 +163,69 @@ export default function TowerAlfaVendasMensaisClient() {
   }, [reloadTargets]);
 
   const vendasPorMes = useMemo(() => aggregateVendasPorMes(building, periodMonths), [building, periodMonths]);
-  const metasRows = useMemo(() => vendasPorMes.rows.filter((r) => r.monthKey >= TARGETS_START_KEY), [vendasPorMes.rows]);
 
   const [metasDraft, setMetasDraft] = useState<Record<string, MetasDraftRow>>({});
   const [metasSaving, setMetasSaving] = useState(false);
   const [metasMessage, setMetasMessage] = useState<string | null>(null);
   const [metasModalOpen, setMetasModalOpen] = useState(false);
+  const [metasEditorKeys, setMetasEditorKeys] = useState<string[]>([]);
+  const [metaPickYear, setMetaPickYear] = useState(2026);
+  const [metaPickMonth, setMetaPickMonth] = useState(4);
 
-  const metasRowsKey = useMemo(() => metasRows.map((r) => r.monthKey).join("|"), [metasRows]);
-
+  const prevMetasModalOpen = useRef(false);
   useEffect(() => {
-    setMetasDraft(buildMetasDraftFromApi(metasRows, apiTargets));
-  }, [metasRowsKey, apiTargets]);
+    const opened = metasModalOpen && !prevMetasModalOpen.current;
+    prevMetasModalOpen.current = metasModalOpen;
+    if (!opened) return;
+    const keys = initMetaEditorKeys(vendasPorMes.rows, apiTargets);
+    const nextKeys = keys.length ? keys : [TARGETS_START_KEY];
+    setMetasEditorKeys(nextKeys);
+    setMetasDraft(buildMetasDraftFromKeys(nextKeys, apiTargets));
+    const last = vendasPorMes.rows.at(-1)?.monthKey;
+    const y = last ? Number(last.slice(0, 4)) : new Date().getFullYear();
+    const m = last ? Number(last.slice(5, 7)) : new Date().getMonth() + 1;
+    setMetaPickYear(Number.isFinite(y) ? y : 2026);
+    setMetaPickMonth(Number.isFinite(m) && m >= 1 && m <= 12 ? m : 4);
+  }, [metasModalOpen, vendasPorMes.rows, apiTargets]);
 
   const canEditMetas = !authEnabled || authRole === "gestor";
+
+  const addMetaMonthToEditor = useCallback(() => {
+    const y = Math.min(META_PICK_YEAR_MAX, Math.max(META_PICK_YEAR_MIN, metaPickYear));
+    const m = Math.min(12, Math.max(1, metaPickMonth));
+    const mk = `${String(y)}-${String(m).padStart(2, "0")}`;
+    setMetasEditorKeys((prev) => {
+      if (prev.includes(mk)) return prev;
+      return [...prev, mk].sort();
+    });
+    setMetasDraft((prev) => {
+      if (prev[mk]) return prev;
+      const row = buildMetasDraftFromKeys([mk], apiTargets)[mk] ?? emptyMetasDraftRow();
+      return { ...prev, [mk]: row };
+    });
+  }, [apiTargets, metaPickMonth, metaPickYear]);
+
+  const removeMetaMonthFromEditor = useCallback((mk: string) => {
+    setMetasEditorKeys((prev) => {
+      if (prev.length <= 1 || !prev.includes(mk)) return prev;
+      return prev.filter((k) => k !== mk);
+    });
+    setMetasDraft((prev) => {
+      if (!(mk in prev)) return prev;
+      const { [mk]: _removed, ...rest } = prev;
+      return rest;
+    });
+  }, []);
 
   const saveMetas = useCallback(async () => {
     if (!canEditMetas) return;
     setMetasMessage(null);
     const merged: TargetsMap = { ...apiTargets };
-    for (const r of metasRows) {
-      const rowDraft = metasDraft[r.monthKey] ?? emptyMetasDraftRow();
+    for (const mk of metasEditorKeys) {
+      const rowDraft = metasDraft[mk] ?? emptyMetasDraftRow();
       const entry = draftRowToStored(rowDraft);
-      if (entry == null) delete merged[r.monthKey];
-      else merged[r.monthKey] = entry;
+      if (entry == null) delete merged[mk];
+      else merged[mk] = entry;
     }
     setMetasSaving(true);
     try {
@@ -181,14 +237,16 @@ export default function TowerAlfaVendasMensaisClient() {
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string; targets?: TargetsMap };
       if (!res.ok) throw new Error(typeof j?.error === "string" ? j.error : "Falha ao gravar");
-      setApiTargets(j.targets && typeof j.targets === "object" ? j.targets : merged);
+      const saved = j.targets && typeof j.targets === "object" ? j.targets : merged;
+      setApiTargets(saved);
+      setMetasDraft(buildMetasDraftFromKeys(metasEditorKeys, saved));
       setMetasMessage("Metas guardadas.");
     } catch (e) {
       setMetasMessage(e instanceof Error ? e.message : "Erro ao guardar");
     } finally {
       setMetasSaving(false);
     }
-  }, [apiTargets, canEditMetas, metasDraft, metasRows]);
+  }, [apiTargets, canEditMetas, metasDraft, metasEditorKeys]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -338,18 +396,60 @@ export default function TowerAlfaVendasMensaisClient() {
               </p>
             ) : null}
 
-            {metasModalOpen && metasRows.length > 0 ? (
+            {metasModalOpen ? (
               <div className="report-vendas-metas-modal-backdrop" onClick={() => setMetasModalOpen(false)}>
                 <div className="report-panel report-vendas-metas-panel" onClick={(e) => e.stopPropagation()}>
                 <div className="report-vendas-metas-modal-head">
-                  <div className="report-panel-head">Definir metas (a partir de abril/2026)</div>
+                  <div className="report-panel-head">Definir metas por mês</div>
                   <button type="button" className="em-btn em-cancel" onClick={() => setMetasModalOpen(false)}>Fechar</button>
                 </div>
                 <p className="report-vendas-metas-intro">
-                  Defina, por mês civil, a meta de <strong>salas vendidas</strong> e o <strong>faturamento</strong> alvo
-                  (valor vendido somado). Opcional: metas por tipologia (~40 m² e ~140 m²). Os gráficos e a tabela usam estes
-                  valores em vez da prévia simulada.
+                  Escolha o <strong>mês e ano</strong> e use <strong>Incluir mês</strong> para acrescentar linhas. Defina, por
+                  mês civil, a meta de <strong>salas vendidas</strong> e o <strong>faturamento</strong> alvo (valor vendido
+                  somado). Opcional: metas por tipologia (~40 m² e ~140 m²). Nos gráficos, meses antes de abril/2026 continuam
+                  só com realizado (sem meta oficial).
                 </p>
+                {canEditMetas ? (
+                  <div className="report-vendas-metas-pick">
+                    <div className="em-field">
+                      <label className="em-label" htmlFor="meta-pick-year">
+                        Ano
+                      </label>
+                      <select
+                        id="meta-pick-year"
+                        className="em-select"
+                        value={metaPickYear}
+                        onChange={(e) => setMetaPickYear(Number(e.target.value))}
+                      >
+                        {META_PICK_YEARS.map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="em-field">
+                      <label className="em-label" htmlFor="meta-pick-month">
+                        Mês
+                      </label>
+                      <select
+                        id="meta-pick-month"
+                        className="em-select"
+                        value={metaPickMonth}
+                        onChange={(e) => setMetaPickMonth(Number(e.target.value))}
+                      >
+                        {META_PICK_MONTHS.map((m) => (
+                          <option key={m} value={m}>
+                            {new Date(2000, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button type="button" className="em-btn em-save report-vendas-metas-pick-btn" onClick={addMetaMonthToEditor}>
+                      Incluir mês
+                    </button>
+                  </div>
+                ) : null}
                 {metasMessage ? (
                   <div
                     className={`report-vendas-metas-feedback${metasMessage.includes("Erro") || metasMessage.includes("Falha") ? " report-vendas-metas-feedback--err" : ""}`}
@@ -366,14 +466,15 @@ export default function TowerAlfaVendasMensaisClient() {
                         <th className="num">Meta faturamento (R$)</th>
                         <th className="num">Meta ~40 m²</th>
                         <th className="num">Meta ~140 m²</th>
+                        {canEditMetas ? <th className="report-vendas-metas-col-remove" /> : null}
                       </tr>
                     </thead>
                     <tbody>
-                      {metasRows.map((r) => {
-                        const d = metasDraft[r.monthKey] ?? emptyMetasDraftRow();
+                      {metasEditorKeys.map((monthKey) => {
+                        const d = metasDraft[monthKey] ?? emptyMetasDraftRow();
                         return (
-                          <tr key={`meta-${r.monthKey}`}>
-                            <td>{formatMonthLabelPt(r.monthKey)}</td>
+                          <tr key={`meta-${monthKey}`}>
+                            <td>{formatMonthLabelPt(monthKey)}</td>
                             <td className="num">
                               <input
                                 className="report-vendas-metas-input"
@@ -384,7 +485,7 @@ export default function TowerAlfaVendasMensaisClient() {
                                 onChange={(e) =>
                                   setMetasDraft((prev) => ({
                                     ...prev,
-                                    [r.monthKey]: { ...d, quantidade: e.target.value },
+                                    [monthKey]: { ...d, quantidade: e.target.value },
                                   }))
                                 }
                                 placeholder="—"
@@ -400,7 +501,7 @@ export default function TowerAlfaVendasMensaisClient() {
                                 onChange={(e) =>
                                   setMetasDraft((prev) => ({
                                     ...prev,
-                                    [r.monthKey]: { ...d, faturamento: e.target.value },
+                                    [monthKey]: { ...d, faturamento: e.target.value },
                                   }))
                                 }
                                 placeholder="—"
@@ -416,7 +517,7 @@ export default function TowerAlfaVendasMensaisClient() {
                                 onChange={(e) =>
                                   setMetasDraft((prev) => ({
                                     ...prev,
-                                    [r.monthKey]: { ...d, n40: e.target.value },
+                                    [monthKey]: { ...d, n40: e.target.value },
                                   }))
                                 }
                                 placeholder="—"
@@ -432,12 +533,25 @@ export default function TowerAlfaVendasMensaisClient() {
                                 onChange={(e) =>
                                   setMetasDraft((prev) => ({
                                     ...prev,
-                                    [r.monthKey]: { ...d, n140: e.target.value },
+                                    [monthKey]: { ...d, n140: e.target.value },
                                   }))
                                 }
                                 placeholder="—"
                               />
                             </td>
+                            {canEditMetas ? (
+                              <td className="report-vendas-metas-col-remove">
+                                <button
+                                  type="button"
+                                  className="em-btn em-cancel report-vendas-metas-remove"
+                                  title="Remover mês da lista"
+                                  disabled={metasEditorKeys.length <= 1}
+                                  onClick={() => removeMetaMonthFromEditor(monthKey)}
+                                >
+                                  Remover
+                                </button>
+                              </td>
+                            ) : null}
                           </tr>
                         );
                       })}
@@ -456,7 +570,13 @@ export default function TowerAlfaVendasMensaisClient() {
                         disabled={metasSaving}
                         onClick={() => {
                           setMetasMessage(null);
-                          void reloadTargets();
+                          void (async () => {
+                            const next = await reloadTargets();
+                            const keys = initMetaEditorKeys(vendasPorMes.rows, next);
+                            const nextKeys = keys.length ? keys : [TARGETS_START_KEY];
+                            setMetasEditorKeys(nextKeys);
+                            setMetasDraft(buildMetasDraftFromKeys(nextKeys, next));
+                          })();
                         }}
                       >
                         Recarregar do servidor
@@ -488,24 +608,22 @@ export default function TowerAlfaVendasMensaisClient() {
               </select>
             </div>
 
+            <div className="report-vendas-dash-toolbar">
+              <button
+                type="button"
+                className="em-btn em-save"
+                onClick={() => {
+                  setMetasMessage(null);
+                  setMetasModalOpen(true);
+                }}
+              >
+                Definir metas
+              </button>
+            </div>
             {vendasPorMes.rows.length > 0 ? (
-              <>
-                <div className="report-vendas-dash-toolbar">
-                  <button
-                    type="button"
-                    className="em-btn em-save"
-                    onClick={() => {
-                      setMetasMessage(null);
-                      setMetasModalOpen(true);
-                    }}
-                  >
-                    Definir metas
-                  </button>
-                </div>
-                <div className="report-panel report-panel--vendas-dash">
-                  <VendasPeriodDashboardCharts building={building} rows={vendasPorMes.rows} targets={targetsEffective} />
-                </div>
-              </>
+              <div className="report-panel report-panel--vendas-dash">
+                <VendasPeriodDashboardCharts building={building} rows={vendasPorMes.rows} targets={targetsEffective} />
+              </div>
             ) : null}
 
             {selectedMonthKey && vendasPorMes.rows.length > 0 ? (
@@ -591,7 +709,7 @@ export default function TowerAlfaVendasMensaisClient() {
                     </tr>
                   </thead>
                   <tbody>
-                    {metasRows.map((r) => {
+                    {vendasPorMes.rows.map((r) => {
                       const tm = targetsEffective[r.monthKey];
                       const sim = targetsSimulated[r.monthKey];
                       const isSel = r.monthKey === selectedMonthKey;
