@@ -68,11 +68,21 @@ function monthKeysFromSavedTargets(api: TargetsMap): string[] {
 }
 
 function parseMoneyDraft(raw: string): number | undefined {
-  const t = raw.trim().replace(/\s/g, "");
+  const t = raw
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/^R\$\s*/i, "");
   if (!t) return undefined;
-  let n = t;
-  if (n.includes(",") && n.includes(".")) n = n.replace(/\./g, "").replace(",", ".");
-  else if (n.includes(",")) n = n.replace(",", ".");
+  let n: string;
+  if (t.includes(",")) {
+    // pt-BR: pontos = milhares, vírgula = decimal
+    n = t.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(t)) {
+    // só pontos como separador de milhares (ex.: 1.500.000)
+    n = t.replace(/\./g, "");
+  } else {
+    n = t;
+  }
   const v = Number(n);
   if (!Number.isFinite(v) || v <= 0) return undefined;
   return v;
@@ -214,15 +224,16 @@ export default function TowerAlfaVendasMensaisClient() {
   const saveMetas = useCallback(async () => {
     if (!canEditMetas) return;
     setMetasMessage(null);
-    const merged: TargetsMap = { ...apiTargets };
-    for (const mk of metasEditorKeys) {
-      const rowDraft = metasDraft[mk] ?? emptyMetasDraftRow();
-      const entry = draftRowToStored(rowDraft);
-      if (entry == null) delete merged[mk];
-      else merged[mk] = entry;
-    }
     setMetasSaving(true);
     try {
+      const fresh = await reloadTargets();
+      const merged: TargetsMap = { ...fresh };
+      for (const mk of metasEditorKeys) {
+        const rowDraft = metasDraft[mk] ?? emptyMetasDraftRow();
+        const entry = draftRowToStored(rowDraft);
+        if (entry == null) delete merged[mk];
+        else merged[mk] = entry;
+      }
       const res = await fetch("/api/reports/sales-targets", {
         method: "PUT",
         credentials: "include",
@@ -240,7 +251,7 @@ export default function TowerAlfaVendasMensaisClient() {
     } finally {
       setMetasSaving(false);
     }
-  }, [apiTargets, canEditMetas, metasDraft, metasEditorKeys]);
+  }, [canEditMetas, metasDraft, metasEditorKeys, reloadTargets]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
