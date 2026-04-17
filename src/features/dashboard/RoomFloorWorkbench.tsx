@@ -15,6 +15,12 @@ import {
   statusSalaShowsDataVendaField,
   TREE_TOWER_STATUS_SALA_OPTIONS,
 } from "@/lib/treeTowerStatusSala";
+import {
+  areaBasePrecificacaoM2,
+  computeValorImovelFromValorM2,
+  computeValorM2FromValorImovel,
+  divergenciaValorImovelVsM2,
+} from "@/lib/precificacaoSala";
 import { formatSaleDateIsoLocal } from "@/lib/vendasMensaisAgg";
 
 /** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
@@ -92,13 +98,13 @@ export default function RoomFloorWorkbench({
   const [editValorM2, setEditValorM2] = useState("");
   const [editPrecificacao, setEditPrecificacao] = useState("");
   const [editFaixa, setEditFaixa] = useState("");
-  const [editBaseCalculo, setEditBaseCalculo] = useState("");
   const [editCorretor, setEditCorretor] = useState("");
   const [editImobiliaria, setEditImobiliaria] = useState("");
   const [editComprador, setEditComprador] = useState("");
   const [editFormaPagamento, setEditFormaPagamento] = useState("");
   const [editPrazoPagamento, setEditPrazoPagamento] = useState("");
   const [editDataVenda, setEditDataVenda] = useState("");
+  const [lastEditedPriceSource, setLastEditedPriceSource] = useState<"valorM2" | "valorImovel" | null>(null);
 
   const [selectedPlanSlot, setSelectedPlanSlot] = useState<string | null>(null);
 
@@ -149,6 +155,13 @@ export default function RoomFloorWorkbench({
     return ids.map((id) => building.roomsById[id]).filter(Boolean).sort((a, b) => a.id - b.id);
   }, [building, floor]);
 
+  const editingRoom = editRoomId != null && building ? building.roomsById[editRoomId] : null;
+
+  const divergenciaArmazenada = useMemo(() => {
+    if (!editingRoom || isViewer) return null;
+    return divergenciaValorImovelVsM2(editingRoom.area, editingRoom.meta?.valorM2, editingRoom.meta?.valorImovel);
+  }, [editingRoom, isViewer]);
+
   const openEdit = useCallback((room: RoomRecord) => {
     setEditRoomId(room.id);
     setEditName(room.name ?? "");
@@ -158,14 +171,54 @@ export default function RoomFloorWorkbench({
     setEditValorM2(m?.valorM2 != null && Number.isFinite(m.valorM2) ? String(m.valorM2) : "");
     setEditPrecificacao(m?.precificacao ?? "");
     setEditFaixa(m?.faixa ?? "");
-    setEditBaseCalculo(m?.baseCalculoVenda != null && Number.isFinite(m.baseCalculoVenda) ? String(m.baseCalculoVenda) : "");
     setEditCorretor(m?.corretor ?? "");
     setEditImobiliaria(m?.imobiliaria ?? "");
     setEditComprador(m?.comprador ?? "");
     setEditFormaPagamento(m?.formaPagamento ?? "");
     setEditPrazoPagamento(m?.prazoPagamento ?? "");
     setEditDataVenda(formatDateInputFromMs(m?.dataVenda));
+    setLastEditedPriceSource(null);
   }, []);
+
+  const handleValorM2Change = useCallback(
+    (raw: string) => {
+      setEditValorM2(raw);
+      setLastEditedPriceSource("valorM2");
+      if (!editingRoom) return;
+      try {
+        const m2 = parseOptionalMoney(raw);
+        if (m2 == null || m2 <= 0) {
+          if (!raw.trim()) setEditValorImovel("");
+          return;
+        }
+        const nextImovel = computeValorImovelFromValorM2(m2, areaBasePrecificacaoM2(editingRoom.area));
+        setEditValorImovel(String(nextImovel));
+      } catch {
+        // mantém input livre até ficar válido
+      }
+    },
+    [editingRoom],
+  );
+
+  const handleValorImovelChange = useCallback(
+    (raw: string) => {
+      setEditValorImovel(raw);
+      setLastEditedPriceSource("valorImovel");
+      if (!editingRoom) return;
+      try {
+        const imovel = parseOptionalMoney(raw);
+        if (imovel == null || imovel <= 0) {
+          if (!raw.trim()) setEditValorM2("");
+          return;
+        }
+        const nextM2 = computeValorM2FromValorImovel(imovel, areaBasePrecificacaoM2(editingRoom.area));
+        setEditValorM2(String(nextM2));
+      } catch {
+        // mantém input livre até ficar válido
+      }
+    },
+    [editingRoom],
+  );
 
   const closeEdit = () => setEditRoomId(null);
 
@@ -219,12 +272,10 @@ export default function RoomFloorWorkbench({
 
       let valorImovel: number | null;
       let valorM2: number | null;
-      let baseCalculoVenda: number | null;
       let dataVenda: number | null;
       try {
         valorImovel = parseOptionalMoney(editValorImovel);
         valorM2 = parseOptionalMoney(editValorM2);
-        baseCalculoVenda = parseOptionalMoney(editBaseCalculo);
         if (statusSalaShowsDataVendaField(next)) {
           dataVenda = editDataVenda.trim() ? parseDateInputLocal(editDataVenda) : null;
         } else {
@@ -240,13 +291,18 @@ export default function RoomFloorWorkbench({
         return;
       }
 
+      if (!isViewer && !editValorM2.trim()) {
+        showToast("Indique o valor do m² — a partir dele o sistema calcula o valor do imóvel.", "⚠️");
+        return;
+      }
+
       await updateRoomDetails(editRoomId, {
         name: nextName,
         statusSala: next,
         by: authName?.trim() || "admin",
         valorImovel,
         valorM2,
-        baseCalculoVenda,
+        priceSource: lastEditedPriceSource,
         precificacao: editPrecificacao.trim() || null,
         faixa: editFaixa.trim() || null,
         corretor: editCorretor.trim() || null,
@@ -268,8 +324,6 @@ export default function RoomFloorWorkbench({
   };
 
   const wrapClass = className ? ` ${className}` : "";
-
-  const editingRoom = editRoomId != null && building ? building.roomsById[editRoomId] : null;
 
   return (
     <>
@@ -564,28 +618,16 @@ export default function RoomFloorWorkbench({
                     <div className="em-input em-readonly">{editingRoom.meta?.matricula?.trim() || "—"}</div>
                   </div>
                   <div className="em-field">
-                    <label className="em-label" htmlFor="room-valor-imovel">
-                      Valor do imóvel (R$)
-                    </label>
-                    {readOnly ? (
-                      <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorImovel)}</div>
-                    ) : (
-                      <input
-                        id="room-valor-imovel"
-                        className="em-input"
-                        type="text"
-                        inputMode="decimal"
-                        autoComplete="off"
-                        placeholder="Ex.: 1500000 ou 1500000,50"
-                        value={editValorImovel}
-                        onChange={(e) => setEditValorImovel(e.target.value)}
-                      />
-                    )}
+                    <div className="em-label">Base de precificação</div>
+                    <div className="em-input em-readonly">
+                      {areaBasePrecificacaoM2(editingRoom.area)} m²{" "}
+                      <span style={{ opacity: 0.75, fontSize: 10 }}>(40 ou 140 conforme a área da sala)</span>
+                    </div>
                   </div>
                   {isViewer ? null : (
                     <div className="em-field">
                       <label className="em-label" htmlFor="room-valor-m2">
-                        Valor m²
+                        Valor m² (base do cálculo)
                       </label>
                       {readOnly ? (
                         <div className="em-input em-readonly">
@@ -602,13 +644,107 @@ export default function RoomFloorWorkbench({
                           autoComplete="off"
                           placeholder="Ex.: 12500,50"
                           value={editValorM2}
-                          onChange={(e) => setEditValorM2(e.target.value)}
+                          onChange={(e) => handleValorM2Change(e.target.value)}
                         />
                       )}
                     </div>
                   )}
+                  {isViewer ? null : (
+                    <div className="em-field">
+                      <label className="em-label" htmlFor="room-faixa-input">
+                        Faixa
+                      </label>
+                      {readOnly ? (
+                        <div className="em-input em-readonly">{editingRoom.meta?.faixa?.trim() || "—"}</div>
+                      ) : (
+                        <input
+                          id="room-faixa-input"
+                          className="em-input"
+                          value={editFaixa}
+                          onChange={(e) => setEditFaixa(e.target.value)}
+                          placeholder="Ex.: Faixa 3"
+                          autoComplete="off"
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div className="em-field" style={{ gridColumn: "1 / -1" }}>
+                    <div className="em-label">Valor do imóvel (R$)</div>
+                    {readOnly || isViewer ? (
+                      <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.valorImovel)}</div>
+                    ) : (
+                      <>
+                        <input
+                          id="room-valor-imovel"
+                          className="em-input"
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder="Ex.: 560000"
+                          value={editValorImovel}
+                          onChange={(e) => handleValorImovelChange(e.target.value)}
+                        />
+                        <div style={{ marginTop: 6, fontSize: 11, opacity: 0.85, lineHeight: 1.45 }}>
+                          {editValorM2.trim() || editValorImovel.trim() ? (
+                            <>
+                              Campos vinculados: ao alterar <strong>m²</strong> o imóvel é recalculado, e ao alterar{" "}
+                              <strong>imóvel</strong> o m² é recalculado (base {areaBasePrecificacaoM2(editingRoom.area)} m²).
+                            </>
+                          ) : (
+                            <>Indique um valor válido em m² ou imóvel para sincronizar.</>
+                          )}
+                          {divergenciaArmazenada &&
+                          divergenciaArmazenada.rel > 0.002 &&
+                          editingRoom.meta?.valorM2 != null &&
+                          Number.isFinite(editingRoom.meta.valorM2) ? (
+                            <div style={{ marginTop: 6, color: "rgba(251, 191, 36, 0.95)" }}>
+                              Conferência: com o m² <strong>guardado</strong> ({formatDecimalBRL(editingRoom.meta.valorM2)})
+                              × {areaBasePrecificacaoM2(editingRoom.area)} m², o esperado seria{" "}
+                              {formatMoneyBRL(
+                                computeValorImovelFromValorM2(
+                                  editingRoom.meta.valorM2,
+                                  areaBasePrecificacaoM2(editingRoom.area),
+                                ),
+                              )}
+                              . O valor persistido pode ter sido definido antes desta regra — altere o m² e grave para
+                              alinhar.
+                            </div>
+                          ) : null}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {!isViewer && (editingRoom.meta?.faixaPrecoHistorico?.length ?? 0) > 0 ? (
+                <div className="em-section">
+                  <div className="em-section-title">Histórico de faixas e valor m²</div>
+                  <div style={{ maxHeight: 180, overflowY: "auto", fontSize: 11, lineHeight: 1.45 }}>
+                    {(editingRoom.meta?.faixaPrecoHistorico ?? []).map((h, idx) => (
+                      <div
+                        key={`${h.at}-${idx}`}
+                        style={{
+                          padding: "6px 8px",
+                          marginBottom: 6,
+                          borderRadius: 6,
+                          background: "rgba(148, 163, 184, 0.08)",
+                          border: "1px solid rgba(148, 163, 184, 0.2)",
+                        }}
+                      >
+                        <div style={{ fontWeight: 600 }}>
+                          {new Date(h.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} ·{" "}
+                          {h.faixa}
+                        </div>
+                        <div style={{ opacity: 0.9 }}>
+                          m²: {formatDecimalBRL(h.valorM2)} · base {h.areaBaseM2} m² · imóvel: {formatMoneyBRL(h.valorImovel)}
+                        </div>
+                        <div style={{ opacity: 0.65, fontSize: 10 }}>por {h.by}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="em-section">
                 <div className="em-section-title">Áreas (m²)</div>
@@ -638,12 +774,12 @@ export default function RoomFloorWorkbench({
                         <div className="em-input em-readonly">{editingRoom.meta?.precificacao ?? "—"}</div>
                       </div>
                       <div className="em-field">
-                        <div className="em-label">Faixa</div>
-                        <div className="em-input em-readonly">{editingRoom.meta?.faixa ?? "—"}</div>
-                      </div>
-                      <div className="em-field">
-                        <div className="em-label">Base cálculo</div>
-                        <div className="em-input em-readonly">{formatMoneyBRL(editingRoom.meta?.baseCalculoVenda)}</div>
+                        <div className="em-label">Base cálculo (m²)</div>
+                        <div className="em-input em-readonly">
+                          {editingRoom.meta?.baseCalculoVenda != null && Number.isFinite(editingRoom.meta.baseCalculoVenda)
+                            ? `${editingRoom.meta.baseCalculoVenda} m²`
+                            : `${areaBasePrecificacaoM2(editingRoom.area)} m²`}
+                        </div>
                       </div>
                     </div>
                   </div>

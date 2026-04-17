@@ -40,6 +40,7 @@ export async function PATCH(
     descontos?: number | null;
     /** Epoch ms — data em que a sala foi vendida (relatório “Vendas por período”). */
     dataVenda?: number | null;
+    priceSource?: "valorM2" | "valorImovel" | null;
   };
   const session = await getAuthSession();
   const by =
@@ -101,6 +102,8 @@ export async function PATCH(
       valorVenda: optFinite(body.valorVenda, "Valor da venda"),
       descontos: optFinite(body.descontos, "Descontos"),
       dataVenda: optFinite(body.dataVenda, "Data da venda"),
+      priceSource:
+        body.priceSource === "valorM2" || body.priceSource === "valorImovel" ? body.priceSource : null,
       reserveBy,
     });
     await flushBuildingPersistence();

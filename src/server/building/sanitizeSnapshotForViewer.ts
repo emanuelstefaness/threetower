@@ -4,6 +4,7 @@ import type { BuildingSnapshot, RoomRecord } from "@/lib/buildingTypes";
 const SENSITIVE_META_KEYS = [
   "precificacao",
   "faixa",
+  "faixaPrecoHistorico",
   "valorM2",
   "baseCalculoVenda",
   "formaPagamento",

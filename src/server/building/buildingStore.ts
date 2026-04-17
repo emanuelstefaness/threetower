@@ -1,5 +1,6 @@
 import type {
   BuildingSnapshot,
+  FaixaPrecoHistoricoEntry,
   FloorAggregate,
   NotificationEvent,
   RoomRecord,
@@ -9,6 +10,7 @@ import type {
   StatusSalaHistoryEntry,
 } from "@/lib/buildingTypes";
 import { STATUS_META, STATUS_ORDER } from "@/lib/status";
+import { areaBasePrecificacaoM2, computeValorImovelFromValorM2, computeValorM2FromValorImovel } from "@/lib/precificacaoSala";
 import {
   looksLikeRentedStatusSala,
   looksLikeSoldStatusSala,
@@ -66,6 +68,8 @@ type Store = {
     descontos?: number | null;
     /** Data da venda (epoch ms) — usada em “Vendas por período”. */
     dataVenda?: number | null;
+    /** Campo de preço alterado por último no modal (m² ou imóvel). */
+    priceSource?: "valorM2" | "valorImovel" | null;
     /** Preenchido pelo servidor ao entrar em reservada (quem registou). */
     reserveBy?: { name: string; login: string };
   }) => RoomRecord;
@@ -293,6 +297,7 @@ async function createStore(): Promise<Store> {
     valorVenda,
     descontos,
     dataVenda,
+    priceSource,
     reserveBy,
   }: {
     roomId: number;
@@ -314,6 +319,7 @@ async function createStore(): Promise<Store> {
     valorVenda?: number | null;
     descontos?: number | null;
     dataVenda?: number | null;
+    priceSource?: "valorM2" | "valorImovel" | null;
     reserveBy?: { name: string; login: string };
   }) => {
     const room = state.roomsById[roomId];
@@ -426,6 +432,9 @@ async function createStore(): Promise<Store> {
       descontos !== undefined ||
       dataVenda !== undefined;
     if (metaPriceKeys) {
+      const prevM2 = room.meta?.valorM2;
+      const prevValorImovel = room.meta?.valorImovel;
+      const prevFaixa = room.meta?.faixa;
       if (!room.meta) room.meta = {};
       const m = room.meta;
       if (valorImovel !== undefined) {
@@ -469,6 +478,60 @@ async function createStore(): Promise<Store> {
       if (dataVenda !== undefined) {
         if (dataVenda === null) delete m.dataVenda;
         else m.dataVenda = dataVenda;
+      }
+
+      const unitBase = areaBasePrecificacaoM2(room.area);
+      const m2Now = m.valorM2;
+      const imovelNow = m.valorImovel;
+      const m2ChangedRaw = valorM2 !== undefined && prevM2 !== m2Now;
+      const imovelChangedRaw = valorImovel !== undefined && prevValorImovel !== imovelNow;
+      const source: "valorM2" | "valorImovel" | null =
+        priceSource === "valorM2" || priceSource === "valorImovel"
+          ? priceSource
+          : m2ChangedRaw && !imovelChangedRaw
+            ? "valorM2"
+            : imovelChangedRaw && !m2ChangedRaw
+              ? "valorImovel"
+              : null;
+
+      if (
+        source === "valorM2" &&
+        typeof m2Now === "number" &&
+        Number.isFinite(m2Now) &&
+        m2Now > 0
+      ) {
+        m.valorImovel = computeValorImovelFromValorM2(m2Now, unitBase);
+        m.baseCalculoVenda = unitBase;
+      } else if (
+        source === "valorImovel" &&
+        typeof imovelNow === "number" &&
+        Number.isFinite(imovelNow) &&
+        imovelNow > 0
+      ) {
+        m.valorM2 = computeValorM2FromValorImovel(imovelNow, unitBase);
+        m.baseCalculoVenda = unitBase;
+      }
+
+      const m2Final = m.valorM2;
+      const faixaNow = m.faixa;
+      const m2Changed = prevM2 !== m2Final;
+      const faixaChanged =
+        faixa !== undefined && String(prevFaixa ?? "").trim() !== String(faixaNow ?? "").trim();
+      if (
+        typeof m2Final === "number" &&
+        Number.isFinite(m2Final) &&
+        m2Final > 0 &&
+        (m2Changed || faixaChanged)
+      ) {
+        const hist: FaixaPrecoHistoricoEntry = {
+          at: Date.now(),
+          by,
+          faixa: String(faixaNow ?? "").trim() || "—",
+          valorM2: m2Final,
+          valorImovel: typeof m.valorImovel === "number" && Number.isFinite(m.valorImovel) ? m.valorImovel : 0,
+          areaBaseM2: unitBase,
+        };
+        m.faixaPrecoHistorico = [hist, ...(m.faixaPrecoHistorico ?? [])].slice(0, 80);
       }
     }
 

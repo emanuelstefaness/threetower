@@ -1,5 +1,15 @@
 export type RoomStatus = "disponivel" | "ocupada" | "reservada" | "manutencao";
 
+/** Registo de alteração de faixa / valor m² (precificação). */
+export type FaixaPrecoHistoricoEntry = {
+  at: number;
+  by: string;
+  faixa: string;
+  valorM2: number;
+  valorImovel: number;
+  areaBaseM2: 40 | 140;
+};
+
 export type RoomMeta = {
   andar?: string;
   numeroAndar?: number;
@@ -14,6 +24,8 @@ export type RoomMeta = {
   baseCalculoVenda?: number;
   precificacao?: string;
   faixa?: string;
+  /** Últimas alterações de faixa e valor m² (gestor). */
+  faixaPrecoHistorico?: FaixaPrecoHistoricoEntry[];
   valorM2?: number;
   valorImovel?: number;
   statusSalaOriginal?: string;

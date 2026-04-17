@@ -119,6 +119,8 @@ export type UpdateRoomDetailsPayload = {
   descontos?: number | null;
   /** Epoch ms — data da venda (status VENDIDO). */
   dataVenda?: number | null;
+  /** Campo de preço que o gestor alterou por último no modal. */
+  priceSource?: "valorM2" | "valorImovel" | null;
 };
 
 export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsPayload): Promise<{ updated: RoomRecord }> {
@@ -144,6 +146,7 @@ export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsP
       valorVenda: args.valorVenda,
       descontos: args.descontos,
       dataVenda: args.dataVenda,
+      priceSource: args.priceSource,
     }),
   });
   if (!res.ok) {
