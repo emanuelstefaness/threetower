@@ -2133,6 +2133,12 @@ html.tower-minimal .report-vendas-legend--month {
   color: rgba(248, 250, 252, 0.98);
   margin: 0 0 8px;
 }
+.vendas-dash-section-hint {
+  margin: -4px 0 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text2);
+}
 .vendas-dash-legend {
   display: flex;
   flex-wrap: wrap;

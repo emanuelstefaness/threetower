@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { formatMoneyAxisBRL, formatMoneyCompactMilBRL } from "@/lib/formatMoney";
+import { formatMoneyAxisBRL, formatMoneyBRL, formatMoneyCompactMilBRL } from "@/lib/formatMoney";
 import type { BuildingSnapshot } from "@/lib/buildingTypes";
 import type { TargetsMap } from "@/lib/vendasReportTargets";
 import {
@@ -31,8 +31,6 @@ type TooltipState =
     }
   | null;
 
-const C_FAT_40 = "rgba(59, 130, 246, 0.92)";
-const C_FAT_140 = "rgba(34, 197, 94, 0.92)";
 const C_Q_40 = "rgba(147, 51, 234, 0.92)";
 const C_Q_140 = "rgba(249, 115, 22, 0.92)";
 const C_META = "rgba(239, 68, 68, 0.95)";
@@ -159,7 +157,7 @@ export default function VendasPeriodDashboardCharts({
 
     const maxStackFat = Math.max(
       1,
-      ...byMonth.map((b) => b.fat40 + b.fat140),
+      ...byMonth.map((b) => b.row.fat),
       ...byMonth.map((b) => b.metaFat),
     );
     const maxStackQ = Math.max(1, ...byMonth.map((b) => b.n40 + b.n140), ...byMonth.map((b) => b.metaQtd));
@@ -286,16 +284,17 @@ export default function VendasPeriodDashboardCharts({
       ) : null}
 
       <section className="vendas-dash-section">
-        <h3 className="vendas-dash-h3">Faturamento mensal (R$)</h3>
+        <h3 className="vendas-dash-h3">Faturamento mensal (total R$ vendido)</h3>
+        <p className="vendas-dash-section-hint">
+          Cada barra é a <strong>soma do valor vendido</strong> no mês (não é R$/m²). O detalhe por tipologia (~40 / ~140 m²) aparece ao
+          passar o rato.
+        </p>
         <div className="vendas-dash-legend">
           <span className="vendas-dash-legend-item">
-            <i className="vendas-dash-swatch" style={{ background: C_FAT_40 }} /> 40 m²
+            <i className="vendas-dash-swatch" style={{ background: C_CUM_FAT }} /> Total no mês
           </span>
           <span className="vendas-dash-legend-item">
-            <i className="vendas-dash-swatch" style={{ background: C_FAT_140 }} /> 140 m²
-          </span>
-          <span className="vendas-dash-legend-item">
-            <i className="vendas-dash-swatch vendas-dash-swatch--line" style={{ borderColor: C_META }} /> Meta
+            <i className="vendas-dash-swatch vendas-dash-swatch--line" style={{ borderColor: C_META }} /> Meta faturamento
           </span>
         </div>
         <div
@@ -305,11 +304,10 @@ export default function VendasPeriodDashboardCharts({
             hideTip();
           }}
         >
-          <StackedFatChart
+          <MonthlyTotalFatChart
             byMonth={byMonth}
             n={n}
             maxY={maxStackFat}
-            segmentTooltipLines={segmentTooltipLines}
             onSegmentTip={showSegmentTip}
             onTipLeave={hideTip}
           />
@@ -392,25 +390,24 @@ type MonthBlock = {
   metaQtd: number;
 };
 
-function StackedFatChart({
+/** Uma barra por mês = soma do valor vendido (R$), alinhado à tabela do relatório. */
+function MonthlyTotalFatChart({
   byMonth,
   n,
   maxY,
-  segmentTooltipLines,
   onSegmentTip,
   onTipLeave,
 }: {
   byMonth: MonthBlock[];
   n: number;
   maxY: number;
-  segmentTooltipLines: Map<string, { typ40: string[]; typ140: string[] }>;
   onSegmentTip: (
     e: ReactPointerEvent,
     payload: { title: string; swatch: string; text: string; detailLines?: string[] },
   ) => void;
   onTipLeave: () => void;
 }) {
-  const [focus, setFocus] = useState<{ i: number; seg: "40" | "140" } | null>(null);
+  const [focusI, setFocusI] = useState<number | null>(null);
 
   const w = 920;
   const h = 260;
@@ -441,15 +438,14 @@ function StackedFatChart({
     key: t,
   }));
 
-  const segOp = (bi: number, seg: "40" | "140") => {
-    if (!focus) return 1;
-    if (focus.i !== bi) return 0.28;
-    return focus.seg === seg ? 1 : 0.28;
+  const barOp = (bi: number) => {
+    if (focusI == null) return 1;
+    return focusI === bi ? 1 : 0.35;
   };
 
   const labelOp = (bi: number) => {
-    if (!focus) return 1;
-    return focus.i === bi ? 1 : 0.28;
+    if (focusI == null) return 1;
+    return focusI === bi ? 1 : 0.35;
   };
 
   return (
@@ -459,7 +455,7 @@ function StackedFatChart({
       preserveAspectRatio="xMidYMid meet"
       onPointerLeave={(e) => {
         if (pointerEnteredDescendant(e.currentTarget as SVGSVGElement, e)) return;
-        setFocus(null);
+        setFocusI(null);
         onTipLeave();
       }}
     >
@@ -474,27 +470,18 @@ function StackedFatChart({
       {byMonth.map((b, bi) => {
         const cx = padL + (bi + 0.5) * band;
         const x = cx - barW / 2;
-        const h40 = (b.fat40 / maxY) * innerH;
-        const h140 = (b.fat140 / maxY) * innerH;
-        const segLines = segmentTooltipLines.get(b.row.monthKey);
-        const tip40 = (e: ReactPointerEvent) => {
-          setFocus({ i: bi, seg: "40" });
-          const lines = segLines?.typ40;
+        const fat = b.row.fat;
+        const hBar = (fat / maxY) * innerH;
+        const detailLines: string[] = [];
+        if (b.fat40 > 0) detailLines.push(`Tipologia ~40 m²: ${formatMoneyBRL(b.fat40)}`);
+        if (b.fat140 > 0) detailLines.push(`Tipologia ~140 m²: ${formatMoneyBRL(b.fat140)}`);
+        const tip = (e: ReactPointerEvent) => {
+          setFocusI(bi);
           onSegmentTip(e, {
             title: b.row.label,
-            swatch: C_FAT_40,
-            text: `40 m²: ${formatMoneyCompactMilBRL(b.fat40)}`,
-            detailLines: lines?.length ? lines : undefined,
-          });
-        };
-        const tip140 = (e: ReactPointerEvent) => {
-          setFocus({ i: bi, seg: "140" });
-          const lines = segLines?.typ140;
-          onSegmentTip(e, {
-            title: b.row.label,
-            swatch: C_FAT_140,
-            text: `140 m²: ${formatMoneyCompactMilBRL(b.fat140)}`,
-            detailLines: lines?.length ? lines : undefined,
+            swatch: C_CUM_FAT,
+            text: `Total vendido: ${formatMoneyBRL(fat)}`,
+            detailLines: detailLines.length ? detailLines : undefined,
           });
         };
         return (
@@ -502,34 +489,18 @@ function StackedFatChart({
             <rect
               className="vendas-dash-bar-seg"
               x={x}
-              y={y0 - h40 - h140}
+              y={y0 - hBar}
               width={barW}
-              height={Math.max(h40, 0)}
-              rx={h140 > 0 ? 0 : 4}
-              fill={C_FAT_40}
-              opacity={segOp(bi, "40")}
+              height={Math.max(hBar, 0)}
+              rx={4}
+              fill={C_CUM_FAT}
+              opacity={barOp(bi)}
               style={{
-                cursor: b.fat40 > 0 ? "crosshair" : "default",
-                pointerEvents: b.fat40 > 0 ? "auto" : "none",
+                cursor: fat > 0 ? "crosshair" : "default",
+                pointerEvents: fat > 0 ? "auto" : "none",
               }}
-              onPointerEnter={b.fat40 > 0 ? tip40 : undefined}
-              onPointerMove={b.fat40 > 0 ? tip40 : undefined}
-            />
-            <rect
-              className="vendas-dash-bar-seg"
-              x={x}
-              y={y0 - h140}
-              width={barW}
-              height={Math.max(h140, 0)}
-              rx={h40 > 0 ? 0 : 4}
-              fill={C_FAT_140}
-              opacity={segOp(bi, "140")}
-              style={{
-                cursor: b.fat140 > 0 ? "crosshair" : "default",
-                pointerEvents: b.fat140 > 0 ? "auto" : "none",
-              }}
-              onPointerEnter={b.fat140 > 0 ? tip140 : undefined}
-              onPointerMove={b.fat140 > 0 ? tip140 : undefined}
+              onPointerEnter={fat > 0 ? tip : undefined}
+              onPointerMove={fat > 0 ? tip : undefined}
             />
             <text
               x={cx}
