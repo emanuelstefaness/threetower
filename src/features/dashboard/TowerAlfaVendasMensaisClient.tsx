@@ -13,6 +13,7 @@ import { formatMoneyBRL } from "@/lib/formatMoney";
 import {
   mergeTargetsWithSimulation,
   isTargetSimulated,
+  officialSalesTargetEntry,
   type SimulatedByMonth,
   type SalesTargetEntry,
   type TargetsMap,
@@ -283,8 +284,14 @@ export default function TowerAlfaVendasMensaisClient() {
     const simulated: SimulatedByMonth = { ...merged.simulated };
     for (const r of vendasPorMes.rows) {
       if (r.monthKey < TARGETS_START_KEY) {
-        delete targets[r.monthKey];
-        delete simulated[r.monthKey];
+        const official = officialSalesTargetEntry(apiTargets[r.monthKey]);
+        if (official) {
+          targets[r.monthKey] = official;
+          simulated[r.monthKey] = {};
+        } else {
+          delete targets[r.monthKey];
+          delete simulated[r.monthKey];
+        }
       }
     }
     return { targets, simulated };
@@ -413,7 +420,8 @@ export default function TowerAlfaVendasMensaisClient() {
                   para cada meta. Depois de <strong>Guardar metas</strong>, os gráficos de «Vendas por período» usam esses
                   valores (junto com o que já estava no servidor para outros meses). <strong>Recarregar do servidor</strong>{" "}
                   preenche a tabela só com meses que já têm metas guardadas. Opcional: metas por tipologia (~40 m² e ~140 m²).
-                  Nos gráficos, meses antes de abril/2026 continuam só com realizado (sem linha de meta oficial).
+                  Nos gráficos, antes de abril/2026 só entra linha de meta se tiveres <strong>meta guardada</strong> (não há
+                  meta simulada automática nesses meses).
                 </p>
                 {canEditMetas ? (
                   <div className="report-vendas-metas-pick">

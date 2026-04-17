@@ -96,3 +96,20 @@ export function mergeTargetsWithSimulation(rows: VendaMesRow[], api: TargetsMap)
 export function isTargetSimulated(simulated: SimulatedByMonth, monthKey: string, field: TargetMetric): boolean {
   return simulated[monthKey]?.[field] === true;
 }
+
+const ALL_TARGET_METRICS: TargetMetric[] = ["faturamento", "quantidade", "n40", "n140"];
+
+/** Só o que veio da API (gestor); usado antes da data de “metas oficiais” no eixo, para não misturar com simulação. */
+export function officialSalesTargetEntry(cur: SalesTargetEntry | undefined): SalesTargetEntry | null {
+  if (!cur) return null;
+  const out: SalesTargetEntry = {};
+  for (const m of ALL_TARGET_METRICS) {
+    const v = pickApi(cur, m);
+    if (v === undefined) continue;
+    if (m === "faturamento") out.faturamento = v;
+    else if (m === "quantidade") out.quantidade = v;
+    else if (m === "n40") out.n40 = v;
+    else out.n140 = v;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
