@@ -22,7 +22,8 @@ import {
   formatMonthLabelPt,
   formatSaleDateIsoLocal,
   monthKeyFromTs,
-  valorFaturamentoVenda,
+  valorVendaBase,
+  valorVendido,
   vendidoMomentoRelatorio,
   type VendaReportDateFonte,
 } from "@/lib/vendasMensaisAgg";
@@ -200,7 +201,7 @@ export default function TowerAlfaVendasMensaisClient() {
             <p className="report-vendas-sidebar-hint">
               Cada venda entra no <strong>mês civil da data de venda</strong> da sala (Salas). O eixo prolonga-se para trás
               se houver vendas com data antes dos “últimos N meses” (até 72 meses no total). Quantidade, tipologia (~40 / ~140
-              m²) e faturamento somam por esse mês. Metas: <code>data/sales-targets.json</code> — onde faltar,{" "}
+              m²) e valor vendido somam por esse mês. Metas: <code>data/sales-targets.json</code> — onde faltar,{" "}
               <strong>prévia simulada</strong>.
             </p>
           </div>
@@ -276,12 +277,16 @@ export default function TowerAlfaVendasMensaisClient() {
                           <th>Nome</th>
                           <th>Data (relatório)</th>
                           <th>Origem da data</th>
-                          <th className="num">Faturamento</th>
+                          <th className="num">Valor de venda</th>
+                          <th className="num">Valor vendido</th>
+                          <th className="num">Desconto/Acréscimo</th>
                         </tr>
                       </thead>
                       <tbody>
                         {salasNoMesGrafico.map(({ room, atMs, fonte }) => {
-                          const fat = valorFaturamentoVenda(room);
+                          const base = valorVendaBase(room);
+                          const vendido = valorVendido(room);
+                          const delta = base - vendido;
                           const labelFonte =
                             fonte === "data_sala" ? "Campo data na sala" : "Histórico (VENDIDO)";
                           return (
@@ -297,7 +302,13 @@ export default function TowerAlfaVendasMensaisClient() {
                                 <span className="report-vendas-mes-detalhe-iso">({formatSaleDateIsoLocal(atMs)})</span>
                               </td>
                               <td>{labelFonte}</td>
-                              <td className="num">{fat > 0 ? formatMoneyBRL(fat) : "—"}</td>
+                              <td className="num">{base > 0 ? formatMoneyBRL(base) : "—"}</td>
+                              <td className="num">{vendido > 0 ? formatMoneyBRL(vendido) : "—"}</td>
+                              <td className="num">
+                                {base > 0 && vendido > 0
+                                  ? `${delta >= 0 ? "-" : "+"} ${formatMoneyBRL(Math.abs(delta))}`
+                                  : "—"}
+                              </td>
                             </tr>
                           );
                         })}
@@ -317,7 +328,7 @@ export default function TowerAlfaVendasMensaisClient() {
                       <th>Mês</th>
                       <th className="num">Qtd.</th>
                       <th className="num">Meta qtd</th>
-                      <th className="num">Faturamento</th>
+                      <th className="num">Valor vendido</th>
                       <th className="num">Meta fat.</th>
                       <th className="num">40 m²</th>
                       <th className="num" title="Meta unidades ~40 m²">

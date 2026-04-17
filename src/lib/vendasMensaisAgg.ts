@@ -98,13 +98,23 @@ export function shortMonthLabel(key: string): string {
   return `${ms}/${ys.slice(2)}`;
 }
 
-/** Mesma regra do gráfico de faturamento (valor da venda ou valor do imóvel). */
-export function valorFaturamentoVenda(r: RoomRecord): number {
+/** Valor de venda (tabela/base): usa valor do imóvel. */
+export function valorVendaBase(r: RoomRecord): number {
   const m = r.meta;
   if (!m) return 0;
-  if (typeof m.valorVenda === "number" && Number.isFinite(m.valorVenda)) return m.valorVenda;
   if (typeof m.valorImovel === "number" && Number.isFinite(m.valorImovel)) return m.valorImovel;
   return 0;
+}
+
+/** Valor vendido (fechado): usa apenas `valorVenda`. */
+export function valorVendido(r: RoomRecord): number {
+  const v = r.meta?.valorVenda;
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
+/** Compatibilidade: faturamento passa a considerar só valor vendido. */
+export function valorFaturamentoVenda(r: RoomRecord): number {
+  return valorVendido(r);
 }
 
 export type VendaReportDateFonte = "data_sala" | "historico_status";

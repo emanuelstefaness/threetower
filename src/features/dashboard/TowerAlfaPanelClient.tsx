@@ -163,12 +163,15 @@ export default function TowerAlfaPanelClient() {
 
   const soldRooms = useMemo(() => rooms.filter(isVendidoRoom), [rooms]);
   const soldTotal = soldRooms.length;
-  /** Mesma regra que `valorFaturamentoVenda` nos Relatórios: valorVenda (aba Oficial), senão valorImovel. */
-  const soldRevenue = soldRooms.reduce((sum, r) => {
-    if (typeof r.meta?.valorVenda === "number" && Number.isFinite(r.meta.valorVenda)) return sum + r.meta.valorVenda;
+  const soldRevenueBase = soldRooms.reduce((sum, r) => {
     if (typeof r.meta?.valorImovel === "number" && Number.isFinite(r.meta.valorImovel)) return sum + r.meta.valorImovel;
     return sum;
   }, 0);
+  const soldRevenueVendido = soldRooms.reduce((sum, r) => {
+    if (typeof r.meta?.valorVenda === "number" && Number.isFinite(r.meta.valorVenda)) return sum + r.meta.valorVenda;
+    return sum;
+  }, 0);
+  const soldDiscount = soldRevenueBase - soldRevenueVendido;
 
   const donutSegments = useMemo(
     () =>
@@ -216,7 +219,8 @@ export default function TowerAlfaPanelClient() {
   }, [updatesFeed.length]);
 
   const currentUpdate = updatesFeed.length > 0 ? updatesFeed[updIdx % updatesFeed.length] : null;
-  const revenueLabel = formatMoneyBRL(soldRevenue);
+  const revenueLabel = formatMoneyBRL(soldRevenueVendido);
+  const revenueBaseLabel = formatMoneyBRL(soldRevenueBase);
 
   return (
     <div className="panel-tv">
@@ -340,9 +344,13 @@ export default function TowerAlfaPanelClient() {
                 <div className="kpi-val">{soldTotal}</div>
               </article>
               <article className="kpi-revenue">
-                <div className="kpi-lab">Faturamento (vendidas)</div>
+                <div className="kpi-lab">Valor vendido (vendidas)</div>
                 <div className="kpi-mon" title={revenueLabel}>
                   {revenueLabel}
+                </div>
+                <div className="kpi-lab" style={{ marginTop: 4, fontSize: 10, opacity: 0.78 }}>
+                  Valor de venda: {revenueBaseLabel} · {soldDiscount >= 0 ? "Desconto" : "Acréscimo"}:{" "}
+                  {formatMoneyBRL(Math.abs(soldDiscount))}
                 </div>
               </article>
             </div>

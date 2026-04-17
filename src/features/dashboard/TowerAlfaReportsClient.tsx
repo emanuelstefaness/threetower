@@ -16,7 +16,7 @@ import {
   normalizeStatusSala,
   TREE_TOWER_STATUS_SALA_OPTIONS,
 } from "@/lib/treeTowerStatusSala";
-import { bucketAreaTipologia40vs140 } from "@/lib/vendasMensaisAgg";
+import { bucketAreaTipologia40vs140, valorVendaBase, valorVendido } from "@/lib/vendasMensaisAgg";
 
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
   const totalAll = segments.reduce((s, item) => s + item.value, 0);
@@ -89,18 +89,8 @@ function startOfDay(ts: number) {
   return d.getTime();
 }
 
-/** Faturamento da venda: `valorVenda` (aba Oficial), senão `valorImovel` como referência. */
-function valorFaturamentoVenda(r: RoomRecord): number {
-  const m = r.meta;
-  if (!m) return 0;
-  if (typeof m.valorVenda === "number" && Number.isFinite(m.valorVenda)) return m.valorVenda;
-  if (typeof m.valorImovel === "number" && Number.isFinite(m.valorImovel)) return m.valorImovel;
-  return 0;
-}
-
 function valorImovelMeta(r: RoomRecord): number {
-  const v = r.meta?.valorImovel;
-  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+  return valorVendaBase(r);
 }
 
 export default function TowerAlfaReportsClient() {
@@ -290,19 +280,19 @@ export default function TowerAlfaReportsClient() {
 
   const vendidas = useMemo(() => {
     const sold = compareBaseRooms.filter((r) => normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO");
-    const valorVendas = sold.reduce((s, r) => s + valorImovelMeta(r), 0);
-    const valorVendido = sold.reduce((s, r) => s + valorFaturamentoVenda(r), 0);
-    const descontoTotal = valorVendas - valorVendido;
+    const valorVendas = sold.reduce((s, r) => s + valorVendaBase(r), 0);
+    const totalVendido = sold.reduce((s, r) => s + valorVendido(r), 0);
+    const descontoTotal = valorVendas - totalVendido;
     const areaTotal = sold.reduce((s, r) => s + (Number.isFinite(r.area) ? r.area : 0), 0);
     return {
       count: sold.length,
       valorVendas,
-      valorVendido,
+      valorVendido: totalVendido,
       descontoTotal,
       areaTotal,
-      ticketMedio: sold.length ? valorVendido / sold.length : 0,
+      ticketMedio: sold.length ? totalVendido / sold.length : 0,
       /** Ponderado pelo total de m²: valor vendido ÷ área vendida. */
-      valorMedioM2: areaTotal > 0 ? valorVendido / areaTotal : 0,
+      valorMedioM2: areaTotal > 0 ? totalVendido / areaTotal : 0,
     };
   }, [compareBaseRooms]);
 
