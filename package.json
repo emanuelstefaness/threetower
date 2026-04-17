@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "sanitize:valor-m2": "node scripts/sanitize-valor-m2-from-imovel.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

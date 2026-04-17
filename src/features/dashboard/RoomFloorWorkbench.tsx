@@ -19,7 +19,6 @@ import {
   areaBasePrecificacaoM2,
   computeValorImovelFromValorM2,
   computeValorM2FromValorImovel,
-  divergenciaValorImovelVsM2,
 } from "@/lib/precificacaoSala";
 import { formatSaleDateIsoLocal } from "@/lib/vendasMensaisAgg";
 
@@ -167,11 +166,6 @@ export default function RoomFloorWorkbench({
   }, [building, floor]);
 
   const editingRoom = editRoomId != null && building ? building.roomsById[editRoomId] : null;
-
-  const divergenciaArmazenada = useMemo(() => {
-    if (!editingRoom || isViewer) return null;
-    return divergenciaValorImovelVsM2(editingRoom.area, editingRoom.meta?.valorM2, editingRoom.meta?.valorImovel);
-  }, [editingRoom, isViewer]);
 
   const valoresPreview = useMemo(() => {
     const safeParse = (raw: string) => {
@@ -824,22 +818,6 @@ export default function RoomFloorWorkbench({
                         <div style={{ marginTop: 6, fontSize: 11, opacity: 0.85, lineHeight: 1.45 }}>
                           Campos vinculados: ao alterar <strong>m²</strong> o imóvel é recalculado, e ao alterar{" "}
                           <strong>imóvel</strong> o m² é recalculado (base {areaBasePrecificacaoM2(editingRoom.area)} m²).
-                          {divergenciaArmazenada &&
-                          divergenciaArmazenada.rel > 0.002 &&
-                          editingRoom.meta?.valorM2 != null &&
-                          Number.isFinite(editingRoom.meta.valorM2) ? (
-                            <div style={{ marginTop: 6, color: "rgba(251, 191, 36, 0.95)" }}>
-                              Conferência: com o m² <strong>guardado</strong> ({formatDecimalBRL(editingRoom.meta.valorM2)})
-                              × {areaBasePrecificacaoM2(editingRoom.area)} m², o esperado seria{" "}
-                              {formatMoneyBRL(
-                                computeValorImovelFromValorM2(
-                                  editingRoom.meta.valorM2,
-                                  areaBasePrecificacaoM2(editingRoom.area),
-                                ),
-                              )}
-                              .
-                            </div>
-                          ) : null}
                         </div>
                       ) : null}
                     </div>
