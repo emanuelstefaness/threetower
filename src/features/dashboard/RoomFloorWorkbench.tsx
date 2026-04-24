@@ -427,6 +427,7 @@ export default function RoomFloorWorkbench({
               {floorRooms.map((r) => {
                 const ss = r.statusSala ?? r.meta?.statusSalaOriginal ?? "—";
                 const showCardDate = statusSalaShowsDataVendaField(ss);
+                const cardAmount = looksLikeSoldStatusSala(ss) ? r.meta?.valorVenda : r.meta?.valorImovel;
                 const cardDateLabel =
                   looksLikeSoldStatusSala(ss) && !looksLikeRentedStatusSala(ss)
                     ? "Data venda"
@@ -447,7 +448,7 @@ export default function RoomFloorWorkbench({
                       {ss}
                     </div>
                     <div className="rc-status" style={{ marginTop: 4, opacity: 0.85 }}>
-                      {formatMoneyBRL(r.meta?.valorImovel)}
+                      {formatMoneyBRL(cardAmount)}
                     </div>
                     {showCardDate ? (
                       <div
