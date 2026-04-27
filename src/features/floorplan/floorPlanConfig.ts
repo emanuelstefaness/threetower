@@ -11,6 +11,46 @@ export type FloorPlanSlot = {
 
 type SlotCoords = Omit<FloorPlanSlot, "label">;
 
+const HOTSPOT_INSET_X_PCT = 0.25;
+const HOTSPOT_INSET_Y_PCT = 0.35;
+const RIGHT_SIDE_UP_SHIFT_Y_PCT = 3.2;
+const RIGHT_SIDE_GROW_LEFT_X_PCT = 0.75;
+const RIGHT_THIN_TOP_EXTRA_UP_SHIFT_Y_PCT = 1.15;
+
+const RIGHT_SIDE_SLOT_IDS = new Set([
+  "F-01",
+  "F-02",
+  "F-03",
+  "F-04",
+  "F-05",
+  "F-06",
+  "F-07",
+  "F-08",
+  "F-09",
+  "F-10",
+]);
+
+const RIGHT_THIN_TOP_SLOT_IDS = new Set(["F-03", "F-05", "F-07"]);
+
+function withInset(slot: SlotCoords): SlotCoords {
+  const x = slot.x + HOTSPOT_INSET_X_PCT;
+  const y = slot.y + HOTSPOT_INSET_Y_PCT;
+  const w = Math.max(0.8, slot.w - HOTSPOT_INSET_X_PCT * 2);
+  const h = Math.max(0.8, slot.h - HOTSPOT_INSET_Y_PCT * 2);
+  return { ...slot, x, y, w, h };
+}
+
+function withRightSideFineTuning(slot: SlotCoords): SlotCoords {
+  if (!RIGHT_SIDE_SLOT_IDS.has(slot.id)) return slot;
+  const extraTopShift = RIGHT_THIN_TOP_SLOT_IDS.has(slot.id) ? RIGHT_THIN_TOP_EXTRA_UP_SHIFT_Y_PCT : 0;
+  return {
+    ...slot,
+    x: Math.max(0, slot.x - RIGHT_SIDE_GROW_LEFT_X_PCT),
+    y: Math.max(0, slot.y - RIGHT_SIDE_UP_SHIFT_Y_PCT - extraTopShift),
+    w: slot.w + RIGHT_SIDE_GROW_LEFT_X_PCT,
+  };
+}
+
 /**
  * Geometria dos vãos (F-01…F-22). O rótulo exibido é sempre “Sala {andar}{01–22}”
  * (ex.: andar 1 + F-01 → Sala 101), alinhado à numeração das unidades no empreendimento.
@@ -47,7 +87,7 @@ export function getFloorPlanImage(floor: number): string {
 
 export function getFloorPlanSlots(floor: number): FloorPlanSlot[] {
   return TEMPLATE_COORDS.map((s) => ({
-    ...s,
+    ...withRightSideFineTuning(withInset(s)),
     label: salaLabelForFloorSlot(floor, s.id),
   }));
 }
