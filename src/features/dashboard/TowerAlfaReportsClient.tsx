@@ -70,6 +70,15 @@ function formatDateTime(d: number) {
   return new Date(d).toLocaleString("pt-BR");
 }
 
+function formatAreaM2(value: unknown) {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(n);
+}
+
 function downloadCSV(filename: string, rows: string[][]) {
   const csv = rows.map((r) => r.map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -650,12 +659,12 @@ export default function TowerAlfaReportsClient() {
               </div>
               <div className="report-kpi-card">
                 <div className="report-kpi-card-label">Área total</div>
-                <div className="report-kpi-card-value">{Math.round(totalArea * 10) / 10}</div>
+                <div className="report-kpi-card-value">{formatAreaM2(totalArea)}</div>
                 <div className="report-kpi-card-sub">m² somados</div>
               </div>
               <div className="report-kpi-card">
                 <div className="report-kpi-card-label">Área total disponível</div>
-                <div className="report-kpi-card-value">{Math.round(estoqueStats.areaTotal * 10) / 10}</div>
+                <div className="report-kpi-card-value">{formatAreaM2(estoqueStats.areaTotal)}</div>
                 <div className="report-kpi-card-sub">
                   m² em ESTOQUE · {estoqueStats.count} sala{estoqueStats.count !== 1 ? "s" : ""}
                 </div>
@@ -701,7 +710,7 @@ export default function TowerAlfaReportsClient() {
                   </div>
                   <div className="report-compare-hint">
                     Σ valor imóvel ÷ Σ m² (tabela) · {compareOtherRooms.length} sala{compareOtherRooms.length !== 1 ? "s" : ""} ·{" "}
-                    {Math.round(compareOtherArea * 10) / 10} m²
+                    {formatAreaM2(compareOtherArea)} m²
                   </div>
                 </div>
                 <div className="report-compare-item report-compare-item--fixed">
@@ -711,7 +720,7 @@ export default function TowerAlfaReportsClient() {
                   </div>
                   <div className="report-compare-hint">
                     Valor vendido ÷ m² · VENDIDO · {vendidas.count} sala{vendidas.count !== 1 ? "s" : ""} ·{" "}
-                    {Math.round(vendidas.areaTotal * 10) / 10} m²
+                    {formatAreaM2(vendidas.areaTotal)} m²
                   </div>
                 </div>
               </div>
@@ -739,7 +748,7 @@ export default function TowerAlfaReportsClient() {
                   </div>
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Área total de vendas (m²)</div>
-                    <div className="report-kpi-value">{Math.round(vendidas.areaTotal * 10) / 10}</div>
+                    <div className="report-kpi-value">{formatAreaM2(vendidas.areaTotal)}</div>
                   </div>
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Média R$/m² vendido</div>
@@ -758,7 +767,7 @@ export default function TowerAlfaReportsClient() {
                   </div>
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Área total (m²)</div>
-                    <div className="report-kpi-value">{Math.round(totalArea * 10) / 10}</div>
+                    <div className="report-kpi-value">{formatAreaM2(totalArea)}</div>
                   </div>
                   <div className="report-kpi-row">
                     <div className="report-kpi-label">Média R$/m² (tabela)</div>
@@ -881,7 +890,7 @@ export default function TowerAlfaReportsClient() {
                           <td>{r.id}</td>
                           <td>{r.name}</td>
                           <td>{r.floor}</td>
-                          <td>{r.area}</td>
+                          <td>{formatAreaM2(r.area)}</td>
                           <td>
                             <span className="report-badge" style={{ borderColor: colorForStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal), background: "rgba(148,163,184,0.06)" }}>
                               <span className="report-status-dot" style={{ background: colorForStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) }} />
