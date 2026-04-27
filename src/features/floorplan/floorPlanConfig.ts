@@ -17,6 +17,7 @@ const RIGHT_SIDE_UP_SHIFT_Y_PCT = 3.2;
 const RIGHT_SIDE_GROW_LEFT_X_PCT = 0.75;
 const RIGHT_THIN_TOP_EXTRA_UP_SHIFT_Y_PCT = 1.15;
 const RIGHT_BOTTOM_40_EXTRA_UP_SHIFT_Y_PCT = 0.55;
+const RIGHT_BOTTOM_40608_EXTRA_UP_SHIFT_Y_PCT = 0.35;
 
 const RIGHT_SIDE_SLOT_IDS = new Set([
   "F-01",
@@ -33,6 +34,7 @@ const RIGHT_SIDE_SLOT_IDS = new Set([
 
 const RIGHT_THIN_TOP_SLOT_IDS = new Set(["F-03", "F-05", "F-07"]);
 const RIGHT_BOTTOM_40_SLOT_IDS = new Set(["F-02", "F-04", "F-06", "F-08"]);
+const RIGHT_BOTTOM_40608_SLOT_IDS = new Set(["F-04", "F-06", "F-08"]);
 
 function withInset(slot: SlotCoords): SlotCoords {
   const x = slot.x + HOTSPOT_INSET_X_PCT;
@@ -46,10 +48,13 @@ function withRightSideFineTuning(slot: SlotCoords): SlotCoords {
   if (!RIGHT_SIDE_SLOT_IDS.has(slot.id)) return slot;
   const extraTopShift = RIGHT_THIN_TOP_SLOT_IDS.has(slot.id) ? RIGHT_THIN_TOP_EXTRA_UP_SHIFT_Y_PCT : 0;
   const extraBottom40Shift = RIGHT_BOTTOM_40_SLOT_IDS.has(slot.id) ? RIGHT_BOTTOM_40_EXTRA_UP_SHIFT_Y_PCT : 0;
+  const extraBottom40608Shift = RIGHT_BOTTOM_40608_SLOT_IDS.has(slot.id)
+    ? RIGHT_BOTTOM_40608_EXTRA_UP_SHIFT_Y_PCT
+    : 0;
   return {
     ...slot,
     x: Math.max(0, slot.x - RIGHT_SIDE_GROW_LEFT_X_PCT),
-    y: Math.max(0, slot.y - RIGHT_SIDE_UP_SHIFT_Y_PCT - extraTopShift - extraBottom40Shift),
+    y: Math.max(0, slot.y - RIGHT_SIDE_UP_SHIFT_Y_PCT - extraTopShift - extraBottom40Shift - extraBottom40608Shift),
     w: slot.w + RIGHT_SIDE_GROW_LEFT_X_PCT,
   };
 }
