@@ -22,7 +22,7 @@ import {
   computeValorM2FromValorImovel,
 } from "@/lib/precificacaoSala";
 import { formatSaleDateIsoLocal } from "@/lib/vendasMensaisAgg";
-import { roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
+import { roomCardToneClass, roomPublicLabel, roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
 /** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
 function formatDateInputFromMs(ms: number | undefined): string {
@@ -442,22 +442,25 @@ export default function RoomFloorWorkbench({
                     : looksLikeRentedStatusSala(ss) && !looksLikeSoldStatusSala(ss)
                       ? "Data aluguel"
                       : "Data";
+                const cardTone = readOnly ? roomCardToneClass(ss) : "rc-d";
                 return (
                   <div
                     key={r.id}
-                    className={`room-card rc-d${readOnly ? " room-card--readonly" : ""}`}
+                    className={`room-card ${cardTone}${readOnly ? " room-card--readonly" : ""}`}
                     onClick={() => openEdit(r)}
                   >
                     <div className="rc-area">{r.area}m²</div>
                     <div className="rc-num">{r.id}</div>
-                    <div className="rc-name">{r.name}</div>
+                    <div className="rc-name">{readOnly ? roomPublicLabel(r) : r.name}</div>
                     <div className="rc-status">
                       <div className="rc-dot" />
                       {ss}
                     </div>
+                    {readOnly && cardAmount == null ? null : (
                     <div className="rc-status" style={{ marginTop: 4, opacity: 0.85 }}>
                       {formatMoneyBRL(cardAmount)}
                     </div>
+                    )}
                     {showCardDate ? (
                       <div
                         className="rc-date-row"
@@ -503,7 +506,7 @@ export default function RoomFloorWorkbench({
         onClick={(e) => e.target === e.currentTarget && closeEdit()}
       >
         <div className="edit-modal" style={{ maxWidth: 520 }}>
-          <div className="em-title">{editingRoom?.name ?? "—"}</div>
+          <div className="em-title">{editingRoom ? (readOnly ? roomPublicLabel(editingRoom) : editingRoom.name) : "—"}</div>
           <div className="em-sub">
             {editingRoom ? `Andar ${editingRoom.floor} · Unidade #${editingRoom.id}` : "—"}
           </div>

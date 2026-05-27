@@ -1,5 +1,5 @@
 import type { BuildingSnapshot, RoomRecord } from "@/lib/buildingTypes";
-import { roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
+import { roomPublicLabel, roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
 /** Campos de negócio/fechamento que o visitante não deve receber. */
 const SENSITIVE_META_KEYS = [
@@ -44,6 +44,7 @@ export function sanitizeSnapshotForViewer(snapshot: BuildingSnapshot): BuildingS
     const id = Number(idStr);
     roomsById[id] = {
       ...room,
+      name: roomPublicLabel(room),
       meta: sanitizeRoomMeta(room),
       statusSalaHistory: undefined,
       history: [],

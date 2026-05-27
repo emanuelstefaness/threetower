@@ -5,7 +5,7 @@ import type { RoomRecord } from "@/lib/buildingTypes";
 import { getFloorPlanImage, getFloorPlanSlots } from "./floorPlanConfig";
 import { tryFormatMoneyBRL } from "@/lib/formatMoney";
 import { planToneForStatusSala } from "@/lib/treeTowerStatusSala";
-import { roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
+import { roomPublicLabel, roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
 type Props = {
   floor: number;
@@ -70,8 +70,9 @@ export default function FloorPlanHotspots({
             room && (!viewMode || roomShowsListPriceInViewMode(statusSala)) ? room.meta?.valorImovel : undefined;
           const valorTxt = tryFormatMoneyBRL(valor) ?? "";
 
+          const roomLabel = room ? (viewMode ? roomPublicLabel(room) : room.name) : "";
           const title = room
-            ? `${room.name} · ${room.statusSala ?? room.meta?.statusSalaOriginal ?? "—"}${valorTxt ? ` · ${valorTxt}` : ""}`
+            ? `${roomLabel} · ${room.statusSala ?? room.meta?.statusSalaOriginal ?? "—"}${valorTxt ? ` · ${valorTxt}` : ""}`
             : `${slot.label} · sem sala cadastrada`;
 
           return (
@@ -89,7 +90,7 @@ export default function FloorPlanHotspots({
               <span className="plan-slot-labels">
                 {room ? (
                   <>
-                    <span className="plan-slot-occ">{room.name}</span>
+                    <span className="plan-slot-occ">{viewMode ? roomPublicLabel(room) : room.name}</span>
                     <span className="plan-slot-num">{room.id}</span>
                     {valorTxt ? <span className="plan-slot-vago">{valorTxt}</span> : null}
                   </>
