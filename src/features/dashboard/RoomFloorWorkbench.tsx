@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchBuildingState, updateRoomDetails } from "@/features/building/apiClient";
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import FloorPlanHotspots from "@/features/floorplan/FloorPlanHotspots";
+import { ViewModeRoomSummary } from "@/features/dashboard/ViewModeRoomSummary";
 import type { RoomRecord } from "@/lib/buildingTypes";
 import { formatDecimalBRL, formatMoneyBRL } from "@/lib/formatMoney";
 import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
@@ -21,6 +22,7 @@ import {
   computeValorM2FromValorImovel,
 } from "@/lib/precificacaoSala";
 import { formatSaleDateIsoLocal } from "@/lib/vendasMensaisAgg";
+import { roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
 /** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
 function formatDateInputFromMs(ms: number | undefined): string {
@@ -96,8 +98,7 @@ export default function RoomFloorWorkbench({
   const { building, appMode, authRole, authName, setBuilding } = useBuildingStoreClient();
   const readOnly = appMode === "view";
   const isViewer = authRole === "viewer";
-  /** Visitante não vê blocos de relatório nem pagamento; valor do imóvel e comprador sim (API alinhada). */
-  const hideReportAndPaymentUi = isViewer;
+  const hideReportAndPaymentUi = readOnly || isViewer;
   const skipNextPlanClear = useRef(false);
 
   const [editRoomId, setEditRoomId] = useState<number | null>(null);
@@ -413,6 +414,7 @@ export default function RoomFloorWorkbench({
           subCaption={
             subCaption !== undefined ? subCaption : readOnly ? "Visualização — clique numa sala para ver os dados." : undefined
           }
+          viewMode={readOnly}
         />
       </div>
 
@@ -426,8 +428,14 @@ export default function RoomFloorWorkbench({
             <div className="rooms-grid">
               {floorRooms.map((r) => {
                 const ss = r.statusSala ?? r.meta?.statusSalaOriginal ?? "—";
-                const showCardDate = statusSalaShowsDataVendaField(ss);
-                const cardAmount = looksLikeSoldStatusSala(ss) ? r.meta?.valorVenda : r.meta?.valorImovel;
+                const showCardDate = !readOnly && statusSalaShowsDataVendaField(ss);
+                const cardAmount = readOnly
+                  ? roomShowsListPriceInViewMode(ss)
+                    ? r.meta?.valorImovel
+                    : null
+                  : looksLikeSoldStatusSala(ss)
+                    ? r.meta?.valorVenda
+                    : r.meta?.valorImovel;
                 const cardDateLabel =
                   looksLikeSoldStatusSala(ss) && !looksLikeRentedStatusSala(ss)
                     ? "Data venda"
@@ -502,13 +510,11 @@ export default function RoomFloorWorkbench({
 
           {editingRoom ? (
             <>
-              {readOnly ? (
-                <div className="em-section">
-                  <div className="em-readonly-banner">Modo visualização — dados não podem ser alterados.</div>
-                </div>
-              ) : null}
+              {readOnly ? <ViewModeRoomSummary room={editingRoom} /> : null}
+              {!readOnly ? (
+              <>
               <div className="em-section">
-                <div className="em-section-title">{readOnly ? "Dados" : "Edição rápida"}</div>
+                <div className="em-section-title">Edição rápida</div>
                 <div className="em-grid em-grid-2">
                   <div className="em-field" style={{ marginBottom: 0 }}>
                     <label className="em-label" htmlFor="room-name-input">
@@ -934,6 +940,8 @@ export default function RoomFloorWorkbench({
                   </div>
                 </>
               )}
+              </>
+              ) : null}
             </>
           ) : null}
 

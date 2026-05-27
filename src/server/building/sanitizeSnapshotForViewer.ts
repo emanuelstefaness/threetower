@@ -1,6 +1,7 @@
 import type { BuildingSnapshot, RoomRecord } from "@/lib/buildingTypes";
+import { roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
-/** Visitante não recebe: relatório (precificação/faixa/base, m²), fechamento e forma de pagamento. Valor do imóvel e comprador permanecem. */
+/** Campos de negócio/fechamento que o visitante não deve receber. */
 const SENSITIVE_META_KEYS = [
   "precificacao",
   "faixa",
@@ -11,27 +12,46 @@ const SENSITIVE_META_KEYS = [
   "prazoPagamento",
   "valorVenda",
   "descontos",
+  "dataVenda",
+  "corretor",
+  "imobiliaria",
+  "comprador",
+  "reservedAt",
+  "reservedByName",
+  "reservedByLogin",
 ] as const;
 
-/** Remove campos de relatório e de pagamento/fechamento — visitante não recebe no JSON. */
+function sanitizeRoomMeta(room: RoomRecord): RoomRecord["meta"] {
+  const meta = room.meta ? { ...room.meta } : undefined;
+  if (!meta) return undefined;
+
+  for (const k of SENSITIVE_META_KEYS) {
+    delete (meta as Record<string, unknown>)[k];
+  }
+
+  const status = room.statusSala ?? meta.statusSalaOriginal;
+  if (!roomShowsListPriceInViewMode(status)) {
+    delete (meta as Record<string, unknown>).valorImovel;
+  }
+
+  return Object.keys(meta).length > 0 ? meta : undefined;
+}
+
+/** Remove dados de comprador, corretagem, fechamento e valores fora de estoque. */
 export function sanitizeSnapshotForViewer(snapshot: BuildingSnapshot): BuildingSnapshot {
   const roomsById: Record<number, RoomRecord> = {};
   for (const [idStr, room] of Object.entries(snapshot.roomsById)) {
     const id = Number(idStr);
-    const meta = room.meta ? { ...room.meta } : undefined;
-    if (meta) {
-      for (const k of SENSITIVE_META_KEYS) {
-        delete (meta as Record<string, unknown>)[k];
-      }
-      delete (meta as Record<string, unknown>).reservedByLogin;
-    }
     roomsById[id] = {
       ...room,
-      meta,
+      meta: sanitizeRoomMeta(room),
+      statusSalaHistory: undefined,
+      history: [],
     };
   }
   return {
     ...snapshot,
     roomsById,
+    notifications: [],
   };
 }

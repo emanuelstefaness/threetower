@@ -27,12 +27,13 @@ export async function GET() {
     const store = await getBuildingStore();
     snapshot = store.getState();
   }
-  if (role === "viewer" && process.env.NODE_ENV !== "development") {
+  const appMode = await getEffectiveAppMode();
+  if (appMode === "view") {
     snapshot = sanitizeSnapshotForViewer(snapshot);
   }
   return Response.json({
     snapshot,
-    appMode: await getEffectiveAppMode(),
+    appMode,
     authEnabled: isAuthEnabled(),
     authRole: role ?? undefined,
     authName: session?.name,

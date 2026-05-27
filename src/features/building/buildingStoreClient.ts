@@ -114,7 +114,16 @@ export const useBuildingStoreClient = create<BuildingStoreClient>((set, get) => 
           room.statusSala = evt.planilha.statusSala;
           if (!room.meta) room.meta = {};
           room.meta.statusSalaOriginal = evt.planilha.statusSala;
-          if (evt.planilha.reservation === null) {
+          if (state.appMode === "view") {
+            delete room.meta.reservedAt;
+            delete room.meta.reservedByName;
+            delete room.meta.reservedByLogin;
+            delete room.meta.comprador;
+            delete room.meta.corretor;
+            delete room.meta.imobiliaria;
+            delete room.meta.valorVenda;
+            delete room.meta.dataVenda;
+          } else if (evt.planilha.reservation === null) {
             delete room.meta.reservedAt;
             delete room.meta.reservedByName;
             delete room.meta.reservedByLogin;

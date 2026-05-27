@@ -5,6 +5,7 @@ import type { RoomRecord } from "@/lib/buildingTypes";
 import { getFloorPlanImage, getFloorPlanSlots } from "./floorPlanConfig";
 import { tryFormatMoneyBRL } from "@/lib/formatMoney";
 import { planToneForStatusSala } from "@/lib/treeTowerStatusSala";
+import { roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
 type Props = {
   floor: number;
@@ -15,6 +16,8 @@ type Props = {
   onSelectEmptySlot?: (slot: { id: string; label: string }) => void;
   /** Subtítulo abaixo do título. Omitir = texto padrão; string vazia = sem subtítulo */
   subCaption?: string;
+  /** Modo visualização: valor só em salas em estoque. */
+  viewMode?: boolean;
 };
 
 export default function FloorPlanHotspots({
@@ -24,6 +27,7 @@ export default function FloorPlanHotspots({
   onSelectRoom,
   onSelectEmptySlot,
   subCaption,
+  viewMode = false,
 }: Props) {
   const slots = getFloorPlanSlots(floor);
   const imageSrc = getFloorPlanImage(floor);
@@ -61,7 +65,9 @@ export default function FloorPlanHotspots({
           const statusClass = `plan-${tone}`;
           const isSelected = selectedSlotId === slot.id;
 
-          const valor = room?.meta?.valorImovel;
+          const statusSala = room?.statusSala ?? room?.meta?.statusSalaOriginal;
+          const valor =
+            room && (!viewMode || roomShowsListPriceInViewMode(statusSala)) ? room.meta?.valorImovel : undefined;
           const valorTxt = tryFormatMoneyBRL(valor) ?? "";
 
           const title = room
