@@ -40,6 +40,13 @@ export type RoomMeta = {
   descontos?: number;
   /** Data da venda (ou contrato) em epoch ms — editável na app; persistida; seed só arranque inicial. */
   dataVenda?: number;
+  /**
+   * Escritura registrada (sim/não) — campo do sistema, distinto de `escrituras` (texto vindo do Excel).
+   * Só faz sentido quando a sala está VENDIDA; geralmente preenchido depois da venda.
+   */
+  escriturada?: boolean;
+  /** Nome da sala antes da venda — guardado ao vender para restaurar no distrato. */
+  nomeAntesVenda?: string;
   competencia?: number;
   /** Momento em que a sala passou a reservada (epoch ms). */
   reservedAt?: number;

@@ -10,7 +10,7 @@ import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { canAccessInbox, canAccessReports, canAccessTvPanel } from "@/lib/authUi";
-import { colorForStatusSala } from "@/lib/treeTowerStatusSala";
+import { colorForStatusSala, looksLikeSoldStatusSala } from "@/lib/treeTowerStatusSala";
 
 function formatClock(d: Date) {
   return d.toLocaleTimeString("pt-BR");
@@ -127,6 +127,15 @@ export default function TowerAlfaDashboardClient() {
         .map((item) => ({ key: item.name, value: item.count, color: item.color })),
     [statusSalaBreakdown]
   );
+  /** Item 5: total de salas vendidas que já estão escrituradas. */
+  const escrituradasCount = useMemo(() => {
+    let n = 0;
+    for (const room of Object.values(building?.roomsById ?? {})) {
+      const ss = room.statusSala ?? room.meta?.statusSalaOriginal;
+      if (looksLikeSoldStatusSala(ss) && room.meta?.escriturada === true) n += 1;
+    }
+    return n;
+  }, [building]);
 
   const floorsSorted = useMemo(() => {
     if (!building?.floorAggregates) return [];
@@ -194,15 +203,42 @@ export default function TowerAlfaDashboardClient() {
           <div className="sb-manage">
             <div className="sb-count">{totalAllRooms} salas</div>
             {statusSalaBreakdown.map((item) => (
-              <div key={`sum-${item.name}`} className="bd-row">
-                <div className="report-kpi-label" style={{ minWidth: 0, flex: "0 0 140px" }}>
-                  <span className="report-status-dot" style={{ background: item.color }} />
-                  <span style={{ whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{item.name}</span>
+              <div key={`sum-${item.name}`}>
+                <div className="bd-row">
+                  <div className="report-kpi-label" style={{ minWidth: 0, flex: "0 0 140px" }}>
+                    <span className="report-status-dot" style={{ background: item.color }} />
+                    <span style={{ whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{item.name}</span>
+                  </div>
+                  <div className="bd-bar">
+                    <div className="bd-seg" style={{ width: `${totalAllRooms ? (item.count / totalAllRooms) * 100 : 0}%`, background: item.color }} />
+                  </div>
+                  <div className="bd-total">{item.count}</div>
                 </div>
-                <div className="bd-bar">
-                  <div className="bd-seg" style={{ width: `${totalAllRooms ? (item.count / totalAllRooms) * 100 : 0}%`, background: item.color }} />
-                </div>
-                <div className="bd-total">{item.count}</div>
+                {looksLikeSoldStatusSala(item.name) ? (
+                  <div
+                    className="bd-row"
+                    style={{ paddingLeft: 16, opacity: 0.85, fontSize: 12 }}
+                    title="Salas vendidas com escritura registrada"
+                  >
+                    <div className="report-kpi-label" style={{ minWidth: 0, flex: "0 0 124px" }}>
+                      <span style={{ opacity: 0.6 }}>↳</span>
+                      <span style={{ whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                        Escrituradas
+                      </span>
+                    </div>
+                    <div className="bd-bar">
+                      <div
+                        className="bd-seg"
+                        style={{
+                          width: `${item.count ? (escrituradasCount / item.count) * 100 : 0}%`,
+                          background: item.color,
+                          opacity: 0.6,
+                        }}
+                      />
+                    </div>
+                    <div className="bd-total">{escrituradasCount}</div>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

@@ -16,6 +16,7 @@ import {
   looksLikeSoldStatusSala,
   normalizeStatusSala,
   statusSalaRequiresFechamentoCompleto,
+  statusSalaRequiresReservaFields,
   statusSalaShowsDataVendaField,
 } from "@/lib/treeTowerStatusSala";
 import type { SeedRoom } from "./generateBuilding";
@@ -44,7 +45,10 @@ type Store = {
     roomId: number,
     newStatus: RoomStatus,
     by: string,
-    opts?: { reserveBy?: { name: string; login: string } }
+    opts?: {
+      reserveBy?: { name: string; login: string };
+      reserva?: { comprador?: string; corretor?: string; imobiliaria?: string };
+    }
   ) => RoomStatusChangedEvent;
   createRooms: (args: { floor: number; status: RoomStatus; count: number; area: number; namePrefix: string; by: string; planSlot?: string }) => RoomRecord[];
   updateRoomDetails: (args: {
@@ -68,6 +72,12 @@ type Store = {
     descontos?: number | null;
     /** Data da venda (epoch ms) — usada em “Vendas por período”. */
     dataVenda?: number | null;
+    /** Escritura registrada (sim/não) — único campo editável numa sala VENDIDA travada. */
+    escriturada?: boolean | null;
+    /** Distrato (item 6): reverte a venda para ESTOQUE e limpa os campos travados. */
+    distrato?: boolean;
+    /** Gestor-admin: ignora a trava de sala vendida e a regra de nome (edita qualquer dado a qualquer hora). */
+    adminOverride?: boolean;
     /** Campo de preço alterado por último no modal (m² ou imóvel). */
     priceSource?: "valorM2" | "valorImovel" | null;
     /** Preenchido pelo servidor ao entrar em reservada (quem registou). */
@@ -297,6 +307,9 @@ async function createStore(): Promise<Store> {
     valorVenda,
     descontos,
     dataVenda,
+    escriturada,
+    distrato,
+    adminOverride,
     priceSource,
     reserveBy,
   }: {
@@ -319,6 +332,9 @@ async function createStore(): Promise<Store> {
     valorVenda?: number | null;
     descontos?: number | null;
     dataVenda?: number | null;
+    escriturada?: boolean | null;
+    distrato?: boolean;
+    adminOverride?: boolean;
     priceSource?: "valorM2" | "valorImovel" | null;
     reserveBy?: { name: string; login: string };
   }) => {
@@ -328,8 +344,152 @@ async function createStore(): Promise<Store> {
     const statusAtStart = room.status;
     const wasReserved = statusAtStart === "reservada";
     const statusSalaAtStart = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "").trim();
+    const wasSoldAtStart = looksLikeSoldStatusSala(statusSalaAtStart);
 
+    // === DISTRATO (item 6): só sala vendida; reverte para ESTOQUE e limpa campos travados. ===
+    if (distrato) {
+      if (!wasSoldAtStart) throw new Error("Distrato só é possível em salas vendidas.");
+      const at = Date.now();
+      const restoredName = room.meta?.nomeAntesVenda?.trim();
+      if (restoredName) room.name = restoredName;
+
+      room.statusSala = "ESTOQUE";
+      if (!room.meta) room.meta = {};
+      room.meta.statusSalaOriginal = "ESTOQUE";
+      const m = room.meta;
+      delete m.comprador;
+      delete m.corretor;
+      delete m.imobiliaria;
+      delete m.valorVenda;
+      delete m.descontos;
+      delete m.dataVenda;
+      delete m.escriturada;
+      delete m.formaPagamento;
+      delete m.prazoPagamento;
+      delete m.nomeAntesVenda;
+      delete m.reservedAt;
+      delete m.reservedByName;
+      delete m.reservedByLogin;
+
+      const nextOp = operationalStatusFromStatusSala("ESTOQUE");
+      const oldOp = room.status;
+      if (nextOp !== oldOp) {
+        const floorAgg = state.floorAggregates[room.floor];
+        if (floorAgg) {
+          floorAgg.counts[oldOp] = Math.max(0, floorAgg.counts[oldOp] - 1);
+          floorAgg.counts[nextOp] += 1;
+        }
+        state.summary.counts[oldOp] = Math.max(0, state.summary.counts[oldOp] - 1);
+        state.summary.counts[nextOp] += 1;
+        room.status = nextOp;
+      }
+
+      const ssEntry: StatusSalaHistoryEntry = {
+        at,
+        by,
+        from: statusSalaAtStart || "init",
+        to: "ESTOQUE",
+        reason: "distrato (venda revertida para estoque)",
+      };
+      room.statusSalaHistory = [ssEntry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
+      room.history.unshift({
+        at,
+        by,
+        from: statusAtStart,
+        to: room.status,
+        reason: "distrato (venda revertida para estoque)",
+      });
+      room.history = room.history.slice(0, 60);
+      room.lastUpdatedAt = at;
+      persist();
+      return room;
+    }
+
+    // === TRAVA (item 1): sala já VENDIDA só aceita alteração de `escriturada`. ===
+    // O gestor-admin (adminOverride) ignora a trava e edita qualquer campo.
+    if (wasSoldAtStart && !adminOverride) {
+      const disallowedPresent =
+        name !== undefined ||
+        area !== undefined ||
+        planSlot !== undefined ||
+        statusSala !== undefined ||
+        valorImovel !== undefined ||
+        valorM2 !== undefined ||
+        precificacao !== undefined ||
+        faixa !== undefined ||
+        baseCalculoVenda !== undefined ||
+        corretor !== undefined ||
+        imobiliaria !== undefined ||
+        comprador !== undefined ||
+        formaPagamento !== undefined ||
+        prazoPagamento !== undefined ||
+        valorVenda !== undefined ||
+        descontos !== undefined ||
+        dataVenda !== undefined;
+      if (disallowedPresent) {
+        throw new Error(
+          'Sala vendida está travada. Apenas o campo "Escriturada" pode ser alterado, ou faça o distrato.',
+        );
+      }
+      if (escriturada !== undefined) {
+        if (!room.meta) room.meta = {};
+        if (escriturada === null || escriturada === false) delete room.meta.escriturada;
+        else room.meta.escriturada = true;
+        const at = Date.now();
+        room.history.unshift({
+          at,
+          by,
+          from: statusAtStart,
+          to: room.status,
+          reason: escriturada ? "marcada como escriturada" : "escritura desmarcada",
+        });
+        room.history = room.history.slice(0, 60);
+        room.lastUpdatedAt = at;
+      }
+      persist();
+      return room;
+    }
+
+    // Status alvo após esta atualização (sala ainda não vendida neste ponto).
+    const targetStatusSala =
+      typeof statusSala === "string" && statusSala.trim() ? statusSala.trim() : statusSalaAtStart;
+    const transitioningToSold = looksLikeSoldStatusSala(targetStatusSala);
+
+    // Pré-condições (validar ANTES de mutar — evita deixar a sala em estado parcial se faltar dado).
+    // Usa o valor que ficaria após o patch: parâmetro recebido, ou o que já existe na sala.
+    {
+      const effStr = (p: string | null | undefined, cur: string | undefined) =>
+        p === undefined ? String(cur ?? "").trim() : p === null ? "" : String(p).trim();
+      if (statusSalaRequiresFechamentoCompleto(targetStatusSala)) {
+        const parts: string[] = [];
+        if (!effStr(comprador, room.meta?.comprador)) parts.push("comprador ou locatário");
+        if (!effStr(imobiliaria, room.meta?.imobiliaria)) parts.push("imobiliária");
+        if (!effStr(corretor, room.meta?.corretor)) parts.push("corretor");
+        const effData = dataVenda !== undefined ? dataVenda : room.meta?.dataVenda;
+        if (typeof effData !== "number" || !Number.isFinite(effData) || effData <= 0) {
+          parts.push("data (venda ou início do aluguel)");
+        }
+        if (parts.length) throw new Error(`Para VENDIDO ou ALUGADA, preencha: ${parts.join(", ")}.`);
+      }
+      if (statusSalaRequiresReservaFields(targetStatusSala)) {
+        const parts: string[] = [];
+        if (!effStr(comprador, room.meta?.comprador)) parts.push("comprador");
+        if (!effStr(corretor, room.meta?.corretor)) parts.push("corretor");
+        if (!effStr(imobiliaria, room.meta?.imobiliaria)) parts.push("imobiliária");
+        if (parts.length) throw new Error(`Para reservar, preencha: ${parts.join(", ")}.`);
+      }
+    }
+
+    // Item 2: nome só pode mudar ao marcar VENDIDO (o gestor-admin não tem essa restrição).
     const cleanName = typeof name === "string" ? name.trim() : undefined;
+    if (cleanName && cleanName !== room.name && !transitioningToSold && !adminOverride) {
+      throw new Error("O nome da sala só pode ser alterado ao marcar como VENDIDO.");
+    }
+    // Guarda o nome anterior à venda (para restaurar no distrato).
+    if (transitioningToSold) {
+      if (!room.meta) room.meta = {};
+      if (!room.meta.nomeAntesVenda) room.meta.nomeAntesVenda = room.name;
+    }
     if (cleanName) room.name = cleanName;
 
     if (hasSeed) {
@@ -400,6 +560,17 @@ async function createStore(): Promise<Store> {
       if (!statusSalaShowsDataVendaField(statusSalaNow) && room.meta?.dataVenda != null) {
         delete room.meta.dataVenda;
       }
+      // `escriturada` só faz sentido em sala vendida; limpa se sair de VENDIDO.
+      if (!looksLikeSoldStatusSala(statusSalaNow) && room.meta?.escriturada != null) {
+        delete room.meta.escriturada;
+      }
+    }
+
+    // Escritura (item 4): aplicável quando a sala está/fica VENDIDA.
+    if (escriturada !== undefined) {
+      if (!room.meta) room.meta = {};
+      if (escriturada === null || escriturada === false) delete room.meta.escriturada;
+      else room.meta.escriturada = true;
     }
 
     const isReservedNow = room.status === "reservada";
@@ -542,20 +713,7 @@ async function createStore(): Promise<Store> {
       }
     }
 
-    const statusSalaFinal = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "").trim();
-    if (statusSalaRequiresFechamentoCompleto(statusSalaFinal)) {
-      const m = room.meta;
-      const parts: string[] = [];
-      if (!String(m?.comprador ?? "").trim()) parts.push("comprador ou locatário");
-      if (!String(m?.imobiliaria ?? "").trim()) parts.push("imobiliária");
-      if (!String(m?.corretor ?? "").trim()) parts.push("corretor");
-      if (typeof m?.dataVenda !== "number" || !Number.isFinite(m.dataVenda) || m.dataVenda <= 0) {
-        parts.push("data (venda ou início do aluguel)");
-      }
-      if (parts.length) {
-        throw new Error(`Para VENDIDO ou ALUGADA, preencha: ${parts.join(", ")}.`);
-      }
-    }
+    // (Validações de fechamento/reserva já foram feitas como pré-condição, antes de mutar.)
 
     // registra histórico (inclui transição quando o status operacional muda por causa do STATUS SALA)
     room.history.unshift({
@@ -618,10 +776,29 @@ async function createStore(): Promise<Store> {
     roomId: number,
     newStatus: RoomStatus,
     by: string,
-    opts?: { reserveBy?: { name: string; login: string } }
+    opts?: {
+      reserveBy?: { name: string; login: string };
+      reserva?: { comprador?: string; corretor?: string; imobiliaria?: string };
+    }
   ): RoomStatusChangedEvent => {
     const room = state.roomsById[roomId];
     if (!room) throw new Error("Sala não encontrada");
+    // Item 1: sala VENDIDA está travada — nem o status operacional muda (use o distrato).
+    if (
+      room.status !== newStatus &&
+      looksLikeSoldStatusSala(room.statusSala ?? room.meta?.statusSalaOriginal)
+    ) {
+      throw new Error("Sala vendida está travada. Faça o distrato para alterar o status.");
+    }
+    // Item 3: reservar exige comprador, corretor e imobiliária.
+    if (newStatus === "reservada" && room.status !== "reservada") {
+      const r = opts?.reserva;
+      const parts: string[] = [];
+      if (!String(r?.comprador ?? room.meta?.comprador ?? "").trim()) parts.push("comprador");
+      if (!String(r?.corretor ?? room.meta?.corretor ?? "").trim()) parts.push("corretor");
+      if (!String(r?.imobiliaria ?? room.meta?.imobiliaria ?? "").trim()) parts.push("imobiliária");
+      if (parts.length) throw new Error(`Para reservar, preencha: ${parts.join(", ")}.`);
+    }
     if (room.status === newStatus) {
       // Não gera evento; preserva performance.
       return {
@@ -670,6 +847,13 @@ async function createStore(): Promise<Store> {
       room.meta.reservedAt = at;
       room.meta.reservedByName = rb.name;
       room.meta.reservedByLogin = rb.login;
+      // Item 3: registra comprador, corretor e imobiliária informados na reserva.
+      const rinfo = opts?.reserva;
+      if (rinfo) {
+        if (String(rinfo.comprador ?? "").trim()) room.meta.comprador = rinfo.comprador!.trim();
+        if (String(rinfo.corretor ?? "").trim()) room.meta.corretor = rinfo.corretor!.trim();
+        if (String(rinfo.imobiliaria ?? "").trim()) room.meta.imobiliaria = rinfo.imobiliaria!.trim();
+      }
       if (statusSalaAtStart !== "RESERVADA") {
         const entry: StatusSalaHistoryEntry = {
           at,
@@ -703,6 +887,12 @@ async function createStore(): Promise<Store> {
           reason: "libertação de reserva (status operacional → STATUS SALA)",
         };
         room.statusSalaHistory = [entry, ...(room.statusSalaHistory ?? [])].slice(0, 120);
+        // Reserva liberada → limpa também os dados informados na reserva (simetria com o registro).
+        if (room.meta) {
+          delete room.meta.comprador;
+          delete room.meta.corretor;
+          delete room.meta.imobiliaria;
+        }
       }
       if (room.meta) {
         delete room.meta.reservedAt;

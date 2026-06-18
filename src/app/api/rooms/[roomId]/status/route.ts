@@ -20,7 +20,14 @@ export async function PATCH(
   const roomId = Number(params.roomId);
   if (!Number.isFinite(roomId)) return Response.json({ error: "roomId inválido" }, { status: 400 });
 
-  const body = (await req.json().catch(() => ({}))) as { status?: RoomStatus; by?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    status?: RoomStatus;
+    by?: string;
+    /** Item 3: obrigatórios ao reservar. */
+    comprador?: string;
+    corretor?: string;
+    imobiliaria?: string;
+  };
   const newStatus = body.status;
   if (!newStatus) return Response.json({ error: "status é obrigatório" }, { status: 400 });
 
@@ -38,7 +45,16 @@ export async function PATCH(
       roomId,
       newStatus,
       by,
-      newStatus === "reservada" ? { reserveBy } : undefined
+      newStatus === "reservada"
+        ? {
+            reserveBy,
+            reserva: {
+              comprador: typeof body.comprador === "string" ? body.comprador : undefined,
+              corretor: typeof body.corretor === "string" ? body.corretor : undefined,
+              imobiliaria: typeof body.imobiliaria === "string" ? body.imobiliaria : undefined,
+            },
+          }
+        : undefined
     );
     await flushBuildingPersistence();
     return Response.json(evt);

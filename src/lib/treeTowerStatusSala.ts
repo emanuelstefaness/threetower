@@ -85,6 +85,14 @@ export function statusSalaRequiresFechamentoCompleto(statusSala: string | undefi
   return false;
 }
 
+/**
+ * Reserva exige comprador, corretor e imobiliária (item 3). Vale para STATUS SALA = RESERVADA.
+ * Diferente do fechamento completo (venda/aluguel), aqui a data não é obrigatória.
+ */
+export function statusSalaRequiresReservaFields(statusSala: string | undefined): boolean {
+  return normalizeStatusSala(statusSala) === "RESERVADA";
+}
+
 /** Valor único no select (remove duplicata legada `reservada` → `RESERVADA`). */
 export function canonicalStatusSalaForSelect(raw: string | undefined): string {
   const t = (raw ?? "").trim();

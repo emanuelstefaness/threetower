@@ -1,4 +1,6 @@
 import { isAuthEnabled } from "@/lib/authConfig";
+import { isAdminGestor } from "@/lib/authUi";
+import { looksLikeSoldStatusSala } from "@/lib/treeTowerStatusSala";
 import {
   ensureBuildingStoreSyncedFromDb,
   flushBuildingPersistence,
@@ -40,9 +42,37 @@ export async function PATCH(
     descontos?: number | null;
     /** Epoch ms — data em que a sala foi vendida (relatório “Vendas por período”). */
     dataVenda?: number | null;
+    escriturada?: boolean | null;
+    distrato?: boolean;
     priceSource?: "valorM2" | "valorImovel" | null;
   };
   const session = await getAuthSession();
+
+  // Estado atual da sala (fresco da BD) para decidir autorização da trava.
+  const currentRoom = store.getState().roomsById[roomId];
+  const currentlySold = looksLikeSoldStatusSala(
+    currentRoom?.statusSala ?? currentRoom?.meta?.statusSalaOriginal
+  );
+  const isAdmin = isAdminGestor(session?.role ?? null, session?.login ?? null);
+
+  // Distrato (item 6): exclusivo do gestor-admin (quando a auth está ativa).
+  if (body.distrato === true) {
+    if (isAuthEnabled() && !isAdmin) {
+      return Response.json(
+        { error: "Apenas o gestor responsável pode realizar o distrato." },
+        { status: 403 }
+      );
+    }
+  } else if (currentlySold) {
+    // Sala vendida travada: apenas gestores podem mexer (e só no campo Escriturada — a trava de
+    // campos é reforçada no store). Secretaria/visitante não alteram sala vendida.
+    if (isAuthEnabled() && session && session.role !== "gestor") {
+      return Response.json(
+        { error: "Sala vendida está travada. Apenas gestores podem alterar a escritura." },
+        { status: 403 }
+      );
+    }
+  }
   const by =
     session?.name?.trim() ||
     (typeof body.by === "string" && body.by.trim() ? body.by.trim() : "") ||
@@ -102,6 +132,10 @@ export async function PATCH(
       valorVenda: optFinite(body.valorVenda, "Valor da venda"),
       descontos: optFinite(body.descontos, "Descontos"),
       dataVenda: optFinite(body.dataVenda, "Data da venda"),
+      escriturada:
+        body.escriturada === undefined ? undefined : body.escriturada === null ? null : body.escriturada === true,
+      distrato: body.distrato === true,
+      adminOverride: isAdmin,
       priceSource:
         body.priceSource === "valorM2" || body.priceSource === "valorImovel" ? body.priceSource : null,
       reserveBy,

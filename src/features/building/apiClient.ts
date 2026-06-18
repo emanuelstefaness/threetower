@@ -56,11 +56,16 @@ export async function fetchBuildingState(): Promise<BuildingStatePayload> {
   return { snapshot: data as BuildingSnapshot, appMode: "edit" };
 }
 
-export async function updateRoomStatus(roomId: number, status: RoomStatus, by: string = "admin"): Promise<RoomStatusChangedEvent> {
+export async function updateRoomStatus(
+  roomId: number,
+  status: RoomStatus,
+  by: string = "admin",
+  reserva?: { comprador?: string; corretor?: string; imobiliaria?: string }
+): Promise<RoomStatusChangedEvent> {
   const res = await fetch(`/api/rooms/${roomId}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status, by }),
+    body: JSON.stringify({ status, by, ...(reserva ?? {}) }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => null);
@@ -119,6 +124,10 @@ export type UpdateRoomDetailsPayload = {
   descontos?: number | null;
   /** Epoch ms — data da venda (status VENDIDO). */
   dataVenda?: number | null;
+  /** Escritura registrada (sim/não) — único campo editável numa sala VENDIDA travada. */
+  escriturada?: boolean | null;
+  /** Distrato (item 6): reverte a venda para ESTOQUE e limpa os campos travados. */
+  distrato?: boolean;
   /** Campo de preço que o gestor alterou por último no modal. */
   priceSource?: "valorM2" | "valorImovel" | null;
 };
@@ -146,6 +155,8 @@ export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsP
       valorVenda: args.valorVenda,
       descontos: args.descontos,
       dataVenda: args.dataVenda,
+      escriturada: args.escriturada,
+      distrato: args.distrato,
       priceSource: args.priceSource,
     }),
   });

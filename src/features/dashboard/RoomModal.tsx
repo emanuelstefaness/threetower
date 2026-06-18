@@ -7,6 +7,7 @@ import { STATUS_META, STATUS_ORDER } from "@/lib/status";
 import { formatDateTime, formatRelativeDateTime } from "@/lib/time";
 import { updateRoomStatus } from "@/features/building/apiClient";
 import { isSecretaria } from "@/lib/authUi";
+import { looksLikeSoldStatusSala } from "@/lib/treeTowerStatusSala";
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 
 type Props = {
@@ -24,10 +25,15 @@ export function RoomModal({ roomId, open, onClose }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<RoomStatus>("disponivel");
   const [saving, setSaving] = useState(false);
+  const [reservaError, setReservaError] = useState<string | null>(null);
+  const [reservaComprador, setReservaComprador] = useState("");
+  const [reservaCorretor, setReservaCorretor] = useState("");
+  const [reservaImobiliaria, setReservaImobiliaria] = useState("");
 
   const history = room?.history ?? [];
 
-  const canOpenEdit = room && room.status;
+  const isSold = looksLikeSoldStatusSala(room?.statusSala ?? room?.meta?.statusSalaOriginal);
+  const canOpenEdit = room && room.status && !isSold;
 
   const setToStatus = (s: RoomStatus) => setPendingStatus(s);
 
@@ -96,12 +102,18 @@ export function RoomModal({ roomId, open, onClose }: Props) {
                         title={
                           readOnly
                             ? "Modo somente leitura"
-                            : isSecretaria(authRole)
-                              ? "Secretaria de vendas: use Salas → editar sala e o STATUS SALA (ex.: RESERVADA)."
-                              : undefined
+                            : isSold
+                              ? "Sala vendida está travada. Faça o distrato em Salas → editar sala."
+                              : isSecretaria(authRole)
+                                ? "Secretaria de vendas: use Salas → editar sala e o STATUS SALA (ex.: RESERVADA)."
+                                : undefined
                         }
                         onClick={() => {
                           setPendingStatus(room.status === "disponivel" ? "ocupada" : "disponivel");
+                          setReservaComprador("");
+                          setReservaCorretor("");
+                          setReservaImobiliaria("");
+                          setReservaError(null);
                           setEditOpen(true);
                         }}
                         className="rounded-2xl border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 hover:border-sky-500/50 hover:bg-sky-500/15 disabled:opacity-50"
@@ -192,6 +204,41 @@ export function RoomModal({ roomId, open, onClose }: Props) {
                       </select>
                     </label>
 
+                    {pendingStatus === "reservada" ? (
+                      <div className="mt-3 space-y-2">
+                        <div className="text-xs text-slate-400">
+                          Para reservar, informe comprador, corretor e imobiliária.
+                        </div>
+                        <input
+                          value={reservaComprador}
+                          onChange={(e) => setReservaComprador(e.target.value)}
+                          placeholder="Comprador"
+                          autoComplete="off"
+                          className="w-full rounded-xl border border-white/10 bg-slate-900/30 p-2 text-sm outline-none focus:border-sky-500/60"
+                        />
+                        <input
+                          value={reservaCorretor}
+                          onChange={(e) => setReservaCorretor(e.target.value)}
+                          placeholder="Corretor"
+                          autoComplete="off"
+                          className="w-full rounded-xl border border-white/10 bg-slate-900/30 p-2 text-sm outline-none focus:border-sky-500/60"
+                        />
+                        <input
+                          value={reservaImobiliaria}
+                          onChange={(e) => setReservaImobiliaria(e.target.value)}
+                          placeholder="Imobiliária"
+                          autoComplete="off"
+                          className="w-full rounded-xl border border-white/10 bg-slate-900/30 p-2 text-sm outline-none focus:border-sky-500/60"
+                        />
+                      </div>
+                    ) : null}
+
+                    {reservaError ? (
+                      <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-200">
+                        {reservaError}
+                      </div>
+                    ) : null}
+
                     <div className="mt-4 flex items-center justify-end gap-2">
                       <button
                         onClick={() => setEditOpen(false)}
@@ -200,7 +247,16 @@ export function RoomModal({ roomId, open, onClose }: Props) {
                         Cancelar
                       </button>
                       <button
-                        onClick={() => setConfirmOpen(true)}
+                        onClick={() => {
+                          if (pendingStatus === "reservada") {
+                            if (!reservaComprador.trim() || !reservaCorretor.trim() || !reservaImobiliaria.trim()) {
+                              setReservaError("Preencha comprador, corretor e imobiliária para reservar.");
+                              return;
+                            }
+                          }
+                          setReservaError(null);
+                          setConfirmOpen(true);
+                        }}
                         className="rounded-2xl bg-sky-500/15 px-3 py-2 text-sm text-slate-100 hover:bg-sky-500/25 border border-sky-500/40"
                       >
                         Continuar
@@ -251,9 +307,23 @@ export function RoomModal({ roomId, open, onClose }: Props) {
                         onClick={async () => {
                           setSaving(true);
                           try {
-                            await updateRoomStatus(room.id, pendingStatus, authName?.trim() || "Gestor");
+                            await updateRoomStatus(
+                              room.id,
+                              pendingStatus,
+                              authName?.trim() || "Gestor",
+                              pendingStatus === "reservada"
+                                ? {
+                                    comprador: reservaComprador.trim(),
+                                    corretor: reservaCorretor.trim(),
+                                    imobiliaria: reservaImobiliaria.trim(),
+                                  }
+                                : undefined,
+                            );
                             setConfirmOpen(false);
                             setEditOpen(false);
+                          } catch (e) {
+                            setConfirmOpen(false);
+                            setReservaError(e instanceof Error ? e.message : "Falha ao atualizar a sala.");
                           } finally {
                             setSaving(false);
                           }

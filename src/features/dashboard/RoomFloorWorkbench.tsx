@@ -13,6 +13,7 @@ import {
   looksLikeRentedStatusSala,
   looksLikeSoldStatusSala,
   statusSalaRequiresFechamentoCompleto,
+  statusSalaRequiresReservaFields,
   statusSalaShowsDataVendaField,
   TREE_TOWER_STATUS_SALA_OPTIONS,
 } from "@/lib/treeTowerStatusSala";
@@ -22,6 +23,7 @@ import {
   computeValorM2FromValorImovel,
 } from "@/lib/precificacaoSala";
 import { formatSaleDateIsoLocal } from "@/lib/vendasMensaisAgg";
+import { isAdminGestor } from "@/lib/authUi";
 import { roomCardToneClass, roomPublicLabel, roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
 /** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
@@ -95,9 +97,12 @@ export default function RoomFloorWorkbench({
   className,
   nestedInFloorModal = false,
 }: RoomFloorWorkbenchProps) {
-  const { building, appMode, authRole, authName, setBuilding } = useBuildingStoreClient();
+  const { building, appMode, authRole, authName, authLogin, authEnabled, setBuilding } = useBuildingStoreClient();
   const readOnly = appMode === "view";
   const isViewer = authRole === "viewer";
+  const isAdmin = isAdminGestor(authRole, authLogin);
+  /** Pode editar a escritura: gestores (e quando a auth está desligada). Secretaria/visitante não. */
+  const canEditEscritura = !readOnly && authRole !== "secretaria" && authRole !== "viewer";
   const hideReportAndPaymentUi = readOnly || isViewer;
   const skipNextPlanClear = useRef(false);
 
@@ -115,6 +120,9 @@ export default function RoomFloorWorkbench({
   const [editFormaPagamento, setEditFormaPagamento] = useState("");
   const [editPrazoPagamento, setEditPrazoPagamento] = useState("");
   const [editDataVenda, setEditDataVenda] = useState("");
+  const [editEscriturada, setEditEscriturada] = useState(false);
+  const [lockedBusy, setLockedBusy] = useState(false);
+  const [distratoConfirm, setDistratoConfirm] = useState(false);
   const [lastEditedPriceSource, setLastEditedPriceSource] = useState<"valorM2" | "valorImovel" | null>(null);
 
   const [selectedPlanSlot, setSelectedPlanSlot] = useState<string | null>(null);
@@ -167,6 +175,10 @@ export default function RoomFloorWorkbench({
   }, [building, floor]);
 
   const editingRoom = editRoomId != null && building ? building.roomsById[editRoomId] : null;
+  const editingRoomIsSold =
+    !!editingRoom && looksLikeSoldStatusSala(editingRoom.statusSala ?? editingRoom.meta?.statusSalaOriginal);
+  /** Sala VENDIDA travada para gestores comuns (só Escriturada). O gestor-admin edita tudo. */
+  const lockedSold = !readOnly && editingRoomIsSold && !isAdmin;
 
   const valoresPreview = useMemo(() => {
     const safeParse = (raw: string) => {
@@ -212,6 +224,8 @@ export default function RoomFloorWorkbench({
     setEditFormaPagamento(m?.formaPagamento ?? "");
     setEditPrazoPagamento(m?.prazoPagamento ?? "");
     setEditDataVenda(formatDateInputFromMs(m?.dataVenda));
+    setEditEscriturada(m?.escriturada === true);
+    setDistratoConfirm(false);
     setLastEditedPriceSource(null);
   }, []);
 
@@ -301,9 +315,52 @@ export default function RoomFloorWorkbench({
     onOpenRoomRequestHandled?.();
   }, [openRoomIdRequest, building, floor, openEdit, onOpenRoomRequestHandled]);
 
+  const refreshBuilding = useCallback(async () => {
+    const { snapshot, appMode: mode, authEnabled: ae, authRole: r, authName: an, authLogin: al } =
+      await fetchBuildingState();
+    setBuilding(snapshot, mode, ae, r, an, al);
+  }, [setBuilding]);
+
+  /** Sala vendida travada: alterna a escritura (Sim/Não) — único campo editável. */
+  const saveEscrituradaLocked = useCallback(
+    async (value: boolean) => {
+      if (editRoomId == null || !canEditEscritura) return;
+      setLockedBusy(true);
+      try {
+        await updateRoomDetails(editRoomId, { by: authName?.trim() || "admin", escriturada: value });
+        setEditEscriturada(value);
+        await refreshBuilding();
+        showToast(value ? "Marcada como escriturada" : "Escritura desmarcada", "✅");
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Falha ao salvar escritura", "⚠️");
+      } finally {
+        setLockedBusy(false);
+      }
+    },
+    [authName, canEditEscritura, editRoomId, refreshBuilding, showToast],
+  );
+
+  /** Distrato (item 6): reverte a venda para ESTOQUE e limpa os campos — só o gestor-admin. */
+  const doDistrato = useCallback(async () => {
+    if (editRoomId == null || !isAdmin) return;
+    setLockedBusy(true);
+    try {
+      await updateRoomDetails(editRoomId, { by: authName?.trim() || "admin", distrato: true });
+      await refreshBuilding();
+      showToast("Distrato realizado — sala voltou para ESTOQUE", "✅");
+      setDistratoConfirm(false);
+      closeEdit();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Falha no distrato", "⚠️");
+    } finally {
+      setLockedBusy(false);
+    }
+  }, [authName, editRoomId, isAdmin, refreshBuilding, showToast]);
+
   const saveEdit = async () => {
     if (readOnly) return;
     if (editRoomId == null) return;
+    if (lockedSold) return;
     try {
       const current = building?.roomsById[editRoomId];
       if (!current) throw new Error("Sala não encontrada");
@@ -327,6 +384,22 @@ export default function RoomFloorWorkbench({
         }
         if (!editDataVenda.trim()) {
           showToast("Para VENDIDO ou ALUGADA, indique a data (venda ou início do aluguel).", "⚠️");
+          return;
+        }
+      }
+
+      // Item 3: reserva exige comprador, corretor e imobiliária (data não é obrigatória).
+      if (statusSalaRequiresReservaFields(next)) {
+        if (!editComprador.trim()) {
+          showToast("Para reservar, indique o comprador.", "⚠️");
+          return;
+        }
+        if (!editCorretor.trim()) {
+          showToast("Para reservar, indique o corretor.", "⚠️");
+          return;
+        }
+        if (!editImobiliaria.trim()) {
+          showToast("Para reservar, indique a imobiliária.", "⚠️");
           return;
         }
       }
@@ -385,6 +458,7 @@ export default function RoomFloorWorkbench({
         formaPagamento: editFormaPagamento.trim() || null,
         prazoPagamento: editPrazoPagamento.trim() || null,
         dataVenda,
+        escriturada: looksLikeSoldStatusSala(next) ? editEscriturada : null,
       });
 
       const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an, authLogin: al } =
@@ -514,7 +588,21 @@ export default function RoomFloorWorkbench({
           {editingRoom ? (
             <>
               {readOnly ? <ViewModeRoomSummary room={editingRoom} /> : null}
-              {!readOnly ? (
+              {lockedSold ? (
+                <SoldLockedPanel
+                  room={editingRoom}
+                  canEditEscritura={canEditEscritura}
+                  isAdmin={isAdmin}
+                  busy={lockedBusy}
+                  escriturada={editEscriturada}
+                  onToggleEscriturada={saveEscrituradaLocked}
+                  distratoConfirm={distratoConfirm}
+                  onAskDistrato={() => setDistratoConfirm(true)}
+                  onCancelDistrato={() => setDistratoConfirm(false)}
+                  onConfirmDistrato={doDistrato}
+                />
+              ) : null}
+              {!readOnly && !lockedSold ? (
               <>
               <div className="em-section">
                 <div className="em-section-title">Edição rápida</div>
@@ -529,8 +617,18 @@ export default function RoomFloorWorkbench({
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       placeholder="Ex.: Sala Comercial 101"
-                      disabled={readOnly}
+                      disabled={readOnly || !looksLikeSoldStatusSala(editStatusSala)}
+                      title={
+                        looksLikeSoldStatusSala(editStatusSala)
+                          ? undefined
+                          : "O nome só pode ser alterado quando o status é VENDIDO."
+                      }
                     />
+                    {!looksLikeSoldStatusSala(editStatusSala) ? (
+                      <div style={{ marginTop: 6, fontSize: 11, opacity: 0.75, lineHeight: 1.4 }}>
+                        O nome só pode ser alterado ao marcar como <strong>VENDIDO</strong>.
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="em-field" style={{ marginBottom: 0 }}>
@@ -599,6 +697,29 @@ export default function RoomFloorWorkbench({
                   </div>
                 );
               })()}
+
+              {looksLikeSoldStatusSala(editStatusSala) ? (
+                <div className="em-section">
+                  <div className="em-section-title">Escritura</div>
+                  <div className="em-field" style={{ marginBottom: 0 }}>
+                    <label className="em-label" htmlFor="room-escriturada">
+                      Escriturada?
+                    </label>
+                    <select
+                      id="room-escriturada"
+                      className="em-select"
+                      value={editEscriturada ? "sim" : "nao"}
+                      onChange={(e) => setEditEscriturada(e.target.value === "sim")}
+                    >
+                      <option value="nao">Não</option>
+                      <option value="sim">Sim</option>
+                    </select>
+                    <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8, lineHeight: 1.4 }}>
+                      Geralmente preenchido depois da venda. Conta no resumo como sala escriturada.
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               {editingRoom?.status === "reservada" && (editingRoom.meta?.reservedByName || editingRoom.meta?.reservedAt) ? (
                 <div className="em-section">
@@ -943,6 +1064,47 @@ export default function RoomFloorWorkbench({
                   </div>
                 </>
               )}
+
+              {editingRoomIsSold && isAdmin ? (
+                <div className="em-section">
+                  <div className="em-section-title">Distrato (gestor responsável)</div>
+                  {distratoConfirm ? (
+                    <div className="em-field" style={{ marginBottom: 0 }}>
+                      <div className="em-readonly-banner" style={{ marginBottom: 8 }}>
+                        Confirmar distrato? A sala volta para <strong>ESTOQUE</strong> e os campos da venda
+                        (comprador, corretor, imobiliária, valores, data, escritura) serão limpos.
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          className="em-btn em-cancel"
+                          type="button"
+                          disabled={lockedBusy}
+                          onClick={() => setDistratoConfirm(false)}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          className="em-btn em-save"
+                          type="button"
+                          disabled={lockedBusy}
+                          onClick={doDistrato}
+                        >
+                          {lockedBusy ? "Processando..." : "Confirmar distrato"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="em-btn em-cancel"
+                      type="button"
+                      disabled={lockedBusy}
+                      onClick={() => setDistratoConfirm(true)}
+                    >
+                      Realizar distrato (voltar para estoque)
+                    </button>
+                  )}
+                </div>
+              ) : null}
               </>
               ) : null}
             </>
@@ -950,9 +1112,9 @@ export default function RoomFloorWorkbench({
 
           <div className="em-btns">
             <button className="em-btn em-cancel" type="button" onClick={closeEdit}>
-              {readOnly ? "Fechar" : "Cancelar"}
+              {readOnly || lockedSold ? "Fechar" : "Cancelar"}
             </button>
-            {readOnly ? null : (
+            {readOnly || lockedSold ? null : (
               <button className="em-btn em-save" type="button" onClick={saveEdit}>
                 Salvar
               </button>
@@ -967,6 +1129,131 @@ export default function RoomFloorWorkbench({
           <span>{toast.msg}</span>
         </div>
       )}
+    </>
+  );
+}
+
+type SoldLockedPanelProps = {
+  room: RoomRecord;
+  canEditEscritura: boolean;
+  isAdmin: boolean;
+  busy: boolean;
+  escriturada: boolean;
+  onToggleEscriturada: (value: boolean) => void;
+  distratoConfirm: boolean;
+  onAskDistrato: () => void;
+  onCancelDistrato: () => void;
+  onConfirmDistrato: () => void;
+};
+
+/** Painel de sala VENDIDA travada: dados em leitura, só Escritura e Distrato disponíveis. */
+function SoldLockedPanel({
+  room,
+  canEditEscritura,
+  isAdmin,
+  busy,
+  escriturada,
+  onToggleEscriturada,
+  distratoConfirm,
+  onAskDistrato,
+  onCancelDistrato,
+  onConfirmDistrato,
+}: SoldLockedPanelProps) {
+  const m = room.meta;
+  const dataVendaStr = (() => {
+    const ms = m?.dataVenda;
+    if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "—";
+    return new Date(ms).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  })();
+
+  return (
+    <>
+      <div className="em-section">
+        <div className="em-readonly-banner" style={{ marginBottom: 0 }}>
+          🔒 Sala <strong>VENDIDA</strong> — dados travados. Apenas a escritura pode ser alterada
+          {isAdmin ? ", ou faça o distrato." : "."}
+        </div>
+      </div>
+
+      <div className="em-section">
+        <div className="em-section-title">Dados da venda</div>
+        <div className="em-grid em-grid-2">
+          <div className="em-field">
+            <div className="em-label">Nome</div>
+            <div className="em-input em-readonly">{room.name || "—"}</div>
+          </div>
+          <div className="em-field">
+            <div className="em-label">Comprador</div>
+            <div className="em-input em-readonly">{m?.comprador?.trim() || "—"}</div>
+          </div>
+          <div className="em-field">
+            <div className="em-label">Corretor</div>
+            <div className="em-input em-readonly">{m?.corretor?.trim() || "—"}</div>
+          </div>
+          <div className="em-field">
+            <div className="em-label">Imobiliária</div>
+            <div className="em-input em-readonly">{m?.imobiliaria?.trim() || "—"}</div>
+          </div>
+          <div className="em-field">
+            <div className="em-label">Valor vendido</div>
+            <div className="em-input em-readonly">{formatMoneyBRL(m?.valorVenda)}</div>
+          </div>
+          <div className="em-field">
+            <div className="em-label">Data da venda</div>
+            <div className="em-input em-readonly">{dataVendaStr}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="em-section">
+        <div className="em-section-title">Escritura</div>
+        <div className="em-field" style={{ marginBottom: 0 }}>
+          <label className="em-label" htmlFor="room-escriturada-locked">
+            Escriturada?
+          </label>
+          <select
+            id="room-escriturada-locked"
+            className="em-select"
+            value={escriturada ? "sim" : "nao"}
+            disabled={!canEditEscritura || busy}
+            onChange={(e) => onToggleEscriturada(e.target.value === "sim")}
+          >
+            <option value="nao">Não</option>
+            <option value="sim">Sim</option>
+          </select>
+          <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8, lineHeight: 1.4 }}>
+            {canEditEscritura
+              ? "Alteração salva imediatamente."
+              : "Apenas gestores podem alterar a escritura."}
+          </div>
+        </div>
+      </div>
+
+      {isAdmin ? (
+        <div className="em-section">
+          <div className="em-section-title">Distrato</div>
+          {distratoConfirm ? (
+            <div className="em-field" style={{ marginBottom: 0 }}>
+              <div className="em-readonly-banner" style={{ marginBottom: 8 }}>
+                Confirmar distrato? A sala volta para <strong>ESTOQUE</strong> e os campos da venda
+                (comprador, corretor, imobiliária, valores, data, escritura) serão limpos.
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="em-btn em-cancel" type="button" disabled={busy} onClick={onCancelDistrato}>
+                  Cancelar
+                </button>
+                <button className="em-btn em-save" type="button" disabled={busy} onClick={onConfirmDistrato}>
+                  {busy ? "Processando..." : "Confirmar distrato"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="em-btn em-cancel" type="button" disabled={busy} onClick={onAskDistrato}>
+              Realizar distrato (voltar para estoque)
+            </button>
+          )}
+        </div>
+      ) : null}
     </>
   );
 }

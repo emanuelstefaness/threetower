@@ -13,6 +13,8 @@ const SENSITIVE_META_KEYS = [
   "valorVenda",
   "descontos",
   "dataVenda",
+  "escriturada",
+  "nomeAntesVenda",
   "corretor",
   "imobiliaria",
   "comprador",
