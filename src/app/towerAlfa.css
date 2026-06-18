@@ -3811,4 +3811,180 @@ html.tower-minimal ::-webkit-scrollbar-thumb {
   background: rgba(24, 24, 27, 0.12);
 }
 
+/* ======================================================================
+   RESPONSIVIDADE — tablet e celular
+   Desktop usa um "app-shell" de altura fixa (body 100vh / overflow hidden)
+   com colunas fixas. Em telas estreitas colapsamos para coluna única e,
+   no celular, soltamos a rolagem natural da página.
+   ====================================================================== */
+
+/* TABLET (<=1024px): grids de 2–3 colunas viram coluna única, sidebar no topo */
+@media (max-width: 1024px) {
+  .layout,
+  .rooms-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .layout > .sidebar,
+  .rooms-layout > .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border2);
+    max-height: 46vh;
+    min-height: 0;
+  }
+}
+
+/* CELULAR (<=720px): rolagem natural da página + pilha vertical */
+@media (max-width: 720px) {
+  html,
+  body {
+    height: auto;
+    min-height: 100vh; /* fallback */
+    min-height: 100dvh; /* respeita a barra do navegador no mobile */
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .clock {
+    display: none;
+  }
+
+  /* shells deixam de ser grid e empilham com rolagem natural */
+  .layout,
+  .rooms-layout,
+  .reports-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .sidebar {
+    max-height: none !important;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  /* navegação vira uma linha horizontal rolável (sempre acessível) */
+  .sb-nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sb-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Seletor de andares (página Salas): linha horizontal de chips compactos */
+  .floor-picker {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 4px 2px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .floor-picker .sb-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 999px;
+  }
+
+  .main,
+  .dashboard-main,
+  .reports-content {
+    overflow: visible;
+    padding: 14px;
+  }
+  .main-title {
+    font-size: 18px;
+  }
+  .manager-wrap {
+    padding: 12px 14px;
+  }
+  .floors-head,
+  .floor-row {
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 8px;
+  }
+
+  /* Dashboard: solta a compactação dos 16 andares (no desktop eles dividem a altura
+     fixa da tela; no celular há rolagem natural, então cada linha ganha altura própria) */
+  .dashboard-main .floors-wrap {
+    display: block;
+    flex: none;
+    min-height: 0;
+  }
+  .dashboard-main .floor-row {
+    flex: none;
+    min-height: 0;
+    padding: 9px 12px;
+  }
+  .dashboard-main .floors-head {
+    font-size: 9px;
+    padding: 8px 12px;
+  }
+  .dashboard-main .fl-num {
+    font-size: 16px;
+  }
+
+  .rooms-grid {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  }
+
+  /* modal de edição ocupa quase a tela inteira */
+  .edit-modal {
+    width: 94vw;
+    padding: 16px;
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  .em-grid-2,
+  .em-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* evita o "zoom" automático do iOS ao focar campos (font-size < 16px) */
+  .em-input,
+  .em-select,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* TELEFONES ESTREITOS (<=430px) */
+@media (max-width: 430px) {
+  .rooms-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .floors-head,
+  .floor-row {
+    grid-template-columns: 42px 16px 1fr 72px;
+    gap: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .main,
+  .dashboard-main,
+  .reports-content {
+    padding: 12px;
+  }
+}
+
 

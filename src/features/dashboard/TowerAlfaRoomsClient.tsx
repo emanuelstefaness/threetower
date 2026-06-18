@@ -128,7 +128,7 @@ export default function TowerAlfaRoomsClient() {
           </div>
           <div className="sb-divider" />
           <div className="sb-section">Andares</div>
-          <div className="sb-manage">
+          <div className="sb-manage floor-picker">
             {floors.map((f) => (
               <div key={f} className={`sb-item ${activeFloor === f ? "active" : ""}`} onClick={() => setActiveFloor(f)}>
                 Andar {f}
