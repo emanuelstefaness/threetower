@@ -39,3 +39,7 @@ next-env.d.ts
 
 # estado persistente do prédio (nunca versionar dados de produção)
 /.data/
+
+# Ambiente de treino (dados locais)
+.data-treino/
+.data-test/

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "treino": "powershell -ExecutionPolicy Bypass -File scripts/treino.ps1",
+    "treino:reset": "powershell -ExecutionPolicy Bypass -File scripts/treino.ps1 -Reset",
     "sanitize:valor-m2": "node scripts/sanitize-valor-m2-from-imovel.mjs"
   },
   "dependencies": {

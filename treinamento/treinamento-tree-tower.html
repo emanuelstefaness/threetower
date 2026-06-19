@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Treinamento — Sistema Tree Tower</title>
+<style>
+  :root{
+    --bg:#1c2128; --bg2:#222831; --panel:#252a34; --panel2:#2a303c;
+    --gold:#c5a073; --gold-rgb:197,160,115;
+    --text:#e8eaed; --text2:#9aa0a8; --text3:#7d828a; --white:#f5f3f0;
+    --border:rgba(197,160,115,.16); --border2:rgba(197,160,115,.28);
+    --green:#22c55e; --red:#ef4444; --purple:#a896d4; --estoque:#22d3a5;
+    --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:
+    radial-gradient(60% 40% at 50% 0%,rgba(var(--gold-rgb),.08),transparent 60%),var(--bg);
+    color:var(--text);line-height:1.55;min-height:100vh}
+  a{color:var(--gold)}
+  .wrap{display:grid;grid-template-columns:280px 1fr;max-width:1200px;margin:0 auto;min-height:100vh}
+  /* Sidebar */
+  .toc{background:linear-gradient(180deg,#1a1f26,#1c2128);border-right:1px solid var(--border);
+    padding:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;border-bottom:1px solid var(--border)}
+  .brand-mark{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--gold),#8a6f4a);
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:#1c2128;font-size:18px}
+  .brand b{font-size:15px;letter-spacing:.5px;text-transform:uppercase}
+  .brand b span{color:var(--gold)}
+  .brand small{display:block;color:var(--text3);font-size:10px;letter-spacing:2px;text-transform:uppercase}
+  .progresshold{padding:12px 18px;border-bottom:1px solid var(--border)}
+  .progresshold .pbar{height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}
+  .progresshold .pfill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),#e0c89a);transition:width .3s}
+  .progresshold .ptxt{font-size:11px;color:var(--text3);margin-top:6px;letter-spacing:1px}
+  nav{padding:8px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;
+    color:var(--text2);font-size:13px;transition:.15s;border:1px solid transparent}
+  .nav-item:hover{background:rgba(var(--gold-rgb),.07);color:var(--white)}
+  .nav-item.active{background:rgba(var(--gold-rgb),.12);color:var(--white);border-color:var(--border2)}
+  .nav-item .n{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.06);display:flex;
+    align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+  .nav-item.done .n{background:var(--ok);color:#08260f}
+  /* Content */
+  .content{padding:34px 40px 80px;max-width:820px}
+  .mod{display:none;animation:fade .35s ease}
+  .mod.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .kicker{color:var(--gold);font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+  h1{font-size:30px;color:var(--white);margin-bottom:8px;letter-spacing:-.5px}
+  h2{font-size:20px;color:var(--white);margin:26px 0 10px}
+  h3{font-size:15px;color:var(--gold);margin:18px 0 6px;letter-spacing:.3px}
+  p{margin:10px 0;color:var(--text)}
+  ul,ol{margin:10px 0 10px 22px}
+  li{margin:6px 0}
+  .lead{font-size:16px;color:var(--text2)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:16px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;
+    font-weight:600;border:1px solid var(--border2)}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .tag-estoque{color:var(--estoque)} .tag-reservada{color:var(--purple)} .tag-vendido{color:var(--red)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+  th{color:var(--text3);text-transform:uppercase;font-size:11px;letter-spacing:1px}
+  td.c,th.c{text-align:center}
+  .yes{color:var(--ok);font-weight:700} .no{color:var(--err);font-weight:700}
+  .callout{border-left:3px solid var(--gold);background:rgba(var(--gold-rgb),.07);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0}
+  .callout.warn{border-color:var(--warn);background:rgba(245,158,11,.08)}
+  .callout.danger{border-color:var(--err);background:rgba(239,68,68,.08)}
+  .callout.ok{border-color:var(--ok);background:rgba(34,197,94,.08)}
+  .callout b{color:var(--white)}
+  .steps{counter-reset:s;list-style:none;margin-left:0}
+  .steps li{counter-increment:s;position:relative;padding:10px 0 10px 44px;border-bottom:1px dashed var(--border)}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:30px;height:30px;border-radius:50%;
+    background:rgba(var(--gold-rgb),.15);border:1px solid var(--border2);color:var(--gold);font-weight:800;
+    display:flex;align-items:center;justify-content:center;font-size:13px}
+  .steps li b{color:var(--white)}
+  kbd{background:#11151b;border:1px solid var(--border2);border-radius:5px;padding:1px 7px;font-size:12px;color:var(--gold)}
+  .footer-nav{display:flex;justify-content:space-between;gap:12px;margin-top:34px;padding-top:20px;border-top:1px solid var(--border)}
+  .btn{padding:11px 20px;border-radius:10px;border:1px solid var(--border2);background:var(--panel2);color:var(--text);
+    font-size:14px;cursor:pointer;transition:.15s;font-weight:600}
+  .btn:hover{border-color:var(--gold);color:var(--white)}
+  .btn.primary{background:linear-gradient(135deg,var(--gold),#a8855a);color:#1c2128;border:none}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .check{display:flex;align-items:center;gap:10px;margin-top:18px;padding:12px 14px;border:1px dashed var(--border2);
+    border-radius:10px;cursor:pointer;user-select:none}
+  .check input{width:18px;height:18px;accent-color:var(--gold)}
+  /* Quiz */
+  .q{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .q .opt{display:block;padding:10px 12px;border:1px solid var(--border);border-radius:9px;margin:7px 0;cursor:pointer;transition:.15s}
+  .q .opt:hover{border-color:var(--border2);background:rgba(255,255,255,.02)}
+  .q .opt.correct{border-color:var(--ok);background:rgba(34,197,94,.12)}
+  .q .opt.wrong{border-color:var(--err);background:rgba(239,68,68,.12)}
+  .q .fb{margin-top:8px;font-size:13px;display:none}
+  .q.answered .fb{display:block}
+  .scorebox{text-align:center;padding:24px;border-radius:14px;border:1px solid var(--border2);background:var(--panel);margin-top:18px}
+  .scorebox .big{font-size:42px;font-weight:800;color:var(--gold)}
+  .mobile-top{display:none}
+  @media(max-width:880px){
+    .wrap{grid-template-columns:1fr}
+    .toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}
+    nav{display:none}
+    .toc.open nav{display:block}
+    .mobile-top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+    .content{padding:22px 18px 70px}
+    .grid2{grid-template-columns:1fr}
+    h1{font-size:24px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- SIDEBAR / TOC -->
+  <aside class="toc" id="toc">
+    <div class="brand">
+      <div class="brand-mark">T</div>
+      <div><b>Tree <span>Tower</span></b><small>Treinamento</small></div>
+    </div>
+    <div class="mobile-top">
+      <span style="font-size:13px;color:var(--text2)">Menu de módulos</span>
+      <button class="btn" onclick="document.getElementById('toc').classList.toggle('open')">☰</button>
+    </div>
+    <div class="progresshold">
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <div class="ptxt" id="ptxt">0% concluído</div>
+    </div>
+    <nav id="nav"></nav>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content" id="content"></main>
+</div>
+
+<script>
+/* ====== CONTEÚDO DO TREINAMENTO ====== */
+const MODULES = [
+{
+  id:"intro", icon:"👋", title:"Bem-vindo",
+  html:`
+  <div class="kicker">Treinamento oficial</div>
+  <h1>Sistema Tree Tower</h1>
+  <p class="lead">Este treinamento ensina, do zero, a operar o sistema de gestão de salas do prédio Tree Tower — para <b>gestores</b> e <b>secretários(as) de vendas</b>.</p>
+  <div class="card">
+    <h3>O que você vai aprender</h3>
+    <ul>
+      <li>O que o sistema faz e como ele organiza o prédio (16 andares, ~362 salas).</li>
+      <li>Os <b>níveis de acesso</b> e o que cada um pode fazer.</li>
+      <li>Os fluxos do dia a dia: <b>reservar</b>, <b>vender</b>, <b>escriturar</b> e <b>distratar</b>.</li>
+      <li>As <b>regras de segurança</b> (por que uma sala vendida fica "travada").</li>
+      <li>Como <b>praticar sem risco</b> num ambiente de treino.</li>
+    </ul>
+  </div>
+  <div class="callout ok"><b>Dica:</b> faça os módulos em ordem. Ao final há um <b>quiz</b> para testar o que aprendeu. Seu progresso fica salvo neste navegador.</div>
+  `
+},
+{
+  id:"visao", icon:"🏢", title:"Visão geral",
+  html:`
+  <div class="kicker">Módulo 1</div>
+  <h1>O que é o sistema</h1>
+  <p>O Tree Tower é um sistema para <b>acompanhar e gerir a situação comercial de cada sala</b> do prédio: o que está em estoque, reservado, vendido, alugado, etc. Ele mostra o prédio andar por andar, com a planta de cada andar e os dados de cada sala.</p>
+  <div class="grid2">
+    <div class="card"><h3>🗂️ Dashboard</h3><p>Visão geral dos 16 andares, com um <b>Resumo</b> por status e a distribuição de cada andar.</p></div>
+    <div class="card"><h3>📐 Salas</h3><p>A planta de cada andar + a ficha de cada sala (status, comprador, valores…).</p></div>
+    <div class="card"><h3>📥 Reservas</h3><p>A caixa de entrada com as salas reservadas — para o gestor acompanhar e efetivar.</p></div>
+    <div class="card"><h3>📊 Relatórios</h3><p>Vendas por período e metas (apenas gestores).</p></div>
+  </div>
+  <div class="callout warn"><b>Importante:</b> o <b>layout</b> do prédio (quais salas existem, a área e a posição na planta) é fixo — vem da planilha oficial. Vocês alteram os <b>dados de negócio</b> (status, comprador, valores), não a estrutura do prédio.</div>
+  `
+},
+{
+  id:"acessos", icon:"🔑", title:"Níveis de acesso",
+  html:`
+  <div class="kicker">Módulo 2</div>
+  <h1>Quem pode fazer o quê</h1>
+  <p>O sistema tem quatro perfis. Cada pessoa entra com seu próprio <b>login e senha</b>.</p>
+  <table>
+    <tr><th>Perfil</th><th>Para quem</th><th>O que faz</th></tr>
+    <tr><td><span class="pill">Secretário(a)</span></td><td>Equipe de vendas</td><td>Faz <b>reservas</b> e edita dados de salas. <b>Não</b> vê relatórios nem a caixa de reservas.</td></tr>
+    <tr><td><span class="pill">Gestor</span></td><td>Gestão</td><td>Tudo do secretário <b>+</b> efetivar vendas, relatórios, caixa de reservas e marcar a escritura.</td></tr>
+    <tr><td><span class="pill" style="border-color:var(--gold);color:var(--gold)">Gestor-admin</span></td><td>Responsável (Juliany)</td><td>Tudo do gestor <b>+</b> o poder exclusivo de <b>distratar</b> e editar uma sala já vendida.</td></tr>
+    <tr><td><span class="pill">Visualizador</span></td><td>Visitas / telão</td><td>Só <b>olha</b>. Não altera nada e não vê dados sensíveis (comprador, valores).</td></tr>
+  </table>
+  <div class="callout"><b>Resumo:</b> secretário reserva → gestor vende → e só a <b>Juliany</b> (gestora-admin) pode desfazer uma venda (distrato).</div>
+  <h2>Matriz de permissões</h2>
+  <table>
+    <tr><th>Ação</th><th class="c">Secretário</th><th class="c">Gestor</th><th class="c">Juliany</th></tr>
+    <tr><td>Reservar (com comprador, corretor, imobiliária)</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+    <tr><td>Vender / editar sala não vendida</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+    <tr><td>Marcar "Escriturada" em sala vendida</td><td class="c no">✗</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+    <tr><td>Editar qualquer campo de sala vendida</td><td class="c no">✗</td><td class="c no">✗</td><td class="c yes">✔</td></tr>
+    <tr><td>Distratar (desfazer venda)</td><td class="c no">✗</td><td class="c no">✗</td><td class="c yes">✔</td></tr>
+    <tr><td>Relatórios e caixa de reservas</td><td class="c no">✗</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+  </table>
+  `
+},
+{
+  id:"status", icon:"🎯", title:"Status das salas",
+  html:`
+  <div class="kicker">Módulo 3</div>
+  <h1>Os status de uma sala</h1>
+  <p>Cada sala tem um <b>status</b> que indica sua situação comercial. Os principais:</p>
+  <div class="grid2">
+    <div class="card"><span class="pill tag-estoque"><span class="dot" style="background:var(--estoque)"></span>ESTOQUE</span><p>Disponível para venda/reserva.</p></div>
+    <div class="card"><span class="pill tag-reservada"><span class="dot" style="background:var(--purple)"></span>RESERVADA</span><p>Cliente demonstrou interesse; reserva registrada.</p></div>
+    <div class="card"><span class="pill tag-vendido"><span class="dot" style="background:var(--red)"></span>VENDIDO</span><p>Venda fechada — a sala fica <b>travada</b> (veja o módulo da Regra de Ouro).</p></div>
+    <div class="card"><span class="pill"><span class="dot" style="background:#06b6d4"></span>ALUGADA / outros</span><p>Locação, áreas especiais (auditório, rooftop), DBN, etc.</p></div>
+  </div>
+  <div class="callout"><b>O ciclo comum:</b> ESTOQUE → (reserva) → RESERVADA → (venda) → VENDIDO. Se a reserva cair, volta para ESTOQUE. Se a venda for desfeita, o distrato devolve para ESTOQUE.</div>
+  `
+},
+{
+  id:"reservar", icon:"📝", title:"Fluxo: Reservar",
+  html:`
+  <div class="kicker">Módulo 4 · Secretário(a) e Gestor</div>
+  <h1>Como fazer uma reserva</h1>
+  <p>Quando um cliente demonstra interesse numa sala, você registra a reserva.</p>
+  <ol class="steps">
+    <li>Abra <b>Salas</b> e escolha o <b>andar</b>.</li>
+    <li>Clique na sala desejada (na planta ou no cartão) para abrir a ficha.</li>
+    <li>Mude o <b>Status da sala</b> para <b>RESERVADA</b>.</li>
+    <li>Preencha os <b>3 campos obrigatórios</b>: <b>Comprador</b>, <b>Corretor</b> e <b>Imobiliária</b>.</li>
+    <li>Clique em <kbd>Salvar</kbd>.</li>
+  </ol>
+  <div class="callout warn"><b>Regra:</b> o sistema <b>não deixa reservar</b> sem comprador, corretor e imobiliária. Se faltar algum, aparece um aviso e a reserva não é salva.</div>
+  <div class="callout ok"><b>Onde aparece:</b> reservas entram na caixa <b>Reservas</b> do gestor, mostrando quem reservou e para qual cliente.</div>
+  `
+},
+{
+  id:"vender", icon:"💰", title:"Fluxo: Vender",
+  html:`
+  <div class="kicker">Módulo 5 · Gestor</div>
+  <h1>Como efetivar uma venda</h1>
+  <p>Quando a negociação fecha, o gestor converte a sala em <b>VENDIDO</b>.</p>
+  <ol class="steps">
+    <li>Abra a sala (pela caixa <b>Reservas</b> ou em <b>Salas</b>).</li>
+    <li>Mude o <b>Status</b> para <b>VENDIDO</b>.</li>
+    <li>No campo <b>Nome da sala</b>, coloque o nome do <b>comprador</b> (o nome só pode ser alterado ao marcar VENDIDO).</li>
+    <li>Preencha <b>comprador, corretor, imobiliária</b>, o <b>valor</b> e a <b>data da venda</b>.</li>
+    <li>Clique em <kbd>Salvar</kbd>.</li>
+  </ol>
+  <div class="callout warn"><b>Obrigatório para vender:</b> comprador, corretor, imobiliária e data. Sem isso, o sistema não conclui a venda.</div>
+  <div class="callout danger"><b>Atenção:</b> assim que salva como VENDIDO, a sala fica <b>travada</b>. Confira tudo antes de salvar! (próximo módulo)</div>
+  `
+},
+{
+  id:"trava", icon:"🔒", title:"Regra de Ouro: trava",
+  html:`
+  <div class="kicker">Módulo 6 · Todos</div>
+  <h1>Sala vendida fica travada</h1>
+  <p>Para proteger os dados de uma venda já fechada, uma sala <b>VENDIDO</b> tem todos os campos <b>bloqueados para edição</b>.</p>
+  <div class="grid2">
+    <div class="card"><h3 style="color:var(--ok)">✔ O que ainda pode</h3><ul>
+      <li>Marcar a <b>Escritura</b> (Sim/Não) — qualquer gestor.</li>
+      <li>Fazer o <b>distrato</b> — somente a Juliany.</li>
+    </ul></div>
+    <div class="card"><h3 style="color:var(--err)">✗ O que fica bloqueado</h3><ul>
+      <li>Mudar comprador, corretor, imobiliária.</li>
+      <li>Mudar valor, data, nome, status.</li>
+    </ul></div>
+  </div>
+  <div class="callout danger"><b>E se errei um valor numa sala vendida?</b> Um gestor comum <b>não</b> consegue corrigir direto. É preciso a <b>Juliany</b> — ela pode editar a sala vendida ou fazer o distrato para refazer a venda.</div>
+  `
+},
+{
+  id:"escritura", icon:"📜", title:"Escriturada",
+  html:`
+  <div class="kicker">Módulo 7 · Gestor</div>
+  <h1>O campo "Escriturada"</h1>
+  <p>Depois da venda, a escritura costuma sair <b>mais tarde</b>. Por isso existe um campo <b>Escriturada? (Sim/Não)</b> que aparece nas salas vendidas.</p>
+  <ul>
+    <li>Aparece <b>somente</b> quando a sala está <b>VENDIDO</b>.</li>
+    <li>Pode ser preenchido <b>depois</b> da venda — é o <b>único</b> campo editável numa sala travada.</li>
+    <li>Quem marca: <b>qualquer gestor</b> (secretário não mexe em sala vendida).</li>
+  </ul>
+  <div class="callout ok"><b>No Dashboard:</b> abaixo da linha <b>VENDIDO</b> no Resumo, aparece um subitem <b>"↳ Escrituradas"</b> com o total de salas vendidas que já têm escritura registrada.</div>
+  <div class="callout"><b>Não confundir:</b> "Escriturada" (Sim/Não) é um campo do sistema. É diferente do campo "Escrituras" que vem da planilha oficial — esse não se mexe.</div>
+  `
+},
+{
+  id:"distrato", icon:"↩️", title:"Distrato",
+  html:`
+  <div class="kicker">Módulo 8 · Somente Juliany</div>
+  <h1>Distrato — desfazer uma venda</h1>
+  <p>Se uma venda é cancelada, é preciso devolver a sala ao estoque. Essa ação chama-se <b>distrato</b> e é <b>exclusiva da Juliany</b> (gestora-admin).</p>
+  <ol class="steps">
+    <li>A Juliany abre a sala vendida.</li>
+    <li>Clica em <b>Realizar distrato (voltar para estoque)</b>.</li>
+    <li>Confirma.</li>
+  </ol>
+  <h3>O que o distrato faz automaticamente</h3>
+  <ul>
+    <li>Devolve a sala para <b>ESTOQUE</b>.</li>
+    <li><b>Limpa</b> os dados da venda: comprador, corretor, imobiliária, valor, data e escritura.</li>
+    <li><b>Restaura</b> o nome original da sala (de antes da venda).</li>
+  </ul>
+  <div class="callout danger"><b>Sem permissão?</b> Se um gestor comum tentar distratar, o sistema responde: <i>"Apenas o gestor responsável pode realizar o distrato."</i></div>
+  `
+},
+{
+  id:"relatorios", icon:"📊", title:"Resumo & Relatórios",
+  html:`
+  <div class="kicker">Módulo 9 · Gestor</div>
+  <h1>Acompanhando os números</h1>
+  <ul>
+    <li><b>Resumo (Dashboard):</b> total por status (ESTOQUE, VENDIDO, RESERVADA…) e o subitem de <b>Escrituradas</b>.</li>
+    <li><b>Relatórios → Vendas por período:</b> usa a <b>data da venda</b> de cada sala — por isso é importante preencher a data ao vender.</li>
+    <li>Relatórios e a caixa de <b>Reservas</b> são <b>só para gestores</b>.</li>
+  </ul>
+  <div class="callout ok"><b>Boa prática:</b> ao vender, sempre preencha a <b>data</b> correta — é ela que faz a venda aparecer no mês certo do relatório.</div>
+  `
+},
+{
+  id:"treino", icon:"🧪", title:"Ambiente de treino",
+  html:`
+  <div class="kicker">Módulo 10 · Praticar sem risco</div>
+  <h1>Pratique sem medo de errar</h1>
+  <p>Existe um <b>modo treino</b>: uma cópia do sistema que roda localmente e <b>não toca no banco de dados real da empresa</b>. Pode reservar, vender, distratar à vontade — nada disso afeta a produção.</p>
+  <div class="card">
+    <h3>Como abrir o modo treino (no computador que tem o sistema)</h3>
+    <ol class="steps">
+      <li>Abra a pasta do projeto.</li>
+      <li>Rode <kbd>npm run treino</kbd> (ou dê duplo-clique em <kbd>Treinamento.bat</kbd>).</li>
+      <li>Abra <kbd>http://localhost:3200</kbd> no navegador.</li>
+      <li>Entre com um usuário de treino (veja abaixo).</li>
+    </ol>
+  </div>
+  <table>
+    <tr><th>Perfil</th><th>Login</th><th>Senha</th></tr>
+    <tr><td>Secretária</td><td><kbd>secretaria</kbd></td><td><kbd>treino123</kbd></td></tr>
+    <tr><td>Gestor</td><td><kbd>gestor</kbd></td><td><kbd>treino123</kbd></td></tr>
+    <tr><td>Gestora-admin</td><td><kbd>juliany</kbd></td><td><kbd>treino123</kbd></td></tr>
+  </table>
+  <div class="callout ok"><b>Reiniciar os dados:</b> rode <kbd>npm run treino:reset</kbd> para zerar o ambiente de treino e começar do zero.</div>
+  <div class="callout warn">O modo treino guarda os dados num arquivo local separado — nunca no banco da empresa. Pode errar à vontade. 🙂</div>
+  <h3>Roteiro sugerido de prática</h3>
+  <ol>
+    <li>Entre como <b>secretária</b> e <b>reserve</b> uma sala (preencha os 3 campos).</li>
+    <li>Entre como <b>gestor</b>, veja a reserva em <b>Reservas</b> e <b>efetive a venda</b>.</li>
+    <li>Tente <b>editar</b> a sala vendida como gestor — veja a <b>trava</b> agir.</li>
+    <li>Marque a <b>Escritura</b> como Sim e veja o número subir no <b>Resumo</b>.</li>
+    <li>Entre como <b>juliany</b> e faça um <b>distrato</b> — veja a sala voltar ao estoque.</li>
+  </ol>
+  `
+},
+{
+  id:"quiz", icon:"✅", title:"Quiz final",
+  html:`
+  <div class="kicker">Módulo 11 · Avaliação</div>
+  <h1>Teste seus conhecimentos</h1>
+  <p>Responda as perguntas abaixo. O resultado aparece no final.</p>
+  <div id="quizbox"></div>
+  <button class="btn primary" id="quizSubmit" style="margin-top:8px">Ver resultado</button>
+  <div id="quizResult"></div>
+  `
+}
+];
+
+/* ====== QUIZ ====== */
+const QUIZ=[
+ {q:"Quais campos são obrigatórios para fazer uma RESERVA?",
+  opts:["Só o comprador","Comprador, corretor e imobiliária","Comprador e valor da venda","Nenhum"],a:1,
+  fb:"Reserva exige comprador, corretor e imobiliária — nos dois caminhos (ficha e modal 3D)."},
+ {q:"Uma sala está VENDIDA. Um gestor comum quer corrigir o valor. O que acontece?",
+  opts:["Ele corrige normalmente","Fica bloqueado — sala vendida é travada","Some do sistema","Vira ESTOQUE"],a:1,
+  fb:"Sala vendida é travada. Só a Juliany pode editar uma sala vendida ou fazer o distrato."},
+ {q:"Quem pode realizar o DISTRATO?",
+  opts:["Qualquer secretário","Qualquer gestor","Somente a Juliany (gestora-admin)","O visualizador"],a:2,
+  fb:"O distrato é exclusivo da gestora-admin (Juliany)."},
+ {q:"O campo 'Escriturada' (Sim/Não)...",
+  opts:["Aparece em qualquer sala","Aparece só em salas VENDIDAS e pode ser preenchido depois","É o mesmo que 'Escrituras' da planilha","Só o visualizador edita"],a:1,
+  fb:"Aparece somente em salas vendidas, é preenchido depois e é editável por qualquer gestor."},
+ {q:"O nome da sala pode ser alterado quando?",
+  opts:["A qualquer momento","Só ao marcar como VENDIDO","Nunca","Só pela secretária"],a:1,
+  fb:"O nome só pode ser alterado ao marcar VENDIDO (e é restaurado no distrato)."},
+ {q:"O que o DISTRATO faz com a sala?",
+  opts:["Exclui a sala","Volta para ESTOQUE, limpa os dados da venda e restaura o nome","Marca como alugada","Só muda a cor"],a:1,
+  fb:"Devolve para ESTOQUE, limpa comprador/valor/data/escritura e restaura o nome original."},
+ {q:"O ambiente de treino...",
+  opts:["Altera o banco real da empresa","É uma cópia local que não toca o banco real","Só funciona online","É igual a produção"],a:1,
+  fb:"O modo treino roda local com dados isolados — nunca afeta o banco da empresa."},
+];
+
+/* ====== APP ====== */
+const nav=document.getElementById('nav');
+const content=document.getElementById('content');
+let current=0;
+const KEY='treeTowerTraining.done';
+let done=JSON.parse(localStorage.getItem(KEY)||'[]');
+
+function renderNav(){
+  nav.innerHTML='';
+  MODULES.forEach((m,i)=>{
+    const d=document.createElement('div');
+    d.className='nav-item'+(i===current?' active':'')+(done.includes(m.id)?' done':'');
+    d.innerHTML=`<span class="n">${done.includes(m.id)?'✓':(i+1)}</span><span>${m.icon} ${m.title}</span>`;
+    d.onclick=()=>{go(i);document.getElementById('toc').classList.remove('open')};
+    nav.appendChild(d);
+  });
+  const pct=Math.round(done.length/MODULES.length*100);
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('ptxt').textContent=pct+'% concluído';
+}
+
+function renderModule(){
+  const m=MODULES[current];
+  let footer=`<div class="footer-nav">
+    <button class="btn" id="prev" ${current===0?'disabled':''}>← Anterior</button>
+    <label class="check" style="margin:0"><input type="checkbox" id="markdone" ${done.includes(m.id)?'checked':''}> Marcar módulo como concluído</label>
+    <button class="btn primary" id="next" ${current===MODULES.length-1?'disabled':''}>Próximo →</button>
+  </div>`;
+  content.innerHTML=`<div class="mod active">${m.html}${m.id!=='quiz'?footer:''}</div>`;
+  content.scrollTop=0; window.scrollTo(0,0);
+  if(m.id==='quiz') buildQuiz();
+  const md=document.getElementById('markdone');
+  if(md) md.onchange=()=>{ if(md.checked){if(!done.includes(m.id))done.push(m.id);} else {done=done.filter(x=>x!==m.id);} save(); };
+  const p=document.getElementById('prev'), n=document.getElementById('next');
+  if(p) p.onclick=()=>go(current-1);
+  if(n) n.onclick=()=>{ if(md&&!md.checked){md.checked=true;md.onchange();} go(current+1); };
+}
+function go(i){ if(i<0||i>=MODULES.length)return; current=i; renderNav(); renderModule(); }
+function save(){ localStorage.setItem(KEY,JSON.stringify(done)); renderNav(); }
+
+function buildQuiz(){
+  const box=document.getElementById('quizbox');
+  box.innerHTML='';
+  QUIZ.forEach((item,qi)=>{
+    const q=document.createElement('div'); q.className='q'; q.dataset.qi=qi;
+    q.innerHTML=`<b>${qi+1}. ${item.q}</b>`+item.opts.map((o,oi)=>`<div class="opt" data-oi="${oi}">${o}</div>`).join('')+`<div class="fb"></div>`;
+    box.appendChild(q);
+    q.querySelectorAll('.opt').forEach(opt=>{
+      opt.onclick=()=>{ if(q.classList.contains('answered'))return; q.dataset.pick=opt.dataset.oi; q.querySelectorAll('.opt').forEach(o=>o.style.outline=''); opt.style.outline='2px solid var(--gold)'; };
+    });
+  });
+  document.getElementById('quizSubmit').onclick=()=>{
+    let score=0;
+    QUIZ.forEach((item,qi)=>{
+      const q=box.querySelector(`.q[data-qi="${qi}"]`); q.classList.add('answered');
+      const pick=q.dataset.pick!==undefined?parseInt(q.dataset.pick):-1;
+      q.querySelectorAll('.opt').forEach(o=>{ const oi=parseInt(o.dataset.oi); if(oi===item.a)o.classList.add('correct'); else if(oi===pick)o.classList.add('wrong'); });
+      const ok=pick===item.a; if(ok)score++;
+      q.querySelector('.fb').innerHTML=(ok?'<span class="yes">✔ Correto. </span>':'<span class="no">✗ Reveja. </span>')+item.fb;
+    });
+    const pct=Math.round(score/QUIZ.length*100);
+    const aprov=pct>=70;
+    const r=document.getElementById('quizResult');
+    r.innerHTML=`<div class="scorebox"><div class="big">${score}/${QUIZ.length}</div>
+      <p style="margin-top:6px;color:${aprov?'var(--ok)':'var(--warn)'};font-weight:700">${aprov?'Aprovado! 🎉 Você está pronto para operar.':'Quase lá — reveja os módulos destacados e tente de novo.'}</p>
+      <p style="color:var(--text3);font-size:13px">${pct}% de acerto</p></div>`;
+    if(aprov && !done.includes('quiz')){done.push('quiz');save();}
+    r.scrollIntoView({behavior:'smooth'});
+  };
+}
+
+go(0);
+</script>
+</body>
+</html>
