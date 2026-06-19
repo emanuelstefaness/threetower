@@ -150,7 +150,7 @@ const MODULES = [
       <li>Como <b>praticar sem risco</b> num ambiente de treino.</li>
     </ul>
   </div>
-  <div class="callout ok"><b>Dica:</b> faça os módulos em ordem. Ao final há um <b>quiz</b> para testar o que aprendeu. Seu progresso fica salvo neste navegador.</div>
+  <div class="callout ok"><b>Dica:</b> faça os módulos em ordem. Seu progresso fica salvo neste navegador.</div>
   `
 },
 {
@@ -342,43 +342,7 @@ const MODULES = [
     <li>Entre como <b>juliany</b> e faça um <b>distrato</b> — veja a sala voltar ao estoque.</li>
   </ol>
   `
-},
-{
-  id:"quiz", icon:"✅", title:"Quiz final",
-  html:`
-  <div class="kicker">Módulo 11 · Avaliação</div>
-  <h1>Teste seus conhecimentos</h1>
-  <p>Responda as perguntas abaixo. O resultado aparece no final.</p>
-  <div id="quizbox"></div>
-  <button class="btn primary" id="quizSubmit" style="margin-top:8px">Ver resultado</button>
-  <div id="quizResult"></div>
-  `
 }
-];
-
-/* ====== QUIZ ====== */
-const QUIZ=[
- {q:"Quais campos são obrigatórios para fazer uma RESERVA?",
-  opts:["Só o comprador","Comprador, corretor e imobiliária","Comprador e valor da venda","Nenhum"],a:1,
-  fb:"Reserva exige comprador, corretor e imobiliária — nos dois caminhos (ficha e modal 3D)."},
- {q:"Uma sala está VENDIDA. Um gestor comum quer corrigir o valor. O que acontece?",
-  opts:["Ele corrige normalmente","Fica bloqueado — sala vendida é travada","Some do sistema","Vira ESTOQUE"],a:1,
-  fb:"Sala vendida é travada. Só a Juliany pode editar uma sala vendida ou fazer o distrato."},
- {q:"Quem pode realizar o DISTRATO?",
-  opts:["Qualquer secretário","Qualquer gestor","Somente a Juliany (gestora-admin)","O visualizador"],a:2,
-  fb:"O distrato é exclusivo da gestora-admin (Juliany)."},
- {q:"O campo 'Escriturada' (Sim/Não)...",
-  opts:["Aparece em qualquer sala","Aparece só em salas VENDIDAS e pode ser preenchido depois","É o mesmo que 'Escrituras' da planilha","Só o visualizador edita"],a:1,
-  fb:"Aparece somente em salas vendidas, é preenchido depois e é editável por qualquer gestor."},
- {q:"O nome da sala pode ser alterado quando?",
-  opts:["A qualquer momento","Só ao marcar como VENDIDO","Nunca","Só pela secretária"],a:1,
-  fb:"O nome só pode ser alterado ao marcar VENDIDO (e é restaurado no distrato)."},
- {q:"O que o DISTRATO faz com a sala?",
-  opts:["Exclui a sala","Volta para ESTOQUE, limpa os dados da venda e restaura o nome","Marca como alugada","Só muda a cor"],a:1,
-  fb:"Devolve para ESTOQUE, limpa comprador/valor/data/escritura e restaura o nome original."},
- {q:"O ambiente de treino...",
-  opts:["Altera o banco real da empresa","É uma cópia local que não toca o banco real","Só funciona online","É igual a produção"],a:1,
-  fb:"O modo treino roda local com dados isolados — nunca afeta o banco da empresa."},
 ];
 
 /* ====== APP ====== */
@@ -409,9 +373,8 @@ function renderModule(){
     <label class="check" style="margin:0"><input type="checkbox" id="markdone" ${done.includes(m.id)?'checked':''}> Marcar módulo como concluído</label>
     <button class="btn primary" id="next" ${current===MODULES.length-1?'disabled':''}>Próximo →</button>
   </div>`;
-  content.innerHTML=`<div class="mod active">${m.html}${m.id!=='quiz'?footer:''}</div>`;
+  content.innerHTML=`<div class="mod active">${m.html}${footer}</div>`;
   content.scrollTop=0; window.scrollTo(0,0);
-  if(m.id==='quiz') buildQuiz();
   const md=document.getElementById('markdone');
   if(md) md.onchange=()=>{ if(md.checked){if(!done.includes(m.id))done.push(m.id);} else {done=done.filter(x=>x!==m.id);} save(); };
   const p=document.getElementById('prev'), n=document.getElementById('next');
@@ -420,37 +383,6 @@ function renderModule(){
 }
 function go(i){ if(i<0||i>=MODULES.length)return; current=i; renderNav(); renderModule(); }
 function save(){ localStorage.setItem(KEY,JSON.stringify(done)); renderNav(); }
-
-function buildQuiz(){
-  const box=document.getElementById('quizbox');
-  box.innerHTML='';
-  QUIZ.forEach((item,qi)=>{
-    const q=document.createElement('div'); q.className='q'; q.dataset.qi=qi;
-    q.innerHTML=`<b>${qi+1}. ${item.q}</b>`+item.opts.map((o,oi)=>`<div class="opt" data-oi="${oi}">${o}</div>`).join('')+`<div class="fb"></div>`;
-    box.appendChild(q);
-    q.querySelectorAll('.opt').forEach(opt=>{
-      opt.onclick=()=>{ if(q.classList.contains('answered'))return; q.dataset.pick=opt.dataset.oi; q.querySelectorAll('.opt').forEach(o=>o.style.outline=''); opt.style.outline='2px solid var(--gold)'; };
-    });
-  });
-  document.getElementById('quizSubmit').onclick=()=>{
-    let score=0;
-    QUIZ.forEach((item,qi)=>{
-      const q=box.querySelector(`.q[data-qi="${qi}"]`); q.classList.add('answered');
-      const pick=q.dataset.pick!==undefined?parseInt(q.dataset.pick):-1;
-      q.querySelectorAll('.opt').forEach(o=>{ const oi=parseInt(o.dataset.oi); if(oi===item.a)o.classList.add('correct'); else if(oi===pick)o.classList.add('wrong'); });
-      const ok=pick===item.a; if(ok)score++;
-      q.querySelector('.fb').innerHTML=(ok?'<span class="yes">✔ Correto. </span>':'<span class="no">✗ Reveja. </span>')+item.fb;
-    });
-    const pct=Math.round(score/QUIZ.length*100);
-    const aprov=pct>=70;
-    const r=document.getElementById('quizResult');
-    r.innerHTML=`<div class="scorebox"><div class="big">${score}/${QUIZ.length}</div>
-      <p style="margin-top:6px;color:${aprov?'var(--ok)':'var(--warn)'};font-weight:700">${aprov?'Aprovado! 🎉 Você está pronto para operar.':'Quase lá — reveja os módulos destacados e tente de novo.'}</p>
-      <p style="color:var(--text3);font-size:13px">${pct}% de acerto</p></div>`;
-    if(aprov && !done.includes('quiz')){done.push('quiz');save();}
-    r.scrollIntoView({behavior:'smooth'});
-  };
-}
 
 go(0);
 </script>
