@@ -41,16 +41,33 @@ $env:BUILDING_STATE_PATH = ".data-treino/building-state.json"
 $env:AUTH_SECRET = "treino-secret-local-tree-tower"
 $env:ADMIN_LOGIN = "juliany"
 $env:APP_USERS_JSON = '[{"login":"gestor","password":"treino123","role":"gestor","name":"Gestor (treino)"},{"login":"juliany","password":"treino123","role":"gestor","name":"Juliany (admin treino)"},{"login":"secretaria","password":"treino123","role":"secretaria","name":"Secretaria (treino)"}]'
-$env:PORT = "$Port"
+
+# Descobre o IP da maquina na rede local (para outros PCs/celulares acessarem).
+# Prefere a placa com gateway padrao (Wi-Fi/cabo real); evita adaptadores VPN/virtuais.
+$lanIp = $null
+try {
+  $lanIp = (Get-NetIPConfiguration -ErrorAction SilentlyContinue |
+    Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq "Up" } |
+    Select-Object -First 1).IPv4Address.IPAddress
+} catch {}
+if (-not $lanIp) {
+  $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object { $_.IPAddress -like "192.168.*" -or $_.IPAddress -like "10.*" -or $_.IPAddress -like "172.*" } |
+    Select-Object -First 1).IPAddress
+}
+if (-not $lanIp) { $lanIp = "SEU_IP" }
 
 Write-Host ""
 Write-Host "==================== MODO TREINO ====================" -ForegroundColor Green
-Write-Host "  URL:        http://localhost:$Port" -ForegroundColor White
-Write-Host "  Logins (senha treino123):" -ForegroundColor White
-Write-Host "    secretaria | gestor | juliany (admin)" -ForegroundColor White
+Write-Host "  Neste computador:   http://localhost:$Port" -ForegroundColor White
+Write-Host "  Outros aparelhos:   http://${lanIp}:$Port   (mesma rede Wi-Fi)" -ForegroundColor Cyan
+Write-Host "  Logins (senha treino123): secretaria | gestor | juliany (admin)" -ForegroundColor White
 Write-Host "  Dados: arquivo local (.data-treino) - NAO toca o banco real." -ForegroundColor White
+Write-Host "  Se o Windows perguntar, clique em PERMITIR ACESSO (firewall)." -ForegroundColor Yellow
 Write-Host "  Parar: Ctrl + C" -ForegroundColor DarkGray
 Write-Host "====================================================" -ForegroundColor Green
 Write-Host ""
 
-npm run dev
+# Porta via env; -H 0.0.0.0 expoe na rede (outros aparelhos acessam pelo IP).
+$env:PORT = "$Port"
+npm run dev -- -H 0.0.0.0

@@ -33,6 +33,24 @@ ou **duplo-clique** em **`Treinamento.bat`**.
 
 Depois abra no navegador: **http://localhost:3200**
 
+> **Primeira vez:** se nunca rodou o projeto nesse computador, abra a pasta no terminal e rode `npm install` uma vez antes.
+
+### Acesso de outras pessoas (outros PCs / celulares)
+
+`localhost` só funciona **no próprio computador** que está rodando o treino. Para a **equipe acessar de outros aparelhos**, há duas opções:
+
+**Opção A — um "computador-servidor" (recomendado):** uma só máquina roda o `Treinamento.bat`, e todos acessam pela rede.
+1. No computador-servidor, rode o treino. Ele mostra dois endereços, ex.:
+   - `Neste computador:  http://localhost:3200`
+   - `Outros aparelhos:  http://192.168.0.15:3200` ← **compartilhe este**
+2. Se o Windows perguntar, clique em **Permitir acesso** (libera no firewall).
+3. As outras pessoas, **na mesma rede Wi-Fi**, abrem `http://192.168.0.15:3200` (o IP que apareceu) no navegador do PC ou celular.
+4. Mantenha o computador-servidor ligado e o `Treinamento.bat` aberto durante o uso.
+
+**Opção B — cada um no seu PC:** instalar o projeto + Node.js em cada computador e rodar o `Treinamento.bat` localmente (usa `localhost:3200`). Mais trabalhoso.
+
+> Dica: o endereço de rede também funciona no **celular** — ótimo para treinar a versão mobile.
+
 ### Usuários de treino (senha `treino123`)
 
 | Perfil          | Login        | Senha       |
