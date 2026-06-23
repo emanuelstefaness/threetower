@@ -1,18 +1,19 @@
 # Treinamento — Sistema Tree Tower
 
-Material de treinamento para **gestores** e **secretários(as)** aprenderem a operar o sistema,
+Dois cursos interativos (um para **corretores**, outro para **gestores/secretários**),
 mais um **ambiente de treino** local e seguro para praticar sem afetar o banco de dados real.
 
 ---
 
-## 1. Curso interativo (abre no navegador)
+## 1. Cursos interativos (abrem no navegador)
 
-Arquivo: **[`treinamento/treinamento-tree-tower.html`](treinamento/treinamento-tree-tower.html)**
+Pasta **`treinamento/`** — é só **dar duplo-clique**, abre em qualquer navegador (PC ou celular), **sem instalar nada**. O progresso fica salvo no navegador. Podem ser enviados por e-mail/WhatsApp ou colocados numa pasta compartilhada.
 
-- É só **dar duplo-clique** no arquivo — abre em qualquer navegador, **sem instalar nada**.
-- Tem 11 módulos (visão geral, papéis, fluxos de reserva/venda/escritura/distrato, regras) e um **quiz** no final.
-- O progresso fica salvo no navegador.
-- Pode ser enviado por e-mail/WhatsApp ou colocado numa pasta compartilhada para a equipe.
+- **[`treinamento/index.html`](treinamento/index.html)** — página inicial para escolher o curso.
+- **[`treinamento/treinamento-corretores.html`](treinamento/treinamento-corretores.html)** — **Corretores** (modo visualização): navegar pelos andares, ver salas disponíveis, áreas e valores, e o que cada status significa.
+- **[`treinamento/treinamento-gestores.html`](treinamento/treinamento-gestores.html)** — **Gestores e Secretários** (operação completa): níveis de acesso, reservar (com o que preencher), vender, escritura, distrato, aviso de reservas, histórico e relatórios.
+
+> Sem quiz — são cursos de leitura/consulta, com passo a passo e checklist de “concluído”.
 
 ---
 

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Treinamento Gestores e Secretários — Tree Tower</title>
+<style>
+  :root{
+    --bg:#1c2128;--panel:#252a34;--panel2:#2a303c;--gold:#c5a073;--gold-rgb:197,160,115;
+    --text:#e8eaed;--text2:#9aa0a8;--text3:#7d828a;--white:#f5f3f0;
+    --border:rgba(197,160,115,.16);--border2:rgba(197,160,115,.28);
+    --ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--estoque:#22d3a5;--purple:#a896d4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:radial-gradient(60% 40% at 50% 0%,rgba(var(--gold-rgb),.08),transparent 60%),var(--bg);color:var(--text);line-height:1.55;min-height:100vh}
+  a{color:var(--gold)}
+  .wrap{display:grid;grid-template-columns:300px 1fr;max-width:1180px;margin:0 auto;min-height:100vh}
+  .toc{background:linear-gradient(180deg,#1a1f26,#1c2128);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;border-bottom:1px solid var(--border)}
+  .brand-mark{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--gold),#8a6f4a);display:flex;align-items:center;justify-content:center;font-weight:800;color:#1c2128;font-size:18px}
+  .brand b{font-size:14px;letter-spacing:.5px;text-transform:uppercase}.brand b span{color:var(--gold)}
+  .brand small{display:block;color:var(--text3);font-size:10px;letter-spacing:2px;text-transform:uppercase}
+  .progresshold{padding:12px 18px;border-bottom:1px solid var(--border)}
+  .pbar{height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}
+  .pfill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),#e0c89a);transition:width .3s}
+  .ptxt{font-size:11px;color:var(--text3);margin-top:6px;letter-spacing:1px}
+  nav{padding:8px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;color:var(--text2);font-size:13px;transition:.15s;border:1px solid transparent}
+  .nav-item:hover{background:rgba(var(--gold-rgb),.07);color:var(--white)}
+  .nav-item.active{background:rgba(var(--gold-rgb),.12);color:var(--white);border-color:var(--border2)}
+  .nav-item .n{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+  .nav-item.done .n{background:var(--ok);color:#08260f}
+  .content{padding:34px 40px 80px;max-width:840px}
+  .kicker{color:var(--gold);font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+  h1{font-size:29px;color:var(--white);margin-bottom:8px;letter-spacing:-.5px}
+  h2{font-size:19px;color:var(--white);margin:24px 0 10px}
+  h3{font-size:15px;color:var(--gold);margin:16px 0 6px}
+  p{margin:10px 0}ul,ol{margin:10px 0 10px 22px}li{margin:6px 0}
+  .lead{font-size:16px;color:var(--text2)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:16px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid var(--border2)}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+  th{color:var(--text3);text-transform:uppercase;font-size:11px;letter-spacing:1px}
+  td.c,th.c{text-align:center}.yes{color:var(--ok);font-weight:700}.no{color:var(--err);font-weight:700}
+  .callout{border-left:3px solid var(--gold);background:rgba(var(--gold-rgb),.07);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0}
+  .callout.warn{border-color:var(--warn);background:rgba(245,158,11,.08)}
+  .callout.danger{border-color:var(--err);background:rgba(239,68,68,.08)}
+  .callout.ok{border-color:var(--ok);background:rgba(34,197,94,.08)}
+  .callout b{color:var(--white)}
+  .steps{counter-reset:s;list-style:none;margin-left:0}
+  .steps li{counter-increment:s;position:relative;padding:10px 0 10px 44px;border-bottom:1px dashed var(--border)}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:30px;height:30px;border-radius:50%;background:rgba(var(--gold-rgb),.15);border:1px solid var(--border2);color:var(--gold);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .steps li b{color:var(--white)}
+  kbd{background:#11151b;border:1px solid var(--border2);border-radius:5px;padding:1px 7px;font-size:12px;color:var(--gold)}
+  .field{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .field b{color:var(--white);min-width:130px;display:inline-block}
+  .footer-nav{display:flex;justify-content:space-between;gap:12px;margin-top:34px;padding-top:20px;border-top:1px solid var(--border);align-items:center}
+  .btn{padding:11px 20px;border-radius:10px;border:1px solid var(--border2);background:var(--panel2);color:var(--text);font-size:14px;cursor:pointer;transition:.15s;font-weight:600}
+  .btn:hover{border-color:var(--gold);color:var(--white)}
+  .btn.primary{background:linear-gradient(135deg,var(--gold),#a8855a);color:#1c2128;border:none}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .check{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px dashed var(--border2);border-radius:10px;cursor:pointer;user-select:none;font-size:13px}
+  .check input{width:18px;height:18px;accent-color:var(--gold)}
+  .mobile-top{display:none}
+  @media(max-width:880px){.wrap{grid-template-columns:1fr}.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}nav{display:none}.toc.open nav{display:block}.mobile-top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}.content{padding:22px 18px 70px}.grid2{grid-template-columns:1fr}h1{font-size:23px}.field b{min-width:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="toc" id="toc">
+    <div class="brand"><div class="brand-mark">T</div><div><b>Tree <span>Tower</span></b><small>Gestores · Secretários</small></div></div>
+    <div class="mobile-top"><span style="font-size:13px;color:var(--text2)">Módulos</span><button class="btn" onclick="document.getElementById('toc').classList.toggle('open')">☰</button></div>
+    <div class="progresshold"><div class="pbar"><div class="pfill" id="pfill"></div></div><div class="ptxt" id="ptxt">0% concluído</div></div>
+    <nav id="nav"></nav>
+  </aside>
+  <main class="content" id="content"></main>
+</div>
+<script>
+const COURSE_KEY="treeTower.training.gestores.done";
+const MODULES=[
+{id:"intro",icon:"👋",title:"Bem-vindo",html:`
+  <div class="kicker">Treinamento · Gestores e Secretários</div>
+  <h1>Operando o Tree Tower</h1>
+  <p class="lead">Este treinamento é para <b>gestores</b> e <b>secretários(as) de vendas</b>. Você vai aprender a operar todo o sistema: reservar, vender, registrar a escritura, acompanhar reservas e relatórios.</p>
+  <div class="card"><h3>Conteúdo</h3><ul>
+    <li>Os <b>níveis de acesso</b> e o que cada um pode fazer.</li>
+    <li>As <b>telas</b> (Dashboard, Salas, Reservas, Relatórios, Histórico).</li>
+    <li>Os fluxos com <b>passo a passo e o que preencher</b>: reservar, vender, escriturar, distratar.</li>
+    <li>As <b>regras de segurança</b> (por que a sala vendida trava).</li>
+  </ul></div>
+  <div class="callout ok"><b>Pratique junto:</b> use o <b>ambiente de treino</b> (módulo final) para fazer tudo isso sem afetar o sistema real.</div>`},
+{id:"acessos",icon:"🔑",title:"Níveis de acesso",html:`
+  <div class="kicker">Módulo 1</div>
+  <h1>Quem pode fazer o quê</h1>
+  <p>Cada pessoa entra com seu <b>login e senha</b>. Há quatro perfis:</p>
+  <table>
+    <tr><th>Perfil</th><th>O que faz</th></tr>
+    <tr><td><span class="pill">Secretário(a)</span></td><td>Faz <b>reservas</b> e edita dados das salas. Não vê relatórios nem a caixa de reservas.</td></tr>
+    <tr><td><span class="pill">Gestor</span></td><td>Tudo do secretário <b>+</b> efetivar vendas, marcar escritura, relatórios, caixa de reservas e histórico.</td></tr>
+    <tr><td><span class="pill" style="border-color:var(--gold);color:var(--gold)">Gestor-admin</span></td><td>Tudo do gestor <b>+</b> <b>distratar</b> e editar uma sala já vendida.</td></tr>
+    <tr><td><span class="pill">Visualizador</span></td><td>Corretores/visitas — só consultam, não alteram (treinamento separado).</td></tr>
+  </table>
+  <h2>Matriz de permissões</h2>
+  <table>
+    <tr><th>Ação</th><th class="c">Secretário</th><th class="c">Gestor</th><th class="c">Admin</th></tr>
+    <tr><td>Reservar (comprador, corretor, imobiliária)</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+    <tr><td>Vender / editar sala não vendida</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+    <tr><td>Marcar "Escriturada" em sala vendida</td><td class="c no">✗</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+    <tr><td>Editar qualquer campo de sala vendida</td><td class="c no">✗</td><td class="c no">✗</td><td class="c yes">✔</td></tr>
+    <tr><td>Distratar (desfazer venda)</td><td class="c no">✗</td><td class="c no">✗</td><td class="c yes">✔</td></tr>
+    <tr><td>Relatórios, Reservas e Histórico</td><td class="c no">✗</td><td class="c yes">✔</td><td class="c yes">✔</td></tr>
+  </table>
+  <div class="callout"><b>O gestor-admin</b> é definido por um login específico (responsável). É o único que pode distratar.</div>`},
+{id:"acesso",icon:"🚪",title:"Como acessar",html:`
+  <div class="kicker">Módulo 2</div>
+  <h1>Entrar no sistema</h1>
+  <ol class="steps">
+    <li>Abra o endereço do sistema no navegador.</li>
+    <li>Digite seu <b>usuário</b> e <b>senha</b> e clique em <b>Entrar</b>.</li>
+    <li>O menu lateral mostra só o que o seu perfil pode acessar.</li>
+  </ol>
+  <div class="callout warn"><b>Segurança:</b> cada um usa o seu login (não compartilhe senha). O histórico registra <b>quem</b> fez cada alteração.</div>`},
+{id:"telas",icon:"🧭",title:"As telas",html:`
+  <div class="kicker">Módulo 3</div>
+  <h1>Navegando pelo sistema</h1>
+  <div class="grid2">
+    <div class="card"><h3>🗂️ Dashboard</h3><p>Visão geral dos 16 andares + Resumo por status (e quantas vendidas já estão escrituradas).</p></div>
+    <div class="card"><h3>📐 Salas</h3><p>A planta de cada andar e a ficha de cada sala (onde você reserva e vende).</p></div>
+    <div class="card"><h3>📥 Reservas</h3><p>Caixa com as salas reservadas (gestores). Mostra um <b>aviso</b> quando há reservas novas.</p></div>
+    <div class="card"><h3>📊 Relatórios</h3><p>Vendas por período e metas (gestores).</p></div>
+    <div class="card"><h3>📜 Histórico</h3><p>Todas as alterações nas salas — quem fez e quando (gestores).</p></div>
+  </div>`},
+{id:"status",icon:"🎯",title:"Status das salas",html:`
+  <div class="kicker">Módulo 4</div>
+  <h1>Os status de uma sala</h1>
+  <div class="grid2">
+    <div class="card"><span class="pill" style="color:var(--estoque)"><span class="dot" style="background:var(--estoque)"></span>ESTOQUE</span><p>Disponível para reserva/venda.</p></div>
+    <div class="card"><span class="pill" style="color:var(--purple)"><span class="dot" style="background:var(--purple)"></span>RESERVADA</span><p>Reserva registrada (em negociação).</p></div>
+    <div class="card"><span class="pill" style="color:var(--err)"><span class="dot" style="background:var(--err)"></span>VENDIDO</span><p>Venda fechada — sala <b>travada</b>.</p></div>
+    <div class="card"><span class="pill"><span class="dot" style="background:#06b6d4"></span>ALUGADA / outros</span><p>Locação e áreas especiais (auditório, rooftop, DBN…).</p></div>
+  </div>
+  <div class="callout"><b>Ciclo comum:</b> ESTOQUE → (reserva) → RESERVADA → (venda) → VENDIDO. Reserva caiu? volta para ESTOQUE. Venda cancelada? distrato devolve para ESTOQUE.</div>`},
+{id:"reservar",icon:"📝",title:"Reservar uma sala",html:`
+  <div class="kicker">Módulo 5 · Secretário e Gestor</div>
+  <h1>Como fazer uma reserva</h1>
+  <ol class="steps">
+    <li>Abra <b>Salas</b> e escolha o <b>andar</b>.</li>
+    <li>Clique na sala (na planta ou no cartão) para abrir a ficha.</li>
+    <li>Mude o <b>Status da sala</b> para <b>RESERVADA</b>.</li>
+    <li>Preencha os <b>3 campos obrigatórios</b> e clique em <kbd>Salvar</kbd>.</li>
+  </ol>
+  <h3>O que preencher na reserva</h3>
+  <div class="card">
+    <div class="field"><b>Comprador</b><span>Nome do cliente interessado.</span></div>
+    <div class="field"><b>Corretor</b><span>Nome do corretor responsável.</span></div>
+    <div class="field"><b>Imobiliária</b><span>Imobiliária envolvida.</span></div>
+  </div>
+  <div class="callout warn"><b>Regra:</b> sem comprador, corretor e imobiliária, o sistema <b>não deixa reservar</b> — aparece um aviso e a reserva não é salva.</div>`},
+{id:"aviso-reservas",icon:"🔔",title:"Aviso de reservas",html:`
+  <div class="kicker">Módulo 6 · Gestor</div>
+  <h1>Aviso de novas reservas</h1>
+  <p>Quando um(a) secretário(a) faz uma reserva, a aba <b>Reservas</b> mostra um <b>aviso</b> (uma bolinha vermelha com o número) para o gestor saber que há novidades.</p>
+  <ul>
+    <li>O número é a quantidade de <b>reservas novas</b> desde a última vez que você abriu a caixa.</li>
+    <li>Ao <b>abrir Reservas</b>, o aviso zera.</li>
+    <li>Na caixa, cada reserva mostra <b>quem reservou</b> e <b>para qual cliente</b>.</li>
+  </ul>
+  <div class="callout ok"><b>Dica:</b> confira a caixa de <b>Reservas</b> ao longo do dia para acompanhar e dar sequência (efetivar a venda ou liberar).</div>`},
+{id:"vender",icon:"💰",title:"Efetivar a venda",html:`
+  <div class="kicker">Módulo 7 · Gestor</div>
+  <h1>Como registrar uma venda</h1>
+  <ol class="steps">
+    <li>Abra a sala (pela caixa <b>Reservas</b> ou em <b>Salas</b>).</li>
+    <li>Mude o <b>Status</b> para <b>VENDIDO</b>.</li>
+    <li>Preencha os campos da venda e clique em <kbd>Salvar</kbd>.</li>
+  </ol>
+  <h3>O que preencher na venda</h3>
+  <div class="card">
+    <div class="field"><b>Nome da sala</b><span>Coloque o nome do <b>comprador</b> (o nome só pode ser alterado ao marcar VENDIDO).</span></div>
+    <div class="field"><b>Comprador</b><span>Cliente que comprou.</span></div>
+    <div class="field"><b>Corretor / Imobiliária</b><span>Quem intermediou.</span></div>
+    <div class="field"><b>Valor do imóvel / Valor vendido</b><span>O sistema calcula o desconto/acréscimo e o valor do m².</span></div>
+    <div class="field"><b>Data da venda</b><span>Importante: é o que faz a venda aparecer no mês certo do relatório.</span></div>
+    <div class="field"><b>Forma / Prazo de pagamento</b><span>Observações da negociação.</span></div>
+  </div>
+  <div class="callout warn"><b>Obrigatório:</b> comprador, corretor, imobiliária e data — sem isso o sistema não conclui a venda.</div>
+  <div class="callout danger"><b>Confira antes de salvar!</b> Ao salvar como VENDIDO, a sala fica <b>travada</b> (próximo módulo).</div>`},
+{id:"trava",icon:"🔒",title:"Sala vendida trava",html:`
+  <div class="kicker">Módulo 8 · Todos</div>
+  <h1>Regra de ouro: a trava</h1>
+  <p>Para proteger uma venda fechada, a sala <b>VENDIDO</b> tem os campos <b>bloqueados</b>.</p>
+  <div class="grid2">
+    <div class="card"><h3 style="color:var(--ok)">✔ Ainda pode</h3><ul><li>Marcar a <b>Escritura</b> (qualquer gestor).</li><li><b>Distrato</b> (só o gestor-admin).</li></ul></div>
+    <div class="card"><h3 style="color:var(--err)">✗ Fica bloqueado</h3><ul><li>Comprador, corretor, imobiliária.</li><li>Valor, data, nome, status.</li></ul></div>
+  </div>
+  <div class="callout danger"><b>Errou um valor numa sala vendida?</b> O gestor comum não corrige direto — é preciso o <b>gestor-admin</b> (que pode editar a sala vendida) ou um <b>distrato</b> para refazer.</div>`},
+{id:"escritura",icon:"📜",title:"Escriturada",html:`
+  <div class="kicker">Módulo 9 · Gestor</div>
+  <h1>O campo "Escriturada"</h1>
+  <p>A escritura costuma sair <b>depois</b> da venda. Por isso há o campo <b>Escriturada? (Sim/Não)</b> nas salas vendidas.</p>
+  <ul>
+    <li>Aparece <b>só</b> em salas <b>VENDIDO</b>.</li>
+    <li>É o <b>único</b> campo editável numa sala travada.</li>
+    <li>Pode marcar <b>qualquer gestor</b> (secretário não mexe em sala vendida).</li>
+  </ul>
+  <div class="callout ok"><b>No Dashboard:</b> abaixo de VENDIDO no Resumo aparece <b>"Escrituradas"</b> com o total de vendidas que já têm escritura registrada.</div>`},
+{id:"distrato",icon:"↩️",title:"Distrato",html:`
+  <div class="kicker">Módulo 10 · Gestor-admin</div>
+  <h1>Distrato — desfazer uma venda</h1>
+  <p>Se a venda é cancelada, o <b>distrato</b> devolve a sala ao estoque. É <b>exclusivo do gestor-admin</b>.</p>
+  <ol class="steps">
+    <li>O gestor-admin abre a sala vendida.</li>
+    <li>Clica em <b>Realizar distrato (voltar para estoque)</b> e confirma.</li>
+  </ol>
+  <h3>O distrato faz automaticamente</h3>
+  <ul>
+    <li>Devolve a sala para <b>ESTOQUE</b>.</li>
+    <li><b>Limpa</b> comprador, corretor, imobiliária, valores, data e escritura.</li>
+    <li><b>Restaura</b> o nome original da sala.</li>
+  </ul>
+  <div class="callout danger">Gestor comum que tentar distratar recebe: <i>"Apenas o gestor responsável pode realizar o distrato."</i></div>`},
+{id:"historico",icon:"📜",title:"Histórico",html:`
+  <div class="kicker">Módulo 11 · Gestor</div>
+  <h1>Histórico de alterações</h1>
+  <p>A aba <b>Histórico</b> mostra <b>tudo o que foi feito nas salas</b> — em ordem do mais recente para o mais antigo.</p>
+  <ul>
+    <li>Cada linha mostra <b>quando</b>, <b>quem fez</b>, <b>qual sala</b> e <b>o que mudou</b> (reserva, venda, distrato, mudança de status ou valor).</li>
+    <li>Tem um <b>filtro</b>: digite o nome de uma pessoa, número da sala ou ação.</li>
+  </ul>
+  <div class="callout ok"><b>Use para:</b> conferir o que outro gestor ou secretário alterou, e acompanhar o que aconteceu no dia.</div>`},
+{id:"relatorios",icon:"📊",title:"Relatórios",html:`
+  <div class="kicker">Módulo 12 · Gestor</div>
+  <h1>Acompanhando os números</h1>
+  <ul>
+    <li><b>Resumo (Dashboard):</b> total por status e o subitem de <b>Escrituradas</b>.</li>
+    <li><b>Relatórios → Vendas por período:</b> usa a <b>data da venda</b> — por isso sempre preencha a data ao vender.</li>
+    <li>Relatórios, Reservas e Histórico são <b>só para gestores</b>.</li>
+  </ul>
+  <div class="callout ok"><b>Boa prática:</b> mantenha os dados das vendas completos (valor, data) para os relatórios saírem certos.</div>`},
+{id:"treino",icon:"🧪",title:"Ambiente de treino",html:`
+  <div class="kicker">Módulo 13 · Praticar</div>
+  <h1>Pratique sem risco</h1>
+  <p>O <b>modo treino</b> é uma cópia do sistema que roda no computador e <b>não toca o banco real</b>. Pode reservar, vender e distratar à vontade.</p>
+  <div class="card"><h3>Como abrir</h3><ol class="steps">
+    <li>No computador-servidor, dê duplo-clique em <kbd>Treinamento.bat</kbd> (ou rode <kbd>npm run treino</kbd>).</li>
+    <li>Acesse o endereço que aparecer (ex.: <kbd>http://localhost:3200</kbd>; pela rede, o IP indicado).</li>
+    <li>Entre com um usuário de treino (senha <kbd>treino123</kbd>): <kbd>secretaria</kbd>, <kbd>gestor</kbd> ou <kbd>juliany</kbd> (admin).</li>
+  </ol></div>
+  <h3>Roteiro sugerido</h3>
+  <ol>
+    <li>Como <b>secretária</b>: reserve uma sala (preencha os 3 campos).</li>
+    <li>Como <b>gestor</b>: veja a reserva em <b>Reservas</b> e <b>efetive a venda</b>.</li>
+    <li>Tente <b>editar</b> a sala vendida (veja a trava) e marque a <b>Escritura</b>.</li>
+    <li>Como <b>juliany</b>: faça um <b>distrato</b> e veja a sala voltar ao estoque.</li>
+    <li>Olhe o <b>Histórico</b> e confira tudo que foi registrado.</li>
+  </ol>
+  <div class="callout warn">Para zerar os dados de treino: <kbd>npm run treino:reset</kbd>.</div>`}
+];
+const nav=document.getElementById('nav'),content=document.getElementById('content');
+let current=0,done=JSON.parse(localStorage.getItem(COURSE_KEY)||'[]');
+function renderNav(){nav.innerHTML='';MODULES.forEach((m,i)=>{const d=document.createElement('div');d.className='nav-item'+(i===current?' active':'')+(done.includes(m.id)?' done':'');d.innerHTML=`<span class="n">${done.includes(m.id)?'✓':(i+1)}</span><span>${m.icon} ${m.title}</span>`;d.onclick=()=>{go(i);document.getElementById('toc').classList.remove('open')};nav.appendChild(d)});const pct=Math.round(done.length/MODULES.length*100);document.getElementById('pfill').style.width=pct+'%';document.getElementById('ptxt').textContent=pct+'% concluído'}
+function renderModule(){const m=MODULES[current];const footer=`<div class="footer-nav"><button class="btn" id="prev" ${current===0?'disabled':''}>← Anterior</button><label class="check"><input type="checkbox" id="md" ${done.includes(m.id)?'checked':''}> Concluído</label><button class="btn primary" id="next" ${current===MODULES.length-1?'disabled':''}>Próximo →</button></div>`;content.innerHTML=m.html+footer;window.scrollTo(0,0);const md=document.getElementById('md');md.onchange=()=>{if(md.checked){if(!done.includes(m.id))done.push(m.id)}else{done=done.filter(x=>x!==m.id)}save()};const p=document.getElementById('prev'),n=document.getElementById('next');if(p)p.onclick=()=>go(current-1);if(n)n.onclick=()=>{if(!md.checked){md.checked=true;md.onchange()}go(current+1)}}
+function go(i){if(i<0||i>=MODULES.length)return;current=i;renderNav();renderModule()}
+function save(){localStorage.setItem(COURSE_KEY,JSON.stringify(done));renderNav()}
+go(0);
+</script>
+</body>
+</html>

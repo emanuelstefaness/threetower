@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Treinamentos — Tree Tower</title>
+<style>
+  :root{--bg:#1c2128;--gold:#c5a073;--gold-rgb:197,160,115;--text:#e8eaed;--text2:#9aa0a8;--text3:#7d828a;--white:#f5f3f0;--border:rgba(197,160,115,.18);--border2:rgba(197,160,115,.3)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:radial-gradient(70% 50% at 50% 0%,rgba(var(--gold-rgb),.10),transparent 60%),var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .box{max-width:780px;width:100%}
+  .brand{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:8px}
+  .brand-mark{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--gold),#8a6f4a);display:flex;align-items:center;justify-content:center;font-weight:800;color:#1c2128;font-size:24px}
+  .brand b{font-size:22px;letter-spacing:1px;text-transform:uppercase}.brand b span{color:var(--gold)}
+  .sub{text-align:center;color:var(--text2);margin:6px 0 28px;font-size:15px}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  a.card{display:block;text-decoration:none;color:inherit;background:#252a34;border:1px solid var(--border);border-radius:16px;padding:24px;transition:.18s}
+  a.card:hover{border-color:var(--gold);transform:translateY(-3px)}
+  .ico{font-size:34px;margin-bottom:10px}
+  .card h2{font-size:18px;color:var(--white);margin-bottom:6px}
+  .card p{font-size:13px;color:var(--text2);line-height:1.5}
+  .tag{display:inline-block;margin-top:14px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);border:1px solid var(--border2);border-radius:999px;padding:4px 10px}
+  .foot{text-align:center;color:var(--text3);font-size:12px;margin-top:26px;line-height:1.6}
+  @media(max-width:640px){.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="brand"><div class="brand-mark">T</div><b>Tree <span>Tower</span></b></div>
+    <div class="sub">Treinamentos do sistema — escolha o seu perfil</div>
+    <div class="cards">
+      <a class="card" href="treinamento-corretores.html">
+        <div class="ico">🔎</div>
+        <h2>Corretores</h2>
+        <p>Modo visualização: como consultar os andares, ver as salas disponíveis, áreas e valores — e o que oferecer ao cliente.</p>
+        <span class="tag">Visualização</span>
+      </a>
+      <a class="card" href="treinamento-gestores.html">
+        <div class="ico">🛠️</div>
+        <h2>Gestores e Secretários</h2>
+        <p>Operação completa: reservar, vender, registrar escritura, distrato, reservas, histórico e relatórios — com o que preencher.</p>
+        <span class="tag">Operação</span>
+      </a>
+    </div>
+    <div class="foot">Abra com duplo-clique — funciona em qualquer navegador, no computador ou no celular.<br/>Sem instalar nada.</div>
+  </div>
+</body>
+</html>
