@@ -40,12 +40,17 @@ Depois abra no navegador: **http://localhost:3200**
 `localhost` só funciona **no próprio computador** que está rodando o treino. Para a **equipe acessar de outros aparelhos**, há duas opções:
 
 **Opção A — um "computador-servidor" (recomendado):** uma só máquina roda o `Treinamento.bat`, e todos acessam pela rede.
-1. No computador-servidor, rode o treino. Ele mostra dois endereços, ex.:
+
+1. **Configuração única (uma vez só):** dê **duplo-clique em `Liberar-acesso-rede.bat`** e clique **Sim** na permissão de administrador. Isso libera a porta no firewall do Windows — **sem isso, outros PCs não conseguem acessar**.
+2. Rode o **`Treinamento.bat`**. Ele mostra dois endereços, ex.:
    - `Neste computador:  http://localhost:3200`
-   - `Outros aparelhos:  http://192.168.0.15:3200` ← **compartilhe este**
-2. Se o Windows perguntar, clique em **Permitir acesso** (libera no firewall).
+   - `Outros aparelhos:  http://192.168.0.15:3200` ← **compartilhe este** (é o IP da Wi-Fi)
 3. As outras pessoas, **na mesma rede Wi-Fi**, abrem `http://192.168.0.15:3200` (o IP que apareceu) no navegador do PC ou celular.
 4. Mantenha o computador-servidor ligado e o `Treinamento.bat` aberto durante o uso.
+
+> **O IP certo:** em caso de dúvida, no servidor rode `ipconfig` e use o **"Endereço IPv4" do adaptador Wi-Fi** (ex.: `192.168.x.x`) — **não** use IP de VPN (Radmin `26.x`, Hamachi, etc.).
+>
+> **Ainda não acessa?** Verifique: (1) os aparelhos estão na **mesma** rede (não na "Visitante"/guest); (2) o roteador não está com "isolamento de clientes" ligado; (3) o `Liberar-acesso-rede.bat` foi mesmo executado como administrador.
 
 **Opção B — cada um no seu PC:** instalar o projeto + Node.js em cada computador e rodar o `Treinamento.bat` localmente (usa `localhost:3200`). Mais trabalhoso.
 
