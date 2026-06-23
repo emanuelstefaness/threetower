@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { SidebarNav } from "@/features/dashboard/SidebarNav";
 import { usePathname } from "next/navigation";
 import type { RoomRecord } from "@/lib/buildingTypes";
 import { fetchBuildingState } from "@/features/building/apiClient";
@@ -483,34 +484,7 @@ export default function TowerAlfaReportsClient() {
       <div className="layout reports-layout">
         <aside className="sidebar">
           <div className="sb-header">Painel</div>
-          <div className="sb-nav">
-            <Link href="/" className={`sb-item ${pathname === "/" ? "active" : ""}`}>
-              Dashboard
-            </Link>
-            <Link href="/rooms" className={`sb-item ${pathname.startsWith("/rooms") ? "active" : ""}`}>
-              Salas
-            </Link>
-            {canAccessTvPanel(authLogin) ? (
-              <Link href="/panel" className={`sb-item ${pathname.startsWith("/panel") ? "active" : ""}`}>
-                Painel TV
-              </Link>
-            ) : null}
-            {canAccessInbox(authRole, authEnabled) ? (
-              <Link href="/inbox" className={`sb-item ${pathname.startsWith("/inbox") ? "active" : ""}`}>
-                Reservas
-              </Link>
-            ) : null}
-            {canAccessReports(authRole, authEnabled) ? (
-              <>
-                <Link href="/reports" className={`sb-item ${pathname === "/reports" ? "active" : ""}`}>
-                  Relatórios
-                </Link>
-                <Link href="/reports/vendas" className={`sb-item ${pathname.startsWith("/reports/vendas") ? "active" : ""}`}>
-                  Vendas por período
-                </Link>
-              </>
-            ) : null}
-          </div>
+          <SidebarNav />
 
           <div className="sb-divider" />
           <div className="sb-section">Filtros</div>

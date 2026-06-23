@@ -179,6 +179,22 @@ body::before {
   border-color: rgba(var(--brand-rgb), 0.32);
   color: var(--disp);
 }
+/* Aviso de novas reservas na aba "Reservas" */
+.nav-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
 .sb-icon {
   font-size: 15px;
   width: 18px;

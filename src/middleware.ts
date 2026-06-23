@@ -84,6 +84,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Histórico de alterações das salas: só gestores
+  if (pathname.startsWith("/historico") && secret) {
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (token) {
+      const v = await verifyJwtHs256Edge(token, secret);
+      if (v.ok) {
+        const mr = middlewareRole(v.payload);
+        if (mr !== "gestor") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          url.search = "";
+          return NextResponse.redirect(url);
+        }
+      }
+    }
+  }
+
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   if (!token) {
     if (pathname.startsWith("/api/")) {

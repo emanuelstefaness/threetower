@@ -34,6 +34,12 @@ export function canAccessInbox(role: ClientAuthRole, authEnabled: boolean): bool
   return role === "gestor";
 }
 
+/** Histórico de alterações das salas: só gestores quando a auth está ativa. */
+export function canAccessHistorico(role: ClientAuthRole, authEnabled: boolean): boolean {
+  if (!authEnabled) return true;
+  return role === "gestor";
+}
+
 export function isSecretaria(role: ClientAuthRole): boolean {
   return role === "secretaria";
 }
