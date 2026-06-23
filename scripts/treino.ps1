@@ -35,6 +35,28 @@ if ($Reset) {
   Write-Host "[treino] Dados de treino zerados." -ForegroundColor Cyan
 }
 
+# Pre-requisito: Node.js instalado
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+  Write-Host ""
+  Write-Host "ERRO: o Node.js nao esta instalado neste computador." -ForegroundColor Red
+  Write-Host "Instale a versao LTS em https://nodejs.org , reinicie e tente de novo." -ForegroundColor Yellow
+  Read-Host "Pressione ENTER para fechar"
+  exit 1
+}
+
+# Primeira execucao: instala as dependencias do projeto (node_modules)
+if (-not (Test-Path (Join-Path $root "node_modules"))) {
+  Write-Host ""
+  Write-Host "Primeira vez aqui: instalando as dependencias (npm install)." -ForegroundColor Cyan
+  Write-Host "Pode levar alguns minutos. Aguarde..." -ForegroundColor Cyan
+  npm install
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "Falha ao instalar as dependencias. Verifique a internet e tente de novo." -ForegroundColor Red
+    Read-Host "Pressione ENTER para fechar"
+    exit 1
+  }
+}
+
 # Variaveis de ambiente do modo treino
 $env:DATABASE_URL = " "                      # espaco -> tratado como vazio no codigo (forca persistencia em arquivo)
 $env:BUILDING_STATE_PATH = ".data-treino/building-state.json"
