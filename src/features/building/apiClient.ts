@@ -1,6 +1,6 @@
 import type { AppMode } from "@/lib/appMode";
 import type { ClientAuthRole } from "@/lib/authUi";
-import type { BuildingSnapshot, RoomRecord, RoomStatus, RoomStatusChangedEvent } from "@/lib/buildingTypes";
+import type { BuildingSnapshot, NicheDef, RoomRecord, RoomStatus, RoomStatusChangedEvent } from "@/lib/buildingTypes";
 
 function normalizeClientAuthRole(r: string | undefined): ClientAuthRole {
   if (r === "gestor" || r === "secretaria" || r === "viewer") return r;
@@ -126,6 +126,8 @@ export type UpdateRoomDetailsPayload = {
   dataVenda?: number | null;
   /** Escritura registrada (sim/não) — único campo editável numa sala VENDIDA travada. */
   escriturada?: boolean | null;
+  /** Nicho de mercado (id de NicheDef) — só em salas vendidas. */
+  nicho?: string | null;
   /** Distrato (item 6): reverte a venda para ESTOQUE e limpa os campos travados. */
   distrato?: boolean;
   /** Campo de preço que o gestor alterou por último no modal. */
@@ -156,6 +158,7 @@ export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsP
       descontos: args.descontos,
       dataVenda: args.dataVenda,
       escriturada: args.escriturada,
+      nicho: args.nicho,
       distrato: args.distrato,
       priceSource: args.priceSource,
     }),
@@ -165,6 +168,27 @@ export async function updateRoomDetails(roomId: number, args: UpdateRoomDetailsP
     throw new Error(err?.error ?? "Falha ao atualizar detalhes da sala");
   }
   return (await res.json()) as { updated: RoomRecord };
+}
+
+export async function fetchNiches(): Promise<NicheDef[]> {
+  const res = await fetch("/api/admin/niches", { method: "GET", cache: "no-store" });
+  if (!res.ok) throw new Error("Falha ao carregar nichos");
+  const data = (await res.json()) as { niches?: NicheDef[] };
+  return Array.isArray(data.niches) ? data.niches : [];
+}
+
+export async function saveNiches(niches: NicheDef[]): Promise<NicheDef[]> {
+  const res = await fetch("/api/admin/niches", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ niches }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error ?? "Falha ao salvar nichos");
+  }
+  const data = (await res.json()) as { niches?: NicheDef[] };
+  return Array.isArray(data.niches) ? data.niches : [];
 }
 
 export async function deleteRoom(roomId: number, by: string = "admin"): Promise<{ ok: true; deletedRoomId: number; floor: number }> {

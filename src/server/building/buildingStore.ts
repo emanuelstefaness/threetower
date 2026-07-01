@@ -2,6 +2,7 @@ import type {
   BuildingSnapshot,
   FaixaPrecoHistoricoEntry,
   FloorAggregate,
+  NicheDef,
   NotificationEvent,
   RoomRecord,
   RoomStatus,
@@ -12,6 +13,7 @@ import type {
 import { STATUS_META, STATUS_ORDER } from "@/lib/status";
 import { areaBasePrecificacaoM2, computeValorImovelFromValorM2, computeValorM2FromValorImovel } from "@/lib/precificacaoSala";
 import {
+  countsAsSoldForReports,
   looksLikeRentedStatusSala,
   looksLikeSoldStatusSala,
   normalizeStatusSala,
@@ -74,6 +76,8 @@ type Store = {
     dataVenda?: number | null;
     /** Escritura registrada (sim/não) — único campo editável numa sala VENDIDA travada. */
     escriturada?: boolean | null;
+    /** Nicho de mercado (id de NicheDef). Só se aplica a salas vendidas; limpo no distrato. */
+    nicho?: string | null;
     /** Distrato (item 6): reverte a venda para ESTOQUE e limpa os campos travados. */
     distrato?: boolean;
     /** Gestor-admin: ignora a trava de sala vendida e a regra de nome (edita qualquer dado a qualquer hora). */
@@ -86,6 +90,10 @@ type Store = {
   deleteRoom: (args: { roomId: number; by: string }) => { ok: true; deletedRoomId: number; floor: number };
   subscribe: (listener: Listener) => () => void;
   getState: () => BuildingSnapshot;
+  /** Catálogo de nichos configurável pela admin. */
+  getNiches: () => NicheDef[];
+  /** Substitui o catálogo de nichos e persiste. */
+  setNiches: (niches: NicheDef[]) => NicheDef[];
   /** Substitui todo o estado em memória (ex.: import administrativo). Não grava disco/BD — use `persistSnapshotNow` depois. */
   replaceSnapshotFromImport: (snapshot: BuildingSnapshot) => void;
 };
@@ -308,6 +316,7 @@ async function createStore(): Promise<Store> {
     descontos,
     dataVenda,
     escriturada,
+    nicho,
     distrato,
     adminOverride,
     priceSource,
@@ -333,6 +342,7 @@ async function createStore(): Promise<Store> {
     descontos?: number | null;
     dataVenda?: number | null;
     escriturada?: boolean | null;
+    nicho?: string | null;
     distrato?: boolean;
     adminOverride?: boolean;
     priceSource?: "valorM2" | "valorImovel" | null;
@@ -367,6 +377,7 @@ async function createStore(): Promise<Store> {
       delete m.formaPagamento;
       delete m.prazoPagamento;
       delete m.nomeAntesVenda;
+      delete m.nicho;
       delete m.reservedAt;
       delete m.reservedByName;
       delete m.reservedByLogin;
@@ -445,6 +456,14 @@ async function createStore(): Promise<Store> {
         });
         room.history = room.history.slice(0, 60);
         room.lastUpdatedAt = at;
+      }
+      // Nicho: permitido em sala vendida (é justamente onde se define o nicho).
+      if (nicho !== undefined) {
+        if (!room.meta) room.meta = {};
+        const cleanNicho = typeof nicho === "string" ? nicho.trim() : "";
+        if (cleanNicho) room.meta.nicho = cleanNicho;
+        else delete room.meta.nicho;
+        room.lastUpdatedAt = Date.now();
       }
       persist();
       return room;
@@ -564,6 +583,10 @@ async function createStore(): Promise<Store> {
       if (!looksLikeSoldStatusSala(statusSalaNow) && room.meta?.escriturada != null) {
         delete room.meta.escriturada;
       }
+      // `nicho` só se aplica a salas vendidas (inclui atacado); limpa se sair desse conjunto.
+      if (!countsAsSoldForReports(statusSalaNow) && room.meta?.nicho != null) {
+        delete room.meta.nicho;
+      }
     }
 
     // Escritura (item 4): aplicável quando a sala está/fica VENDIDA.
@@ -571,6 +594,14 @@ async function createStore(): Promise<Store> {
       if (!room.meta) room.meta = {};
       if (escriturada === null || escriturada === false) delete room.meta.escriturada;
       else room.meta.escriturada = true;
+    }
+
+    // Nicho de mercado: aplicável quando a sala está/fica vendida (inclui atacado).
+    if (nicho !== undefined) {
+      if (!room.meta) room.meta = {};
+      const cleanNicho = typeof nicho === "string" ? nicho.trim() : "";
+      if (cleanNicho) room.meta.nicho = cleanNicho;
+      else delete room.meta.nicho;
     }
 
     const isReservedNow = room.status === "reservada";
@@ -973,6 +1004,23 @@ async function createStore(): Promise<Store> {
     state.floorAggregates = snapshot.floorAggregates;
     state.summary = snapshot.summary;
     state.notifications = snapshot.notifications ?? [];
+    // Preserva o catálogo de nichos vindo da persistência (ou mantém o atual se ausente).
+    if (snapshot.nichesConfig !== undefined) state.nichesConfig = snapshot.nichesConfig;
+  };
+
+  const getNiches = (): NicheDef[] => state.nichesConfig ?? [];
+
+  const setNiches = (niches: NicheDef[]): NicheDef[] => {
+    const clean = (Array.isArray(niches) ? niches : [])
+      .map((n) => ({
+        id: String(n?.id ?? "").trim(),
+        nome: String(n?.nome ?? "").trim(),
+        cor: String(n?.cor ?? "").trim() || "#64748b",
+      }))
+      .filter((n) => n.id && n.nome);
+    state.nichesConfig = clean;
+    persist();
+    return clean;
   };
 
   const store: Store = {
@@ -984,6 +1032,8 @@ async function createStore(): Promise<Store> {
     deleteRoom: deleteRoomImpl,
     subscribe,
     getState,
+    getNiches,
+    setNiches,
     replaceSnapshotFromImport,
   };
 

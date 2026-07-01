@@ -4003,4 +4003,86 @@ html.tower-minimal ::-webkit-scrollbar-thumb {
   }
 }
 
+/* CELULAR DEITADO (landscape, tela baixa): a largura passa de 720px e cairia no layout
+   desktop travado (body height:100vh; overflow:hidden), cortando a planta. Aqui forçamos
+   rolagem natural e empilhamento, para a planta aparecer inteira e clicável. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html,
+  body {
+    height: auto;
+    min-height: 100vh; /* fallback */
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .clock {
+    display: none;
+  }
+
+  /* shells deixam de ser grid e empilham com rolagem natural da página */
+  .layout,
+  .rooms-layout,
+  .reports-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .sidebar {
+    max-height: none !important;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  /* navegação e seletor de andares viram faixa horizontal rolável (sempre acessível) */
+  .sb-nav,
+  .floor-picker {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sb-nav .sb-item,
+  .floor-picker .sb-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .main,
+  .dashboard-main,
+  .reports-content {
+    overflow: visible;
+  }
+
+  /* Planta: ocupa a largura disponível e o resto rola; nada fica cortado */
+  .floorplan-stage {
+    max-height: none;
+  }
+  .floorplan-image {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Modal de planta do dashboard cabe na altura e rola por dentro */
+  .floorplan-dash-modal {
+    width: min(1020px, 96vw);
+    max-height: calc(100dvh - 12px);
+  }
+
+  /* evita o "zoom" automático do iOS ao focar campos (font-size < 16px) */
+  .em-input,
+  .em-select,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 

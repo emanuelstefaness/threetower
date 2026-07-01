@@ -11,7 +11,11 @@ import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { canAccessInbox, canAccessReports, canAccessTvPanel } from "@/lib/authUi";
-import { colorForStatusSala, looksLikeSoldStatusSala } from "@/lib/treeTowerStatusSala";
+import {
+  colorForStatusSala,
+  looksLikeSoldStatusSala,
+  statusSalaDisplayLabel,
+} from "@/lib/treeTowerStatusSala";
 
 function formatClock(d: Date) {
   return d.toLocaleTimeString("pt-BR");
@@ -118,7 +122,12 @@ export default function TowerAlfaDashboardClient() {
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return Array.from(map.entries())
-      .map(([name, count]) => ({ name, count, color: colorForStatusSala(name) }))
+      .map(([name, count]) => ({
+        name,
+        label: statusSalaDisplayLabel(name),
+        count,
+        color: colorForStatusSala(name),
+      }))
       .sort((a, b) => b.count - a.count);
   }, [building]);
   const statusSalaDonutSegments = useMemo(
@@ -127,6 +136,27 @@ export default function TowerAlfaDashboardClient() {
         .filter((item) => item.count > 0)
         .map((item) => ({ key: item.name, value: item.count, color: item.color })),
     [statusSalaBreakdown]
+  );
+  /** Distribuição por nicho (base = salas que têm nicho atribuído). */
+  const nicheBreakdown = useMemo(() => {
+    const catalog = building?.nichesConfig ?? [];
+    const map = new Map<string, number>();
+    for (const room of Object.values(building?.roomsById ?? {})) {
+      const id = (room.meta?.nicho ?? "").trim();
+      if (!id) continue;
+      map.set(id, (map.get(id) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([id, count]) => {
+        const nd = catalog.find((n) => n.id === id);
+        return { key: id, name: nd?.nome ?? id, count, color: nd?.cor ?? "#64748b" };
+      })
+      .sort((a, b) => b.count - a.count);
+  }, [building]);
+  const nicheTotal = useMemo(() => nicheBreakdown.reduce((s, i) => s + i.count, 0), [nicheBreakdown]);
+  const nicheDonutSegments = useMemo(
+    () => nicheBreakdown.map((i) => ({ key: i.key, value: i.count, color: i.color })),
+    [nicheBreakdown],
   );
   /** Item 5: total de salas vendidas que já estão escrituradas. */
   const escrituradasCount = useMemo(() => {
@@ -185,7 +215,7 @@ export default function TowerAlfaDashboardClient() {
                 <div className="bd-row">
                   <div className="report-kpi-label" style={{ minWidth: 0, flex: "0 0 140px" }}>
                     <span className="report-status-dot" style={{ background: item.color }} />
-                    <span style={{ whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{item.name}</span>
+                    <span style={{ whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{item.label}</span>
                   </div>
                   <div className="bd-bar">
                     <div className="bd-seg" style={{ width: `${totalAllRooms ? (item.count / totalAllRooms) * 100 : 0}%`, background: item.color }} />
@@ -236,7 +266,7 @@ export default function TowerAlfaDashboardClient() {
             {statusSalaBreakdown.slice(0, 8).map((item) => (
               <div key={`leg-${item.name}`} className="leg-item">
                 <div className="leg-dot" style={{ background: item.color }} />
-                {item.name}
+                {item.label}
               </div>
             ))}
           </div>
@@ -293,11 +323,11 @@ export default function TowerAlfaDashboardClient() {
                 key={`sc-${item.name}`}
                 className="status-card"
                 style={{ borderLeft: `3px solid ${item.color}` }}
-                title={item.name}
+                title={item.label}
               >
                 <div className="status-card-top">
                   <span className="status-card-dot" style={{ background: item.color }} />
-                  <div className="status-card-name">{item.name}</div>
+                  <div className="status-card-name">{item.label}</div>
                 </div>
                 <div className="status-card-num">{item.count}</div>
               </div>
@@ -312,6 +342,44 @@ export default function TowerAlfaDashboardClient() {
               <div className="donut-label">salas totais</div>
             </div>
           </div>
+
+          {nicheTotal > 0 ? (
+            <>
+              <div className="rp-header" style={{ marginTop: 18 }}>
+                🎯 Nichos
+                <span className="rp-sub">
+                  {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
+                </span>
+              </div>
+              <div className="donut-wrap">
+                <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de nichos">
+                  <DonutPaths segments={nicheDonutSegments} />
+                </svg>
+                <div className="donut-center">
+                  <div className="donut-total">{nicheBreakdown.length}</div>
+                  <div className="donut-label">nichos</div>
+                </div>
+              </div>
+              <div className="status-cards">
+                {nicheBreakdown.map((item) => (
+                  <div
+                    key={`nc-${item.key}`}
+                    className="status-card"
+                    style={{ borderLeft: `3px solid ${item.color}` }}
+                    title={item.name}
+                  >
+                    <div className="status-card-top">
+                      <span className="status-card-dot" style={{ background: item.color }} />
+                      <div className="status-card-name">{item.name}</div>
+                    </div>
+                    <div className="status-card-num">
+                      {item.count} · {Math.round((item.count / nicheTotal) * 100)}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
         </aside>
       </div>
       </div>

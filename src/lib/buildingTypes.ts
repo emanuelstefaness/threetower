@@ -1,5 +1,16 @@
 export type RoomStatus = "disponivel" | "ocupada" | "reservada" | "manutencao";
 
+/**
+ * Nicho de mercado de uma sala (ex.: "Dentista", "Consultório"). O catálogo é
+ * configurado pela admin e cada sala vendida pode receber um nicho para os vendedores
+ * saberem o perfil de ocupação. `id` é estável; `nome` e `cor` são editáveis.
+ */
+export type NicheDef = {
+  id: string;
+  nome: string;
+  cor: string;
+};
+
 /** Registo de alteração de faixa / valor m² (precificação). */
 export type FaixaPrecoHistoricoEntry = {
   at: number;
@@ -47,6 +58,8 @@ export type RoomMeta = {
   escriturada?: boolean;
   /** Nome da sala antes da venda — guardado ao vender para restaurar no distrato. */
   nomeAntesVenda?: string;
+  /** Nicho de mercado da sala (id de `NicheDef`). Só se aplica a salas vendidas; limpo no distrato. */
+  nicho?: string;
   competencia?: number;
   /** Momento em que a sala passou a reservada (epoch ms). */
   reservedAt?: number;
@@ -139,5 +152,7 @@ export type BuildingSnapshot = {
   floorAggregates: Record<number, FloorAggregate>;
   summary: SummaryCounts;
   notifications: NotificationEvent[]; // recent events
+  /** Catálogo de nichos configurável pela admin (opcional; ausente = sem nichos ainda). */
+  nichesConfig?: NicheDef[];
 };
 

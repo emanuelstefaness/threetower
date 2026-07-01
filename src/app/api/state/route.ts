@@ -3,7 +3,7 @@ import { getAuthRole, getAuthSession } from "@/server/auth/getAuthRole";
 import { getEffectiveAppMode } from "@/server/auth/effectiveAppMode";
 import { getBuildingStore } from "@/server/building/buildingStore";
 import { isPersistenceEnabled } from "@/server/building/persistBuildingState";
-import { loadFromPostgres } from "@/server/building/persistPostgres";
+import { loadFromPostgresCached } from "@/server/building/persistPostgres";
 import { sanitizeSnapshotForViewer } from "@/server/building/sanitizeSnapshotForViewer";
 
 // Evita que o Next trate como algo estático em builds.
@@ -14,7 +14,7 @@ export async function GET() {
   const session = await getAuthSession();
   let snapshot;
   if (process.env.DATABASE_URL?.trim() && isPersistenceEnabled()) {
-    const fromDb = await loadFromPostgres();
+    const fromDb = await loadFromPostgresCached();
     if (fromDb) {
       const store = await getBuildingStore();
       store.replaceSnapshotFromImport(fromDb);

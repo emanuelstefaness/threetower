@@ -9,6 +9,7 @@ import {
   canAccessInbox,
   canAccessReports,
   canAccessTvPanel,
+  isAdminGestor,
 } from "@/lib/authUi";
 
 const SEEN_KEY = "treeTower.reservasSeenAt";
@@ -110,6 +111,11 @@ export function SidebarNav() {
       {canAccessHistorico(authRole, authEnabled) ? (
         <Link href="/historico" className={`sb-item ${pathname.startsWith("/historico") ? "active" : ""}`}>
           Histórico
+        </Link>
+      ) : null}
+      {!authEnabled || isAdminGestor(authRole, authLogin) ? (
+        <Link href="/nichos" className={`sb-item ${pathname.startsWith("/nichos") ? "active" : ""}`}>
+          Nichos
         </Link>
       ) : null}
     </div>

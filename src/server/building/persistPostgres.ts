@@ -32,6 +32,55 @@ export async function loadFromPostgres(): Promise<BuildingSnapshot | null> {
   return parsed;
 }
 
+/**
+ * Cache do snapshot por instância serverless (reduz drasticamente a transferência com o Neon).
+ * A leitura pesada (blob JSONB inteiro) só ocorre quando o `updated_at` da base muda; entre
+ * mudanças, serve da memória. Um TTL curto evita até a checagem de `updated_at` em rajadas.
+ */
+type SnapshotCache = { snapshot: BuildingSnapshot; dbUpdatedAt: string; cachedAt: number };
+let snapshotCache: SnapshotCache | null = null;
+/** Janela em que servimos direto da memória sem sequer consultar o `updated_at`. */
+const CACHE_TTL_MS = 4000;
+
+/** Invalida o cache local (após gravar nesta instância). */
+function invalidateSnapshotCache(): void {
+  snapshotCache = null;
+}
+
+/**
+ * Igual a `loadFromPostgres`, mas com cache: dentro do TTL devolve da memória; passado o TTL,
+ * consulta apenas `updated_at` (poucos bytes) e só puxa o blob inteiro se algo mudou.
+ * Use no caminho de leitura (`/api/state`); no caminho de mutação continue com `loadFromPostgres`.
+ */
+export async function loadFromPostgresCached(): Promise<BuildingSnapshot | null> {
+  const now = Date.now();
+  if (snapshotCache && now - snapshotCache.cachedAt < CACHE_TTL_MS) {
+    return snapshotCache.snapshot;
+  }
+  const pool = getPool();
+  await ensureTable(pool);
+  const meta = await pool.query<{ updated_at: string }>(
+    "SELECT updated_at FROM building_state WHERE id = 1"
+  );
+  if (meta.rowCount === 0) {
+    snapshotCache = null;
+    return null;
+  }
+  const dbUpdatedAt = String(meta.rows[0]?.updated_at ?? "");
+  if (snapshotCache && snapshotCache.dbUpdatedAt === dbUpdatedAt) {
+    // Nada mudou na base: revalida o TTL sem baixar o blob.
+    snapshotCache.cachedAt = now;
+    return snapshotCache.snapshot;
+  }
+  // Mudou (ou primeiro carregamento nesta instância): puxa o snapshot completo.
+  const res = await pool.query<{ snapshot: unknown }>("SELECT snapshot FROM building_state WHERE id = 1");
+  const raw = res.rows[0]?.snapshot;
+  const parsed = typeof raw === "string" ? (JSON.parse(raw) as unknown) : raw;
+  if (!isBuildingSnapshot(parsed)) return null;
+  snapshotCache = { snapshot: parsed, dbUpdatedAt, cachedAt: now };
+  return parsed;
+}
+
 /** Fila serial por processo; cada item grava o JSON capturado no momento do persist (evita estado mutável). */
 let persistChain: Promise<void> = Promise.resolve();
 
@@ -46,6 +95,8 @@ export function queuePostgresSave(state: BuildingSnapshot): void {
          ON CONFLICT (id) DO UPDATE SET snapshot = EXCLUDED.snapshot, updated_at = now()`,
         [frozenJson]
       );
+      // Gravou nesta instância: invalida o cache para reler o novo `updated_at`.
+      invalidateSnapshotCache();
     })
     .catch(() => {
       // Falha silenciosa como no disco; não expor conteúdo do estado em logs.
@@ -66,4 +117,5 @@ export async function savePostgresSnapshotNow(state: BuildingSnapshot): Promise<
      ON CONFLICT (id) DO UPDATE SET snapshot = EXCLUDED.snapshot, updated_at = now()`,
     [JSON.stringify(state)]
   );
+  invalidateSnapshotCache();
 }

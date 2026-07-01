@@ -26,7 +26,8 @@ const STATUS_SALA_COLOR_BY_KEY: Record<string, string> = {
   "DBN | CENTRAL": "#7c3aed",
   "DBN | TERRENO": "#c4b5fd",
   "AUDITÓRIO": "#f59e0b",
-  "ATACADO": "#f97316",
+  // Família do "Vendido" (vermelho mais claro) — atacado é venda no atacado.
+  "ATACADO": "#f87171",
   "ÁREA DE LOCAÇÃO ROOFTOP": "#06b6d4",
 };
 
@@ -58,6 +59,34 @@ export function looksLikeSoldStatusSala(statusSala: string | undefined): boolean
   const u = normalizeStatusSala(statusSala);
   if (u === "VENDIDO" || u === "VENDIDA") return true;
   return /\bvend/i.test((statusSala ?? "").trim());
+}
+
+/** Status ATACADO: venda "no atacado" — conta como vendida, mas é distinguida nos gráficos. */
+export function looksLikeAtacadoStatusSala(statusSala: string | undefined): boolean {
+  return normalizeStatusSala(statusSala).includes("ATACADO");
+}
+
+/**
+ * "Vendido" para efeitos de contagem nos gráficos/relatórios: incorpora VENDIDO e
+ * VENDIDO ATACADO. Usa correspondência estrita de "VENDIDO"/"VENDIDA" (igual ao painel
+ * e relatórios, que NÃO usam `.includes` para não contar ex.: "PRÉ-VENDIDO") mais o
+ * ATACADO. NÃO usar para as travas de venda — para isso continua o
+ * `looksLikeSoldStatusSala` (escritura, distrato, campos obrigatórios, etc.).
+ */
+export function countsAsSoldForReports(statusSala: string | undefined): boolean {
+  const u = normalizeStatusSala(statusSala);
+  return u === "VENDIDO" || u === "VENDIDA" || looksLikeAtacadoStatusSala(statusSala);
+}
+
+/**
+ * Rótulo de exibição do STATUS SALA para legendas/gráficos. ATACADO aparece como
+ * "Vendido (atacado)" para deixar claro que é venda no atacado, sem se confundir com
+ * a venda normal. Demais status mantêm o texto original.
+ */
+export function statusSalaDisplayLabel(statusSala: string | undefined): string {
+  const raw = (statusSala ?? "").trim();
+  if (looksLikeAtacadoStatusSala(raw)) return "Vendido (atacado)";
+  return raw || "Sem status";
 }
 
 /** Status de locação / aluguel (não confundir com “LOCAÇÃO” genérica no texto de rooftop). */

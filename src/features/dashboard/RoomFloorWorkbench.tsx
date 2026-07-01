@@ -5,11 +5,12 @@ import { fetchBuildingState, updateRoomDetails } from "@/features/building/apiCl
 import { useBuildingStoreClient } from "@/features/building/buildingStoreClient";
 import FloorPlanHotspots from "@/features/floorplan/FloorPlanHotspots";
 import { ViewModeRoomSummary } from "@/features/dashboard/ViewModeRoomSummary";
-import type { RoomRecord } from "@/lib/buildingTypes";
+import type { NicheDef, RoomRecord } from "@/lib/buildingTypes";
 import { formatDecimalBRL, formatMoneyBRL } from "@/lib/formatMoney";
 import { displayReservedByName, displayReservedForName } from "@/lib/reservedDisplay";
 import {
   canonicalStatusSalaForSelect,
+  countsAsSoldForReports,
   looksLikeRentedStatusSala,
   looksLikeSoldStatusSala,
   statusSalaRequiresFechamentoCompleto,
@@ -121,6 +122,7 @@ export default function RoomFloorWorkbench({
   const [editPrazoPagamento, setEditPrazoPagamento] = useState("");
   const [editDataVenda, setEditDataVenda] = useState("");
   const [editEscriturada, setEditEscriturada] = useState(false);
+  const [editNicho, setEditNicho] = useState("");
   const [lockedBusy, setLockedBusy] = useState(false);
   const [distratoConfirm, setDistratoConfirm] = useState(false);
   const [lastEditedPriceSource, setLastEditedPriceSource] = useState<"valorM2" | "valorImovel" | null>(null);
@@ -174,6 +176,16 @@ export default function RoomFloorWorkbench({
     return ids.map((id) => building.roomsById[id]).filter(Boolean).sort((a, b) => a.id - b.id);
   }, [building, floor]);
 
+  /** Catálogo de nichos (configurado pela admin) — usado no cadastro e na lista abaixo da planta. */
+  const niches = useMemo<NicheDef[]>(() => building?.nichesConfig ?? [], [building]);
+  const nicheById = useCallback((id: string | undefined) => niches.find((n) => n.id === id), [niches]);
+
+  /** Salas do andar que já têm nicho atribuído (para a lista abaixo da planta). */
+  const floorNicheRooms = useMemo(
+    () => floorRooms.filter((r) => (r.meta?.nicho ?? "").trim().length > 0),
+    [floorRooms],
+  );
+
   const editingRoom = editRoomId != null && building ? building.roomsById[editRoomId] : null;
   const editingRoomIsSold =
     !!editingRoom && looksLikeSoldStatusSala(editingRoom.statusSala ?? editingRoom.meta?.statusSalaOriginal);
@@ -225,6 +237,7 @@ export default function RoomFloorWorkbench({
     setEditPrazoPagamento(m?.prazoPagamento ?? "");
     setEditDataVenda(formatDateInputFromMs(m?.dataVenda));
     setEditEscriturada(m?.escriturada === true);
+    setEditNicho(m?.nicho ?? "");
     setDistratoConfirm(false);
     setLastEditedPriceSource(null);
   }, []);
@@ -333,6 +346,25 @@ export default function RoomFloorWorkbench({
         showToast(value ? "Marcada como escriturada" : "Escritura desmarcada", "✅");
       } catch (e) {
         showToast(e instanceof Error ? e.message : "Falha ao salvar escritura", "⚠️");
+      } finally {
+        setLockedBusy(false);
+      }
+    },
+    [authName, canEditEscritura, editRoomId, refreshBuilding, showToast],
+  );
+
+  /** Sala vendida travada: define/atualiza o nicho (permitido mesmo com a venda travada). */
+  const saveNichoLocked = useCallback(
+    async (value: string) => {
+      if (editRoomId == null || !canEditEscritura) return;
+      setLockedBusy(true);
+      try {
+        await updateRoomDetails(editRoomId, { by: authName?.trim() || "admin", nicho: value.trim() || null });
+        setEditNicho(value);
+        await refreshBuilding();
+        showToast("Nicho atualizado", "✅");
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Falha ao salvar nicho", "⚠️");
       } finally {
         setLockedBusy(false);
       }
@@ -459,6 +491,7 @@ export default function RoomFloorWorkbench({
         prazoPagamento: editPrazoPagamento.trim() || null,
         dataVenda,
         escriturada: looksLikeSoldStatusSala(next) ? editEscriturada : null,
+        nicho: countsAsSoldForReports(next) ? editNicho.trim() || null : null,
       });
 
       const { snapshot, appMode: mode, authEnabled, authRole: r, authName: an, authLogin: al } =
@@ -491,6 +524,39 @@ export default function RoomFloorWorkbench({
           viewMode={readOnly}
         />
       </div>
+
+      {floorNicheRooms.length > 0 ? (
+        <div className={`manager-wrap${wrapClass}`}>
+          <div className="manager-title">Nichos deste andar</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+            {floorNicheRooms.map((r) => {
+              const nd = nicheById(r.meta?.nicho);
+              const label = nd?.nome ?? r.meta?.nicho;
+              const color = nd?.cor ?? "#64748b";
+              const roomLbl = readOnly ? roomPublicLabel(r) : r.name;
+              return (
+                <div
+                  key={`nf-${r.id}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 12px",
+                    border: "1px solid var(--border2)",
+                    borderRadius: 999,
+                    fontSize: 12,
+                  }}
+                  title={`${roomLbl ?? `Sala ${r.id}`} — ${label}`}
+                >
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, flex: "0 0 auto" }} />
+                  <span style={{ opacity: 0.8 }}>Sala {r.id}</span>
+                  <strong>{label}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {showRoomGrid && (
         <div className={`manager-wrap${wrapClass}`}>
@@ -596,6 +662,9 @@ export default function RoomFloorWorkbench({
                   busy={lockedBusy}
                   escriturada={editEscriturada}
                   onToggleEscriturada={saveEscrituradaLocked}
+                  niches={niches}
+                  nicho={editNicho}
+                  onChangeNicho={saveNichoLocked}
                   distratoConfirm={distratoConfirm}
                   onAskDistrato={() => setDistratoConfirm(true)}
                   onCancelDistrato={() => setDistratoConfirm(false)}
@@ -716,6 +785,39 @@ export default function RoomFloorWorkbench({
                     </select>
                     <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8, lineHeight: 1.4 }}>
                       Geralmente preenchido depois da venda. Conta no resumo como sala escriturada.
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {countsAsSoldForReports(editStatusSala) ? (
+                <div className="em-section">
+                  <div className="em-section-title">Nicho de mercado</div>
+                  <div className="em-field" style={{ marginBottom: 0 }}>
+                    <label className="em-label" htmlFor="room-nicho">
+                      Nicho
+                    </label>
+                    {niches.length === 0 ? (
+                      <div className="em-input em-readonly">
+                        Nenhum nicho configurado. A administradora define os nichos na aba “Nichos”.
+                      </div>
+                    ) : (
+                      <select
+                        id="room-nicho"
+                        className="em-select"
+                        value={editNicho}
+                        onChange={(e) => setEditNicho(e.target.value)}
+                      >
+                        <option value="">— Sem nicho —</option>
+                        {niches.map((n) => (
+                          <option key={n.id} value={n.id}>
+                            {n.nome}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8, lineHeight: 1.4 }}>
+                      Aparece abaixo da planta do andar para os vendedores (ex.: “Sala 101 — Dentista”).
                     </div>
                   </div>
                 </div>
@@ -1140,6 +1242,9 @@ type SoldLockedPanelProps = {
   busy: boolean;
   escriturada: boolean;
   onToggleEscriturada: (value: boolean) => void;
+  niches: NicheDef[];
+  nicho: string;
+  onChangeNicho: (value: string) => void;
   distratoConfirm: boolean;
   onAskDistrato: () => void;
   onCancelDistrato: () => void;
@@ -1154,6 +1259,9 @@ function SoldLockedPanel({
   busy,
   escriturada,
   onToggleEscriturada,
+  niches,
+  nicho,
+  onChangeNicho,
   distratoConfirm,
   onAskDistrato,
   onCancelDistrato,
@@ -1225,6 +1333,38 @@ function SoldLockedPanel({
             {canEditEscritura
               ? "Alteração salva imediatamente."
               : "Apenas gestores podem alterar a escritura."}
+          </div>
+        </div>
+      </div>
+
+      <div className="em-section">
+        <div className="em-section-title">Nicho de mercado</div>
+        <div className="em-field" style={{ marginBottom: 0 }}>
+          <label className="em-label" htmlFor="room-nicho-locked">
+            Nicho
+          </label>
+          {niches.length === 0 ? (
+            <div className="em-input em-readonly">
+              Nenhum nicho configurado. A administradora define os nichos na aba “Nichos”.
+            </div>
+          ) : (
+            <select
+              id="room-nicho-locked"
+              className="em-select"
+              value={nicho}
+              disabled={!canEditEscritura || busy}
+              onChange={(e) => onChangeNicho(e.target.value)}
+            >
+              <option value="">— Sem nicho —</option>
+              {niches.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.nome}
+                </option>
+              ))}
+            </select>
+          )}
+          <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8, lineHeight: 1.4 }}>
+            {canEditEscritura ? "Alteração salva imediatamente." : "Apenas gestores podem alterar o nicho."}
           </div>
         </div>
       </div>

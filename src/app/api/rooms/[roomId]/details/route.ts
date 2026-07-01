@@ -43,6 +43,7 @@ export async function PATCH(
     /** Epoch ms — data em que a sala foi vendida (relatório “Vendas por período”). */
     dataVenda?: number | null;
     escriturada?: boolean | null;
+    nicho?: string | null;
     distrato?: boolean;
     priceSource?: "valorM2" | "valorImovel" | null;
   };
@@ -134,6 +135,7 @@ export async function PATCH(
       dataVenda: optFinite(body.dataVenda, "Data da venda"),
       escriturada:
         body.escriturada === undefined ? undefined : body.escriturada === null ? null : body.escriturada === true,
+      nicho: strOrUndef(body.nicho),
       distrato: body.distrato === true,
       adminOverride: isAdmin,
       priceSource:
