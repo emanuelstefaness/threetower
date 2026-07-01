@@ -3163,6 +3163,45 @@ body * {
   height: auto;
 }
 
+/* Legendas de orientação ao redor da planta (vistas do prédio, p/ localização) */
+.fp-orient-top,
+.fp-orient-bottom {
+  text-align: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text2);
+  opacity: 0.85;
+  padding: 5px 8px;
+}
+.fp-orient-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.fp-orient-row .floorplan-stage {
+  flex: 1;
+  min-width: 0;
+}
+.fp-orient-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text2);
+  opacity: 0.85;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+.fp-orient-left {
+  transform: rotate(180deg);
+}
+
 .plan-slot {
   position: absolute;
   box-sizing: border-box;

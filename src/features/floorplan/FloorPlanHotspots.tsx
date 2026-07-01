@@ -47,7 +47,10 @@ export default function FloorPlanHotspots({
         {subLine ? <div className="manager-sub">{subLine}</div> : null}
       </div>
 
-      <div className="floorplan-stage">
+      <div className="fp-orient-top">VISTA LAGO / RESERVA ARAUCÁRIAS / UFPR — SOL NASCENTE</div>
+      <div className="fp-orient-row">
+        <div className="fp-orient-side fp-orient-left">VISTA SHOPPING</div>
+        <div className="floorplan-stage">
         <Image
           src={imageSrc}
           alt={`Planta do andar ${floor}`}
@@ -101,7 +104,10 @@ export default function FloorPlanHotspots({
             </button>
           );
         })}
+        </div>
+        <div className="fp-orient-side fp-orient-right">VISTA PRIMAVERA</div>
       </div>
+      <div className="fp-orient-bottom">VISTA CILLA CORPORATE TOWER / UFPR — SOL POENTE</div>
     </div>
   );
 }
