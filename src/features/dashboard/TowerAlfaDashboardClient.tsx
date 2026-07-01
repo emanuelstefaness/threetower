@@ -59,7 +59,7 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
         const ly = cy + labelR * Math.sin(midAngle);
         const cosA = Math.cos(midAngle);
         const anchor = cosA > 0.25 ? "start" : cosA < -0.25 ? "end" : "middle";
-        const showLabel = pct >= 4;
+        const showLabel = pct >= 1;
 
         const el = (
           <g key={`donut-${item.key}`}>
