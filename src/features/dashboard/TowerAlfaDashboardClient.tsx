@@ -13,9 +13,8 @@ import { MinimalUiToggle } from "@/features/ui/MinimalUiToggle";
 import { canAccessInbox, canAccessReports, canAccessTvPanel } from "@/lib/authUi";
 import {
   colorForStatusSala,
-  countsAsSoldForReports,
-  looksLikeAtacadoStatusSala,
   looksLikeSoldStatusSala,
+  statusSalaDisplayLabel,
 } from "@/lib/treeTowerStatusSala";
 
 function formatClock(d: Date) {
@@ -145,23 +144,27 @@ export default function TowerAlfaDashboardClient() {
   const totalAllRooms = Object.keys(building?.roomsById ?? {}).length;
   const statusSalaBreakdown = useMemo(() => {
     const map = new Map<string, number>();
-    let atacadoTotal = 0;
     for (const room of Object.values(building?.roomsById ?? {})) {
-      const raw = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
-      if (looksLikeAtacadoStatusSala(raw)) atacadoTotal += 1;
-      // Vendido incorpora VENDIDO + ATACADO num único item; o atacado aparece como sub-linha.
-      const key = countsAsSoldForReports(raw) ? "VENDIDO" : raw;
+      const key = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return Array.from(map.entries())
       .map(([name, count]) => ({
         name,
-        label: name,
+        label: statusSalaDisplayLabel(name),
         count,
         color: colorForStatusSala(name),
-        atacadoCount: name === "VENDIDO" ? atacadoTotal : 0,
       }))
-      .sort((a, b) => b.count - a.count);
+      // VENDIDO primeiro, VENDIDO ATACADO logo depois; o resto por quantidade.
+      .sort((a, b) => {
+        const rank = (name: string) => {
+          const u = name.trim().toUpperCase();
+          if (u === "VENDIDO" || u === "VENDIDA") return 0;
+          if (u.includes("ATACADO")) return 1;
+          return 2;
+        };
+        return rank(a.name) - rank(b.name) || b.count - a.count;
+      });
   }, [building]);
   const statusSalaDonutSegments = useMemo(
     () =>
@@ -212,9 +215,7 @@ export default function TowerAlfaDashboardClient() {
     for (const roomId of floorIds) {
       const room = building?.roomsById?.[roomId];
       if (!room) continue;
-      const raw = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
-      // Mesmo agrupamento do resumo: vendido incorpora atacado.
-      const key = countsAsSoldForReports(raw) ? "VENDIDO" : raw;
+      const key = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return map;
@@ -257,31 +258,6 @@ export default function TowerAlfaDashboardClient() {
                   </div>
                   <div className="bd-total">{item.count}</div>
                 </div>
-                {item.atacadoCount > 0 ? (
-                  <div
-                    className="bd-row"
-                    style={{ paddingLeft: 16, opacity: 0.85, fontSize: 12 }}
-                    title="Parte das vendidas que são vendas no atacado"
-                  >
-                    <div className="report-kpi-label" style={{ minWidth: 0, flex: "0 0 124px" }}>
-                      <span style={{ opacity: 0.6 }}>↳</span>
-                      <span style={{ whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-                        no atacado
-                      </span>
-                    </div>
-                    <div className="bd-bar">
-                      <div
-                        className="bd-seg"
-                        style={{
-                          width: `${item.count ? (item.atacadoCount / item.count) * 100 : 0}%`,
-                          background: item.color,
-                          opacity: 0.6,
-                        }}
-                      />
-                    </div>
-                    <div className="bd-total">{item.atacadoCount}</div>
-                  </div>
-                ) : null}
                 {looksLikeSoldStatusSala(item.name) ? (
                   <div
                     className="bd-row"
@@ -424,11 +400,6 @@ export default function TowerAlfaDashboardClient() {
                       <div className="status-card-name">{item.label}</div>
                     </div>
                     <div className="status-card-num">{item.count}</div>
-                    {item.atacadoCount > 0 ? (
-                      <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>
-                        inclui {item.atacadoCount} no atacado
-                      </div>
-                    ) : null}
                   </div>
                 ))}
               </div>

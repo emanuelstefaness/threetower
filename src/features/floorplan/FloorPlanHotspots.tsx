@@ -47,10 +47,9 @@ export default function FloorPlanHotspots({
         {subLine ? <div className="manager-sub">{subLine}</div> : null}
       </div>
 
-      <div className="fp-orient-top">VISTA LAGO / RESERVA ARAUCÁRIAS / UFPR — SOL NASCENTE</div>
+      <div className="fp-orient-top">PARQUE DAS ARÁUCARIAS</div>
       <div className="fp-orient-stage">
-        <div className="fp-orient-side fp-orient-left">VISTA SHOPPING</div>
-        <div className="fp-orient-side fp-orient-right">VISTA PRIMAVERA</div>
+        <div className="fp-orient-side fp-orient-left">FRENTE SHOPPING</div>
         <div className="floorplan-stage">
         <Image
           src={imageSrc}
@@ -106,8 +105,9 @@ export default function FloorPlanHotspots({
           );
         })}
         </div>
+        <div className="fp-orient-side fp-orient-right">FRENTE GPUAVA</div>
       </div>
-      <div className="fp-orient-bottom">VISTA CILLA CORPORATE TOWER / UFPR — SOL POENTE</div>
+      <div className="fp-orient-bottom">UTFPR</div>
     </div>
   );
 }

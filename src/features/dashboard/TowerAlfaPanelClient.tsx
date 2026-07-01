@@ -6,7 +6,7 @@ import { fetchBuildingState } from "@/features/building/apiClient";
 import { AuthLogoutButton } from "@/features/auth/AuthLogoutButton";
 import { BrandLogo } from "@/features/ui/BrandLogo";
 import { formatMoneyBRL } from "@/lib/formatMoney";
-import { colorForStatusSala, countsAsSoldForReports } from "@/lib/treeTowerStatusSala";
+import { colorForStatusSala, normalizeStatusSala } from "@/lib/treeTowerStatusSala";
 
 type PanelState = Awaited<ReturnType<typeof fetchBuildingState>> | null;
 
@@ -43,9 +43,9 @@ function statusLabelForRoom(r: RoomRecord): string {
   return (r.statusSala ?? r.meta?.statusSalaOriginal ?? "Sem status").trim() || "Sem status";
 }
 
-/** "Vendido" incorpora VENDIDO + VENDIDO ATACADO (estrito, sem contar ex.: "PRÉ-VENDIDO"). */
+/** Só STATUS SALA normalizado === "VENDIDO" — o atacado é uma categoria separada. */
 function isVendidoRoom(r: RoomRecord): boolean {
-  return countsAsSoldForReports(r.statusSala ?? r.meta?.statusSalaOriginal);
+  return normalizeStatusSala(r.statusSala ?? r.meta?.statusSalaOriginal) === "VENDIDO";
 }
 
 export default function TowerAlfaPanelClient() {

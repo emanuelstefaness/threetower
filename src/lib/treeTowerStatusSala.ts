@@ -26,8 +26,8 @@ const STATUS_SALA_COLOR_BY_KEY: Record<string, string> = {
   "DBN | CENTRAL": "#7c3aed",
   "DBN | TERRENO": "#c4b5fd",
   "AUDITÓRIO": "#f59e0b",
-  // Família do "Vendido" (vermelho mais claro) — atacado é venda no atacado.
-  "ATACADO": "#f87171",
+  // Cor própria (distinta do Vendido) — atacado é uma categoria separada.
+  "ATACADO": "#f97316",
   "ÁREA DE LOCAÇÃO ROOFTOP": "#06b6d4",
 };
 
@@ -85,7 +85,7 @@ export function countsAsSoldForReports(statusSala: string | undefined): boolean 
  */
 export function statusSalaDisplayLabel(statusSala: string | undefined): string {
   const raw = (statusSala ?? "").trim();
-  if (looksLikeAtacadoStatusSala(raw)) return "Vendido (atacado)";
+  if (looksLikeAtacadoStatusSala(raw)) return "VENDIDO ATACADO";
   return raw || "Sem status";
 }
 
