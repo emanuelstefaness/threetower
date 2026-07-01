@@ -28,6 +28,7 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
   const cy = 74;
   const R = 62;
   const r = 42;
+  const labelR = R + 11; // rótulos de % ficam do lado de fora do anel
 
   if (!totalAll) return null;
 
@@ -52,15 +53,39 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
         const lg = sw > Math.PI ? 1 : 0;
         const pathD = `M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z`;
 
+        // Rótulo de % do lado de fora da fatia (omite fatias muito pequenas para não poluir).
+        const pct = Math.round((value / totalAll) * 100);
+        const midAngle = angle + sw / 2;
+        const lx = cx + labelR * Math.cos(midAngle);
+        const ly = cy + labelR * Math.sin(midAngle);
+        const cosA = Math.cos(midAngle);
+        const anchor = cosA > 0.25 ? "start" : cosA < -0.25 ? "end" : "middle";
+        const showLabel = pct >= 4;
+
         const el = (
-          <path
-            key={`donut-${item.key}`}
-            d={pathD}
-            fill={item.color}
-            opacity={0.72}
-            stroke="rgba(15, 23, 42, 0.45)"
-            strokeWidth={1.5}
-          />
+          <g key={`donut-${item.key}`}>
+            <path
+              d={pathD}
+              fill={item.color}
+              opacity={0.72}
+              stroke="rgba(15, 23, 42, 0.45)"
+              strokeWidth={1.5}
+            />
+            {showLabel ? (
+              <text
+                x={lx}
+                y={ly}
+                textAnchor={anchor}
+                dominantBaseline="central"
+                fontSize={13}
+                fontWeight={700}
+                fill="#e2e8f0"
+                style={{ pointerEvents: "none" }}
+              >
+                {pct}%
+              </text>
+            ) : null}
+          </g>
         );
 
         angle += sw;
@@ -408,7 +433,7 @@ export default function TowerAlfaDashboardClient() {
                 ))}
               </div>
               <div className="donut-wrap">
-                <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de distribuição">
+                <svg className="donut-svg" viewBox="-26 -26 200 200" aria-label="Donut de distribuição">
                   <DonutPaths segments={statusSalaDonutSegments} />
                 </svg>
                 <div className="donut-center">
@@ -423,7 +448,7 @@ export default function TowerAlfaDashboardClient() {
                 {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
               </div>
               <div className="donut-wrap">
-                <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de nichos">
+                <svg className="donut-svg" viewBox="-26 -26 200 200" aria-label="Donut de nichos">
                   <DonutPaths segments={nicheDonutSegments} />
                 </svg>
                 <div className="donut-center">
@@ -443,9 +468,7 @@ export default function TowerAlfaDashboardClient() {
                       <span className="status-card-dot" style={{ background: item.color }} />
                       <div className="status-card-name">{item.name}</div>
                     </div>
-                    <div className="status-card-num">
-                      {item.count} · {Math.round((item.count / nicheTotal) * 100)}%
-                    </div>
+                    <div className="status-card-num">{item.count}</div>
                   </div>
                 ))}
               </div>

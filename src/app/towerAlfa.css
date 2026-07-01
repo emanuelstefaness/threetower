@@ -518,8 +518,8 @@ body::before {
   background: transparent;
 }
 .donut-svg {
-  width: 148px;
-  height: 148px;
+  width: 190px;
+  height: 190px;
 }
 .donut-center {
   text-align: center;
@@ -3175,20 +3175,20 @@ body * {
   opacity: 0.85;
   padding: 5px 8px;
 }
-.fp-orient-row {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-}
-.fp-orient-row .floorplan-stage {
-  flex: 1;
-  min-width: 0;
+/* Sobreposição: as legendas laterais NÃO reduzem a largura da planta
+   (mantém o mesmo tamanho do editor de hotspots). */
+.fp-orient-stage {
+  position: relative;
 }
 .fp-orient-side {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
   font-family: "JetBrains Mono", monospace;
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -3199,7 +3199,11 @@ body * {
   white-space: nowrap;
 }
 .fp-orient-left {
+  left: 2px;
   transform: rotate(180deg);
+}
+.fp-orient-right {
+  right: 2px;
 }
 
 .plan-slot {
