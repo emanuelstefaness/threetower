@@ -76,6 +76,8 @@ export default function TowerAlfaDashboardClient() {
   const [clock, setClock] = useState(() => new Date());
   const [toast, setToast] = useState<{ msg: string; icon: string } | null>(null);
   const [floorPlanFloor, setFloorPlanFloor] = useState<number | null>(null);
+  /** Painel direito: alterna entre a distribuição por status e os nichos (sanduíche). */
+  const [rightTab, setRightTab] = useState<"status" | "nichos">("status");
 
   const showToast = (msg: string, icon = "✅") => {
     setToast({ msg, icon });
@@ -317,39 +319,70 @@ export default function TowerAlfaDashboardClient() {
             🏗️ Prédio Inteiro
             <span className="rp-sub">{totalAllRooms} salas</span>
           </div>
-          <div className="status-cards">
-            {statusSalaBreakdown.map((item) => (
-              <div
-                key={`sc-${item.name}`}
-                className="status-card"
-                style={{ borderLeft: `3px solid ${item.color}` }}
-                title={item.label}
-              >
-                <div className="status-card-top">
-                  <span className="status-card-dot" style={{ background: item.color }} />
-                  <div className="status-card-name">{item.label}</div>
-                </div>
-                <div className="status-card-num">{item.count}</div>
-              </div>
-            ))}
-          </div>
-          <div className="donut-wrap">
-            <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de distribuição">
-              <DonutPaths segments={statusSalaDonutSegments} />
-            </svg>
-            <div className="donut-center">
-              <div className="donut-total">{totalAllRooms}</div>
-              <div className="donut-label">salas totais</div>
-            </div>
-          </div>
 
           {nicheTotal > 0 ? (
+            <div style={{ display: "flex", gap: 6, margin: "10px 0 4px" }} role="tablist" aria-label="Escolher gráfico">
+              {(["status", "nichos"] as const).map((tab) => {
+                const active = (rightTab === tab) || (tab === "status" && nicheTotal === 0);
+                const label = tab === "status" ? "Distribuição" : "🎯 Nichos";
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setRightTab(tab)}
+                    style={{
+                      flex: 1,
+                      padding: "7px 8px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: "1px solid var(--border2)",
+                      background: active ? "rgba(var(--brand-rgb), 0.16)" : "transparent",
+                      color: "var(--text)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {rightTab === "status" || nicheTotal === 0 ? (
             <>
-              <div className="rp-header" style={{ marginTop: 18 }}>
-                🎯 Nichos
-                <span className="rp-sub">
-                  {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
-                </span>
+              <div className="status-cards">
+                {statusSalaBreakdown.map((item) => (
+                  <div
+                    key={`sc-${item.name}`}
+                    className="status-card"
+                    style={{ borderLeft: `3px solid ${item.color}` }}
+                    title={item.label}
+                  >
+                    <div className="status-card-top">
+                      <span className="status-card-dot" style={{ background: item.color }} />
+                      <div className="status-card-name">{item.label}</div>
+                    </div>
+                    <div className="status-card-num">{item.count}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="donut-wrap">
+                <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de distribuição">
+                  <DonutPaths segments={statusSalaDonutSegments} />
+                </svg>
+                <div className="donut-center">
+                  <div className="donut-total">{totalAllRooms}</div>
+                  <div className="donut-label">salas totais</div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rp-sub" style={{ margin: "2px 0 8px" }}>
+                {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
               </div>
               <div className="donut-wrap">
                 <svg className="donut-svg" viewBox="0 0 148 148" aria-label="Donut de nichos">
@@ -379,7 +412,7 @@ export default function TowerAlfaDashboardClient() {
                 ))}
               </div>
             </>
-          ) : null}
+          )}
         </aside>
       </div>
       </div>
