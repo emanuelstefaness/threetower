@@ -4,6 +4,8 @@ import type {
   FloorAggregate,
   NicheDef,
   NotificationEvent,
+  RoomDetailsHistoryEntry,
+  RoomFieldChange,
   RoomRecord,
   RoomStatus,
   RoomStatusChangedEvent,
@@ -110,6 +112,73 @@ function createNotification(type: NotificationEvent["type"], title: string, mess
     message,
     at: Date.now(),
   };
+}
+
+type RoomDetailsSnap = {
+  name: string;
+  nicho: string;
+  comprador: string;
+  corretor: string;
+  imobiliaria: string;
+  escriturada: boolean;
+  formaPagamento: string;
+  prazoPagamento: string;
+};
+
+const ROOM_DETAILS_LABELS: Record<keyof RoomDetailsSnap, string> = {
+  name: "Nome",
+  nicho: "Nicho",
+  comprador: "Comprador",
+  corretor: "Corretor",
+  imobiliaria: "Imobiliária",
+  escriturada: "Escriturada",
+  formaPagamento: "Forma de pagamento",
+  prazoPagamento: "Prazo de pagamento",
+};
+
+function snapRoomDetails(room: RoomRecord): RoomDetailsSnap {
+  const m = room.meta ?? {};
+  return {
+    name: (room.name ?? "").trim(),
+    nicho: (m.nicho ?? "").trim(),
+    comprador: (m.comprador ?? "").trim(),
+    corretor: (m.corretor ?? "").trim(),
+    imobiliaria: (m.imobiliaria ?? "").trim(),
+    escriturada: m.escriturada === true,
+    formaPagamento: (m.formaPagamento ?? "").trim(),
+    prazoPagamento: (m.prazoPagamento ?? "").trim(),
+  };
+}
+
+function fmtRoomDetailValue(
+  key: keyof RoomDetailsSnap,
+  val: string | boolean,
+  nicheName: (id: string) => string
+): string {
+  if (key === "escriturada") return val ? "Sim" : "Não";
+  const s = String(val ?? "").trim();
+  if (!s) return "—";
+  if (key === "nicho") return nicheName(s);
+  return s;
+}
+
+/** Diferenças entre dois snapshots de detalhes, já formatadas (de → para). */
+function diffRoomDetails(
+  before: RoomDetailsSnap,
+  after: RoomDetailsSnap,
+  nicheName: (id: string) => string
+): RoomFieldChange[] {
+  const keys = Object.keys(ROOM_DETAILS_LABELS) as (keyof RoomDetailsSnap)[];
+  const out: RoomFieldChange[] = [];
+  for (const k of keys) {
+    if (before[k] === after[k]) continue;
+    out.push({
+      label: ROOM_DETAILS_LABELS[k],
+      from: fmtRoomDetailValue(k, before[k], nicheName),
+      to: fmtRoomDetailValue(k, after[k], nicheName),
+    });
+  }
+  return out;
 }
 
 function operationalStatusFromStatusSala(statusSala: string): RoomStatus {
@@ -351,6 +420,16 @@ async function createStore(): Promise<Store> {
     const room = state.roomsById[roomId];
     if (!room) throw new Error("Sala não encontrada");
 
+    // Captura o "antes" dos detalhes para registar no histórico apenas o que mudou.
+    const beforeDetails = snapRoomDetails(room);
+    const nicheName = (id: string) => (state.nichesConfig ?? []).find((n) => n.id === id)?.nome ?? id;
+    const commitDetailsHistory = (reason?: string) => {
+      const changes = diffRoomDetails(beforeDetails, snapRoomDetails(room), nicheName);
+      if (changes.length === 0) return;
+      const entry: RoomDetailsHistoryEntry = { at: Date.now(), by, changes, ...(reason ? { reason } : {}) };
+      room.detailsHistory = [entry, ...(room.detailsHistory ?? [])].slice(0, 80);
+    };
+
     const statusAtStart = room.status;
     const wasReserved = statusAtStart === "reservada";
     const statusSalaAtStart = (room.statusSala ?? room.meta?.statusSalaOriginal ?? "").trim();
@@ -412,6 +491,7 @@ async function createStore(): Promise<Store> {
       });
       room.history = room.history.slice(0, 60);
       room.lastUpdatedAt = at;
+      commitDetailsHistory("distrato");
       persist();
       return room;
     }
@@ -465,6 +545,7 @@ async function createStore(): Promise<Store> {
         else delete room.meta.nicho;
         room.lastUpdatedAt = Date.now();
       }
+      commitDetailsHistory();
       persist();
       return room;
     }
@@ -723,14 +804,19 @@ async function createStore(): Promise<Store> {
 
       const m2Final = m.valorM2;
       const faixaNow = m.faixa;
-      const m2Changed = prevM2 !== m2Final;
+      // Só regista histórico de valor quando o utilizador REALMENTE alterou o preço
+      // (compara o valor do imóvel ENVIADO com o guardado). Evita registar "alteração de
+      // valor" ao salvar outros campos — ex.: nicho — quando o m² é apenas recalculado.
+      const round0 = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : NaN);
+      const imovelUserChanged =
+        valorImovel !== undefined && valorImovel !== null && round0(valorImovel) !== round0(prevValorImovel);
       const faixaChanged =
         faixa !== undefined && String(prevFaixa ?? "").trim() !== String(faixaNow ?? "").trim();
       if (
         typeof m2Final === "number" &&
         Number.isFinite(m2Final) &&
         m2Final > 0 &&
-        (m2Changed || faixaChanged)
+        (imovelUserChanged || faixaChanged)
       ) {
         const hist: FaixaPrecoHistoricoEntry = {
           at: Date.now(),
@@ -758,6 +844,7 @@ async function createStore(): Promise<Store> {
 
     room.lastUpdatedAt = Date.now();
 
+    commitDetailsHistory();
     persist();
     return room;
   };

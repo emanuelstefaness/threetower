@@ -77,6 +77,17 @@ export type StatusSalaHistoryEntry = {
   reason?: string;
 };
 
+/** Uma alteração de campo (o que mudou, de → para), já formatada para exibição. */
+export type RoomFieldChange = { label: string; from: string; to: string };
+
+/** Registo de edição de detalhes da sala (nicho, comprador, corretor, escritura, etc.). */
+export type RoomDetailsHistoryEntry = {
+  at: number; // epoch ms
+  by: string;
+  changes: RoomFieldChange[];
+  reason?: string;
+};
+
 export type RoomHistoryEntry = {
   at: number; // epoch ms
   by: string;
@@ -96,6 +107,8 @@ export type RoomRecord = {
   statusSala?: string;
   /** Histórico de alterações do STATUS SALA. */
   statusSalaHistory?: StatusSalaHistoryEntry[];
+  /** Histórico de alterações de detalhes (nicho, comprador, corretor, escritura, etc.). */
+  detailsHistory?: RoomDetailsHistoryEntry[];
   meta?: RoomMeta;
   lastUpdatedAt: number;
   history: RoomHistoryEntry[];

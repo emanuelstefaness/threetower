@@ -518,8 +518,8 @@ body::before {
   background: transparent;
 }
 .donut-svg {
-  width: 190px;
-  height: 190px;
+  width: 210px;
+  height: 210px;
 }
 .donut-center {
   text-align: center;

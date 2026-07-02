@@ -15,7 +15,7 @@ type Entry = {
   roomId: number;
   roomName: string;
   floor: number;
-  kind: "status" | "valores";
+  kind: "status" | "valores" | "detalhes";
   text: string;
 };
 
@@ -62,6 +62,19 @@ export default function HistoricoClient() {
           text: `valor m²: ${formatDecimalBRL(fp.valorM2)} · imóvel: ${formatMoneyBRL(fp.valorImovel)}${
             fp.faixa && fp.faixa !== "—" ? " · faixa " + fp.faixa : ""
           }`,
+        });
+      }
+      for (const d of room.detailsHistory ?? []) {
+        out.push({
+          at: d.at,
+          by: d.by,
+          roomId: room.id,
+          roomName: name,
+          floor: room.floor,
+          kind: "detalhes",
+          text:
+            d.changes.map((c) => `${c.label}: ${c.from} → ${c.to}`).join(" · ") +
+            (d.reason ? ` · ${d.reason}` : ""),
         });
       }
     }

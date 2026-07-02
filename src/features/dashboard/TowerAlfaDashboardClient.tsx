@@ -21,74 +21,113 @@ function formatClock(d: Date) {
   return d.toLocaleTimeString("pt-BR");
 }
 
+type DonutSeg = { key: string; pathD: string; color: string };
+type DonutLabel = { key: string; pct: number; side: 1 | -1; x0: number; y0: number; y: number };
+
 function DonutPaths({ segments }: { segments: Array<{ key: string; value: number; color: string }> }) {
   const totalAll = segments.reduce((s, item) => s + item.value, 0);
   const cx = 74;
   const cy = 74;
   const R = 62;
   const r = 42;
-  const labelR = R + 11; // rótulos de % ficam do lado de fora do anel
 
   if (!totalAll) return null;
 
+  const segs: DonutSeg[] = [];
+  const labels: DonutLabel[] = [];
   let angle = -Math.PI / 2;
+
+  for (const item of segments) {
+    const value = item.value;
+    const sw = (value / totalAll) * Math.PI * 2;
+
+    const x1 = cx + R * Math.cos(angle);
+    const y1 = cy + R * Math.sin(angle);
+    const x2 = cx + R * Math.cos(angle + sw);
+    const y2 = cy + R * Math.sin(angle + sw);
+    const xi1 = cx + r * Math.cos(angle);
+    const yi1 = cy + r * Math.sin(angle);
+    const xi2 = cx + r * Math.cos(angle + sw);
+    const yi2 = cy + r * Math.sin(angle + sw);
+    const lg = sw > Math.PI ? 1 : 0;
+    const pathD = `M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z`;
+    segs.push({ key: item.key, pathD, color: item.color });
+
+    const pct = Math.round((value / totalAll) * 100);
+    if (pct >= 1) {
+      const mid = angle + sw / 2;
+      const side: 1 | -1 = Math.cos(mid) >= 0 ? 1 : -1;
+      labels.push({
+        key: item.key,
+        pct,
+        side,
+        x0: cx + R * Math.cos(mid),
+        y0: cy + R * Math.sin(mid),
+        y: cy + (R + 6) * Math.sin(mid),
+      });
+    }
+    angle += sw;
+  }
+
+  // Anti-sobreposição: espalha os rótulos na vertical, por lado.
+  const gap = 13;
+  const topB = cy - 90;
+  const botB = cy + 90;
+  for (const side of [1, -1] as const) {
+    const g = labels.filter((l) => l.side === side).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < g.length; i++) {
+      if (g[i].y - g[i - 1].y < gap) g[i].y = g[i - 1].y + gap;
+    }
+    for (let i = g.length - 1; i >= 1; i--) {
+      if (g[i].y > botB) g[i].y = botB - (g.length - 1 - i) * gap;
+      if (g[i - 1].y > g[i].y - gap) g[i - 1].y = g[i].y - gap;
+    }
+    for (let i = 0; i < g.length; i++) {
+      if (g[i].y < topB) g[i].y = topB + i * gap;
+    }
+  }
+
+  const labelX = 86;
+  const elbowR = R + 8;
 
   return (
     <>
-      {segments.map((item) => {
-        const value = item.value;
-        const sw = (value / totalAll) * Math.PI * 2;
-
-        const x1 = cx + R * Math.cos(angle);
-        const y1 = cy + R * Math.sin(angle);
-        const x2 = cx + R * Math.cos(angle + sw);
-        const y2 = cy + R * Math.sin(angle + sw);
-
-        const xi1 = cx + r * Math.cos(angle);
-        const yi1 = cy + r * Math.sin(angle);
-        const xi2 = cx + r * Math.cos(angle + sw);
-        const yi2 = cy + r * Math.sin(angle + sw);
-
-        const lg = sw > Math.PI ? 1 : 0;
-        const pathD = `M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z`;
-
-        // Rótulo de % do lado de fora da fatia (omite fatias muito pequenas para não poluir).
-        const pct = Math.round((value / totalAll) * 100);
-        const midAngle = angle + sw / 2;
-        const lx = cx + labelR * Math.cos(midAngle);
-        const ly = cy + labelR * Math.sin(midAngle);
-        const cosA = Math.cos(midAngle);
-        const anchor = cosA > 0.25 ? "start" : cosA < -0.25 ? "end" : "middle";
-        const showLabel = pct >= 1;
-
-        const el = (
-          <g key={`donut-${item.key}`}>
-            <path
-              d={pathD}
-              fill={item.color}
-              opacity={0.72}
-              stroke="rgba(15, 23, 42, 0.45)"
-              strokeWidth={1.5}
+      {segs.map((s) => (
+        <path
+          key={`donut-${s.key}`}
+          d={s.pathD}
+          fill={s.color}
+          opacity={0.72}
+          stroke="rgba(15, 23, 42, 0.45)"
+          strokeWidth={1.5}
+        />
+      ))}
+      {labels.map((l) => {
+        const tx = cx + l.side * labelX;
+        const elbowX = cx + l.side * elbowR;
+        const anchor = l.side === 1 ? "start" : "end";
+        return (
+          <g key={`lbl-${l.key}`}>
+            <polyline
+              points={`${l.x0},${l.y0} ${elbowX},${l.y} ${tx - l.side * 3},${l.y}`}
+              fill="none"
+              stroke="rgba(148, 163, 184, 0.55)"
+              strokeWidth={0.6}
             />
-            {showLabel ? (
-              <text
-                x={lx}
-                y={ly}
-                textAnchor={anchor}
-                dominantBaseline="central"
-                fontSize={13}
-                fontWeight={700}
-                fill="#e2e8f0"
-                style={{ pointerEvents: "none" }}
-              >
-                {pct}%
-              </text>
-            ) : null}
+            <text
+              x={tx}
+              y={l.y}
+              textAnchor={anchor}
+              dominantBaseline="central"
+              fontSize={12}
+              fontWeight={700}
+              fill="#e2e8f0"
+              style={{ pointerEvents: "none" }}
+            >
+              {l.pct}%
+            </text>
           </g>
         );
-
-        angle += sw;
-        return el;
       })}
     </>
   );
@@ -404,7 +443,7 @@ export default function TowerAlfaDashboardClient() {
                 ))}
               </div>
               <div className="donut-wrap">
-                <svg className="donut-svg" viewBox="-26 -26 200 200" aria-label="Donut de distribuição">
+                <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label="Donut de distribuição">
                   <DonutPaths segments={statusSalaDonutSegments} />
                 </svg>
                 <div className="donut-center">
@@ -419,7 +458,7 @@ export default function TowerAlfaDashboardClient() {
                 {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
               </div>
               <div className="donut-wrap">
-                <svg className="donut-svg" viewBox="-26 -26 200 200" aria-label="Donut de nichos">
+                <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label="Donut de nichos">
                   <DonutPaths segments={nicheDonutSegments} />
                 </svg>
                 <div className="donut-center">
