@@ -142,6 +142,8 @@ export default function TowerAlfaDashboardClient() {
   const [floorPlanFloor, setFloorPlanFloor] = useState<number | null>(null);
   /** Painel direito: alterna entre a distribuição por status e os nichos (sanduíche). */
   const [rightTab, setRightTab] = useState<"status" | "nichos">("status");
+  /** Mostrar/ocultar o gráfico (donut) para dar mais espaço aos números. */
+  const [showChart, setShowChart] = useState(true);
 
   const showToast = (msg: string, icon = "✅") => {
     setToast({ msg, icon });
@@ -261,6 +263,16 @@ export default function TowerAlfaDashboardClient() {
   };
 
   const closeFloorPlan = () => setFloorPlanFloor(null);
+
+  // Painel direito unificado: cards (números) em cima, gráfico embaixo (colapsável).
+  const rightIsStatus = rightTab === "status" || nicheTotal === 0;
+  const rightItems = rightIsStatus
+    ? statusSalaBreakdown.map((i) => ({ key: `sc-${i.name}`, label: i.label, color: i.color, count: i.count }))
+    : nicheBreakdown.map((i) => ({ key: `nc-${i.key}`, label: i.name, color: i.color, count: i.count }));
+  const rightDonutSegments = rightIsStatus ? statusSalaDonutSegments : nicheDonutSegments;
+  const rightDonutTotal = rightIsStatus ? totalAllRooms : nicheBreakdown.length;
+  const rightDonutLabel = rightIsStatus ? "salas totais" : "nichos";
+  const rightDonutAria = rightIsStatus ? "Donut de distribuição" : "Donut de nichos";
 
   return (
     <>
@@ -424,66 +436,61 @@ export default function TowerAlfaDashboardClient() {
             </div>
           ) : null}
 
-          {rightTab === "status" || nicheTotal === 0 ? (
-            <>
-              <div className="status-cards">
-                {statusSalaBreakdown.map((item) => (
-                  <div
-                    key={`sc-${item.name}`}
-                    className="status-card"
-                    style={{ borderLeft: `3px solid ${item.color}` }}
-                    title={item.label}
-                  >
-                    <div className="status-card-top">
-                      <span className="status-card-dot" style={{ background: item.color }} />
-                      <div className="status-card-name">{item.label}</div>
-                    </div>
-                    <div className="status-card-num">{item.count}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="donut-wrap">
-                <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label="Donut de distribuição">
-                  <DonutPaths segments={statusSalaDonutSegments} />
-                </svg>
-                <div className="donut-center">
-                  <div className="donut-total">{totalAllRooms}</div>
-                  <div className="donut-label">salas totais</div>
+          {!rightIsStatus ? (
+            <div className="rp-sub" style={{ margin: "2px 0 8px" }}>
+              {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
+            </div>
+          ) : null}
+
+          <div className="status-cards">
+            {rightItems.map((it) => (
+              <div
+                key={it.key}
+                className="status-card"
+                style={{ borderLeft: `3px solid ${it.color}` }}
+                title={it.label}
+              >
+                <div className="status-card-top">
+                  <span className="status-card-dot" style={{ background: it.color }} />
+                  <div className="status-card-name">{it.label}</div>
                 </div>
+                <div className="status-card-num">{it.count}</div>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="rp-sub" style={{ margin: "2px 0 8px" }}>
-                {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowChart((s) => !s)}
+            style={{
+              width: "100%",
+              padding: "7px 8px",
+              margin: "8px 0 2px",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.02em",
+              border: "1px solid var(--border2)",
+              background: "transparent",
+              color: "var(--text2)",
+            }}
+            aria-expanded={showChart}
+          >
+            {showChart ? "▾ Ocultar gráfico" : "▸ Mostrar gráfico"}
+          </button>
+
+          {showChart ? (
+            <div className="donut-wrap">
+              <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label={rightDonutAria}>
+                <DonutPaths segments={rightDonutSegments} />
+              </svg>
+              <div className="donut-center">
+                <div className="donut-total">{rightDonutTotal}</div>
+                <div className="donut-label">{rightDonutLabel}</div>
               </div>
-              <div className="donut-wrap">
-                <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label="Donut de nichos">
-                  <DonutPaths segments={nicheDonutSegments} />
-                </svg>
-                <div className="donut-center">
-                  <div className="donut-total">{nicheBreakdown.length}</div>
-                  <div className="donut-label">nichos</div>
-                </div>
-              </div>
-              <div className="status-cards">
-                {nicheBreakdown.map((item) => (
-                  <div
-                    key={`nc-${item.key}`}
-                    className="status-card"
-                    style={{ borderLeft: `3px solid ${item.color}` }}
-                    title={item.name}
-                  >
-                    <div className="status-card-top">
-                      <span className="status-card-dot" style={{ background: item.color }} />
-                      <div className="status-card-name">{item.name}</div>
-                    </div>
-                    <div className="status-card-num">{item.count}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+            </div>
+          ) : null}
         </aside>
       </div>
       </div>
