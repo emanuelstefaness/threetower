@@ -133,6 +133,33 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
   );
 }
 
+/** Barras horizontais ordenadas — leitura de ranking + proporção por nicho/status. */
+function DistBars({ items }: { items: Array<{ key: string; label: string; count: number; color: string }> }) {
+  const shown = items.filter((i) => i.count > 0);
+  const total = shown.reduce((s, i) => s + i.count, 0);
+  const max = Math.max(1, ...shown.map((i) => i.count));
+  if (!total) return null;
+  return (
+    <div className="dist-bars">
+      {shown.map((i) => {
+        const pct = Math.round((i.count / total) * 100);
+        return (
+          <div className="dist-bar-row" key={i.key} title={`${i.label}: ${i.count} (${pct}%)`}>
+            <span className="dist-bar-label">{i.label}</span>
+            <span className="dist-bar-track">
+              <span className="dist-bar-fill" style={{ width: `${(i.count / max) * 100}%`, background: i.color }} />
+            </span>
+            <span className="dist-bar-val">
+              {i.count}
+              <span className="dist-bar-pct"> · {pct}%</span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function TowerAlfaDashboardClient() {
   const { building, appMode, authRole, authEnabled, authLogin, setBuilding, applyEvent, setRealtime } =
     useBuildingStoreClient();
@@ -481,15 +508,19 @@ export default function TowerAlfaDashboardClient() {
           </button>
 
           {showChart ? (
-            <div className="donut-wrap">
-              <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label={rightDonutAria}>
-                <DonutPaths segments={rightDonutSegments} />
-              </svg>
-              <div className="donut-center">
-                <div className="donut-total">{rightDonutTotal}</div>
-                <div className="donut-label">{rightDonutLabel}</div>
+            rightIsStatus ? (
+              <div className="donut-wrap">
+                <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label={rightDonutAria}>
+                  <DonutPaths segments={rightDonutSegments} />
+                </svg>
+                <div className="donut-center">
+                  <div className="donut-total">{rightDonutTotal}</div>
+                  <div className="donut-label">{rightDonutLabel}</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <DistBars items={rightItems} />
+            )
           ) : null}
         </aside>
       </div>
