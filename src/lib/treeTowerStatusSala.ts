@@ -80,12 +80,12 @@ export function countsAsSoldForReports(statusSala: string | undefined): boolean 
 
 /**
  * Rótulo de exibição do STATUS SALA para legendas/gráficos. ATACADO aparece como
- * "Vendido (atacado)" para deixar claro que é venda no atacado, sem se confundir com
- * a venda normal. Demais status mantêm o texto original.
+ * "VENDIDO ANGARIADO" para deixar claro que é uma venda angariada, sem se confundir
+ * com a venda normal. Demais status mantêm o texto original.
  */
 export function statusSalaDisplayLabel(statusSala: string | undefined): string {
   const raw = (statusSala ?? "").trim();
-  if (looksLikeAtacadoStatusSala(raw)) return "VENDIDO ATACADO";
+  if (looksLikeAtacadoStatusSala(raw)) return "VENDIDO ANGARIADO";
   return raw || "Sem status";
 }
 

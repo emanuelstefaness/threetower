@@ -133,8 +133,18 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
   );
 }
 
-/** Barras horizontais ordenadas — leitura de ranking + proporção por nicho/status. */
-function DistBars({ items }: { items: Array<{ key: string; label: string; count: number; color: string }> }) {
+/**
+ * Barras horizontais ordenadas — leitura de ranking + proporção por nicho/status.
+ * Com `hideValues` (visão de visualizador), oculta a contagem/percentual exatos: fica
+ * só a legenda (nome) e a barra proporcional.
+ */
+function DistBars({
+  items,
+  hideValues = false,
+}: {
+  items: Array<{ key: string; label: string; count: number; color: string }>;
+  hideValues?: boolean;
+}) {
   const shown = items.filter((i) => i.count > 0);
   const total = shown.reduce((s, i) => s + i.count, 0);
   const max = Math.max(1, ...shown.map((i) => i.count));
@@ -144,15 +154,21 @@ function DistBars({ items }: { items: Array<{ key: string; label: string; count:
       {shown.map((i) => {
         const pct = Math.round((i.count / total) * 100);
         return (
-          <div className="dist-bar-row" key={i.key} title={`${i.label}: ${i.count} (${pct}%)`}>
+          <div
+            className="dist-bar-row"
+            key={i.key}
+            title={hideValues ? i.label : `${i.label}: ${i.count} (${pct}%)`}
+          >
             <span className="dist-bar-label">{i.label}</span>
             <span className="dist-bar-track">
               <span className="dist-bar-fill" style={{ width: `${(i.count / max) * 100}%`, background: i.color }} />
             </span>
-            <span className="dist-bar-val">
-              {i.count}
-              <span className="dist-bar-pct"> · {pct}%</span>
-            </span>
+            {!hideValues ? (
+              <span className="dist-bar-val">
+                {i.count}
+                <span className="dist-bar-pct"> · {pct}%</span>
+              </span>
+            ) : null}
           </div>
         );
       })}
@@ -300,6 +316,9 @@ export default function TowerAlfaDashboardClient() {
   const rightDonutTotal = rightIsStatus ? totalAllRooms : nicheBreakdown.length;
   const rightDonutLabel = rightIsStatus ? "salas totais" : "nichos";
   const rightDonutAria = rightIsStatus ? "Donut de distribuição" : "Donut de nichos";
+  /** Visão de visualizador: esconde os números exatos por nicho (fica só legenda + gráfico). */
+  const isViewer = authEnabled && authRole === "viewer";
+  const hideNicheNumbers = isViewer && !rightIsStatus;
 
   return (
     <>
@@ -465,7 +484,7 @@ export default function TowerAlfaDashboardClient() {
 
           {!rightIsStatus ? (
             <div className="rp-sub" style={{ margin: "2px 0 8px" }}>
-              {nicheTotal} sala{nicheTotal !== 1 ? "s" : ""} com nicho
+              {hideNicheNumbers ? "Distribuição por nicho" : `${nicheTotal} sala${nicheTotal !== 1 ? "s" : ""} com nicho`}
             </div>
           ) : null}
 
@@ -481,7 +500,7 @@ export default function TowerAlfaDashboardClient() {
                   <span className="status-card-dot" style={{ background: it.color }} />
                   <div className="status-card-name">{it.label}</div>
                 </div>
-                <div className="status-card-num">{it.count}</div>
+                {!hideNicheNumbers ? <div className="status-card-num">{it.count}</div> : null}
               </div>
             ))}
           </div>
@@ -519,7 +538,7 @@ export default function TowerAlfaDashboardClient() {
                 </div>
               </div>
             ) : (
-              <DistBars items={rightItems} />
+              <DistBars items={rightItems} hideValues={hideNicheNumbers} />
             )
           ) : null}
         </aside>
