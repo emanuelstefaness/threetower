@@ -135,15 +135,15 @@ function DonutPaths({ segments }: { segments: Array<{ key: string; value: number
 
 /**
  * Barras horizontais ordenadas — leitura de ranking + proporção por nicho/status.
- * Com `hideValues` (visão de visualizador), oculta a contagem/percentual exatos: fica
- * só a legenda (nome) e a barra proporcional.
+ * Com `percentOnly` (visão de visualizador), oculta a contagem absoluta e mostra só
+ * a legenda + a barra proporcional + a porcentagem de cada nicho.
  */
 function DistBars({
   items,
-  hideValues = false,
+  percentOnly = false,
 }: {
   items: Array<{ key: string; label: string; count: number; color: string }>;
-  hideValues?: boolean;
+  percentOnly?: boolean;
 }) {
   const shown = items.filter((i) => i.count > 0);
   const total = shown.reduce((s, i) => s + i.count, 0);
@@ -157,18 +157,20 @@ function DistBars({
           <div
             className="dist-bar-row"
             key={i.key}
-            title={hideValues ? i.label : `${i.label}: ${i.count} (${pct}%)`}
+            title={percentOnly ? `${i.label}: ${pct}%` : `${i.label}: ${i.count} (${pct}%)`}
           >
             <span className="dist-bar-label">{i.label}</span>
             <span className="dist-bar-track">
               <span className="dist-bar-fill" style={{ width: `${(i.count / max) * 100}%`, background: i.color }} />
             </span>
-            {!hideValues ? (
+            {percentOnly ? (
+              <span className="dist-bar-val">{pct}%</span>
+            ) : (
               <span className="dist-bar-val">
                 {i.count}
                 <span className="dist-bar-pct"> · {pct}%</span>
               </span>
-            ) : null}
+            )}
           </div>
         );
       })}
@@ -316,9 +318,12 @@ export default function TowerAlfaDashboardClient() {
   const rightDonutTotal = rightIsStatus ? totalAllRooms : nicheBreakdown.length;
   const rightDonutLabel = rightIsStatus ? "salas totais" : "nichos";
   const rightDonutAria = rightIsStatus ? "Donut de distribuição" : "Donut de nichos";
-  /** Visão de visualizador: esconde os números exatos por nicho (fica só legenda + gráfico). */
+  /**
+   * Visão de visualizador na aba de nichos: mostra só o gráfico com a porcentagem de
+   * cada nicho — sem os cards, sem o botão de ocultar/mostrar e sem a contagem absoluta.
+   */
   const isViewer = authEnabled && authRole === "viewer";
-  const hideNicheNumbers = isViewer && !rightIsStatus;
+  const viewerNicheView = isViewer && !rightIsStatus;
 
   return (
     <>
@@ -484,49 +489,53 @@ export default function TowerAlfaDashboardClient() {
 
           {!rightIsStatus ? (
             <div className="rp-sub" style={{ margin: "2px 0 8px" }}>
-              {hideNicheNumbers ? "Distribuição por nicho" : `${nicheTotal} sala${nicheTotal !== 1 ? "s" : ""} com nicho`}
+              {viewerNicheView ? "Distribuição por nicho" : `${nicheTotal} sala${nicheTotal !== 1 ? "s" : ""} com nicho`}
             </div>
           ) : null}
 
-          <div className="status-cards">
-            {rightItems.map((it) => (
-              <div
-                key={it.key}
-                className="status-card"
-                style={{ borderLeft: `3px solid ${it.color}` }}
-                title={it.label}
-              >
-                <div className="status-card-top">
-                  <span className="status-card-dot" style={{ background: it.color }} />
-                  <div className="status-card-name">{it.label}</div>
+          {!viewerNicheView ? (
+            <div className="status-cards">
+              {rightItems.map((it) => (
+                <div
+                  key={it.key}
+                  className="status-card"
+                  style={{ borderLeft: `3px solid ${it.color}` }}
+                  title={it.label}
+                >
+                  <div className="status-card-top">
+                    <span className="status-card-dot" style={{ background: it.color }} />
+                    <div className="status-card-name">{it.label}</div>
+                  </div>
+                  <div className="status-card-num">{it.count}</div>
                 </div>
-                {!hideNicheNumbers ? <div className="status-card-num">{it.count}</div> : null}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
 
-          <button
-            type="button"
-            onClick={() => setShowChart((s) => !s)}
-            style={{
-              width: "100%",
-              padding: "7px 8px",
-              margin: "8px 0 2px",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.02em",
-              border: "1px solid var(--border2)",
-              background: "transparent",
-              color: "var(--text2)",
-            }}
-            aria-expanded={showChart}
-          >
-            {showChart ? "▾ Ocultar gráfico" : "▸ Mostrar gráfico"}
-          </button>
+          {!viewerNicheView ? (
+            <button
+              type="button"
+              onClick={() => setShowChart((s) => !s)}
+              style={{
+                width: "100%",
+                padding: "7px 8px",
+                margin: "8px 0 2px",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: "0.02em",
+                border: "1px solid var(--border2)",
+                background: "transparent",
+                color: "var(--text2)",
+              }}
+              aria-expanded={showChart}
+            >
+              {showChart ? "▾ Ocultar gráfico" : "▸ Mostrar gráfico"}
+            </button>
+          ) : null}
 
-          {showChart ? (
+          {showChart || viewerNicheView ? (
             rightIsStatus ? (
               <div className="donut-wrap">
                 <svg className="donut-svg" viewBox="-40 -40 228 228" aria-label={rightDonutAria}>
@@ -538,7 +547,7 @@ export default function TowerAlfaDashboardClient() {
                 </div>
               </div>
             ) : (
-              <DistBars items={rightItems} hideValues={hideNicheNumbers} />
+              <DistBars items={rightItems} percentOnly={viewerNicheView} />
             )
           ) : null}
         </aside>
