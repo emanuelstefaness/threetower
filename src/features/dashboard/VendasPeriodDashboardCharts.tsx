@@ -65,10 +65,14 @@ export default function VendasPeriodDashboardCharts({
   building,
   rows,
   targets,
+  selectedMonthKey,
+  onSelectMonth,
 }: {
   building: BuildingSnapshot | null;
   rows: VendaMesRow[];
   targets: TargetsMap;
+  selectedMonthKey?: string;
+  onSelectMonth?: (monthKey: string) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<TooltipState>(null);
@@ -308,6 +312,8 @@ export default function VendasPeriodDashboardCharts({
             byMonth={byMonth}
             n={n}
             maxY={maxStackFat}
+            selectedMonthKey={selectedMonthKey}
+            onSelectMonth={onSelectMonth}
             onSegmentTip={showSegmentTip}
             onTipLeave={hideTip}
           />
@@ -341,6 +347,8 @@ export default function VendasPeriodDashboardCharts({
             n={n}
             maxY={maxStackQ}
             segmentTooltipLines={segmentTooltipLines}
+            selectedMonthKey={selectedMonthKey}
+            onSelectMonth={onSelectMonth}
             onSegmentTip={showSegmentTip}
             onTipLeave={hideTip}
           />
@@ -372,7 +380,17 @@ export default function VendasPeriodDashboardCharts({
             hideTip();
           }}
         >
-          <DualCumulativeChart cum={cum} rows={rows} n={n} maxL={maxCumL} maxR={maxCumR} onLinesTip={showLinesTip} onTipLeave={hideTip} />
+          <DualCumulativeChart
+            cum={cum}
+            rows={rows}
+            n={n}
+            maxL={maxCumL}
+            maxR={maxCumR}
+            selectedMonthKey={selectedMonthKey}
+            onSelectMonth={onSelectMonth}
+            onLinesTip={showLinesTip}
+            onTipLeave={hideTip}
+          />
         </div>
       </section>
     </div>
@@ -395,12 +413,16 @@ function MonthlyTotalFatChart({
   byMonth,
   n,
   maxY,
+  selectedMonthKey,
+  onSelectMonth,
   onSegmentTip,
   onTipLeave,
 }: {
   byMonth: MonthBlock[];
   n: number;
   maxY: number;
+  selectedMonthKey?: string;
+  onSelectMonth?: (monthKey: string) => void;
   onSegmentTip: (
     e: ReactPointerEvent,
     payload: { title: string; swatch: string; text: string; detailLines?: string[] },
@@ -408,6 +430,7 @@ function MonthlyTotalFatChart({
   onTipLeave: () => void;
 }) {
   const [focusI, setFocusI] = useState<number | null>(null);
+  const selectedI = byMonth.findIndex((b) => b.row.monthKey === selectedMonthKey);
 
   const w = 920;
   const h = 260;
@@ -439,13 +462,15 @@ function MonthlyTotalFatChart({
   }));
 
   const barOp = (bi: number) => {
-    if (focusI == null) return 1;
-    return focusI === bi ? 1 : 0.35;
+    if (focusI != null) return focusI === bi ? 1 : 0.35;
+    if (selectedI >= 0) return selectedI === bi ? 1 : 0.5;
+    return 1;
   };
 
   const labelOp = (bi: number) => {
-    if (focusI == null) return 1;
-    return focusI === bi ? 1 : 0.35;
+    if (focusI != null) return focusI === bi ? 1 : 0.35;
+    if (selectedI >= 0) return selectedI === bi ? 1 : 0.5;
+    return 1;
   };
 
   return (
@@ -467,6 +492,19 @@ function MonthlyTotalFatChart({
           </text>
         </g>
       ))}
+      {selectedI >= 0 ? (
+        <rect
+          x={padL + selectedI * band + 1}
+          y={padT}
+          width={Math.max(band - 2, 0)}
+          height={innerH}
+          rx={4}
+          fill="rgba(59,130,246,0.10)"
+          stroke="rgba(59,130,246,0.45)"
+          strokeWidth={1}
+          pointerEvents="none"
+        />
+      ) : null}
       {byMonth.map((b, bi) => {
         const cx = padL + (bi + 0.5) * band;
         const x = cx - barW / 2;
@@ -485,7 +523,12 @@ function MonthlyTotalFatChart({
           });
         };
         return (
-          <g key={b.row.monthKey}>
+          <g
+            key={b.row.monthKey}
+            onClick={onSelectMonth ? () => onSelectMonth(b.row.monthKey) : undefined}
+            style={{ cursor: onSelectMonth ? "pointer" : "default" }}
+          >
+            <rect x={padL + bi * band} y={padT} width={band} height={innerH} fill="transparent" />
             <rect
               className="vendas-dash-bar-seg"
               x={x}
@@ -496,7 +539,7 @@ function MonthlyTotalFatChart({
               fill={C_CUM_FAT}
               opacity={barOp(bi)}
               style={{
-                cursor: fat > 0 ? "crosshair" : "default",
+                cursor: onSelectMonth ? "pointer" : fat > 0 ? "crosshair" : "default",
                 pointerEvents: fat > 0 ? "auto" : "none",
               }}
               onPointerEnter={fat > 0 ? tip : undefined}
@@ -506,8 +549,9 @@ function MonthlyTotalFatChart({
               x={cx}
               y={h - 14}
               textAnchor="middle"
-              fill="rgba(148,163,184,0.85)"
+              fill={selectedI === bi ? "rgba(226,232,240,0.95)" : "rgba(148,163,184,0.85)"}
               fontSize={8}
+              fontWeight={selectedI === bi ? 700 : 400}
               fontFamily="IBM Plex Mono, monospace"
               opacity={labelOp(bi)}
               style={{ pointerEvents: "none" }}
@@ -536,6 +580,8 @@ function StackedQtyChart({
   n,
   maxY,
   segmentTooltipLines,
+  selectedMonthKey,
+  onSelectMonth,
   onSegmentTip,
   onTipLeave,
 }: {
@@ -543,6 +589,8 @@ function StackedQtyChart({
   n: number;
   maxY: number;
   segmentTooltipLines: Map<string, { typ40: string[]; typ140: string[] }>;
+  selectedMonthKey?: string;
+  onSelectMonth?: (monthKey: string) => void;
   onSegmentTip: (
     e: ReactPointerEvent,
     payload: { title: string; swatch: string; text: string; detailLines?: string[] },
@@ -550,6 +598,7 @@ function StackedQtyChart({
   onTipLeave: () => void;
 }) {
   const [focus, setFocus] = useState<{ i: number; seg: "40" | "140" } | null>(null);
+  const selectedI = byMonth.findIndex((b) => b.row.monthKey === selectedMonthKey);
 
   const w = 920;
   const h = 260;
@@ -579,14 +628,18 @@ function StackedQtyChart({
   }));
 
   const segOp = (bi: number, seg: "40" | "140") => {
-    if (!focus) return 1;
-    if (focus.i !== bi) return 0.28;
-    return focus.seg === seg ? 1 : 0.28;
+    if (focus) {
+      if (focus.i !== bi) return 0.28;
+      return focus.seg === seg ? 1 : 0.28;
+    }
+    if (selectedI >= 0) return selectedI === bi ? 1 : 0.5;
+    return 1;
   };
 
   const labelOp = (bi: number) => {
-    if (!focus) return 1;
-    return focus.i === bi ? 1 : 0.28;
+    if (focus) return focus.i === bi ? 1 : 0.28;
+    if (selectedI >= 0) return selectedI === bi ? 1 : 0.5;
+    return 1;
   };
 
   return (
@@ -608,6 +661,19 @@ function StackedQtyChart({
           </text>
         </g>
       ))}
+      {selectedI >= 0 ? (
+        <rect
+          x={padL + selectedI * band + 1}
+          y={padT}
+          width={Math.max(band - 2, 0)}
+          height={innerH}
+          rx={4}
+          fill="rgba(59,130,246,0.10)"
+          stroke="rgba(59,130,246,0.45)"
+          strokeWidth={1}
+          pointerEvents="none"
+        />
+      ) : null}
       {byMonth.map((b, bi) => {
         const cx = padL + (bi + 0.5) * band;
         const x = cx - barW / 2;
@@ -635,7 +701,12 @@ function StackedQtyChart({
           });
         };
         return (
-          <g key={b.row.monthKey}>
+          <g
+            key={b.row.monthKey}
+            onClick={onSelectMonth ? () => onSelectMonth(b.row.monthKey) : undefined}
+            style={{ cursor: onSelectMonth ? "pointer" : "default" }}
+          >
+            <rect x={padL + bi * band} y={padT} width={band} height={innerH} fill="transparent" />
             <rect
               className="vendas-dash-bar-seg"
               x={x}
@@ -645,7 +716,7 @@ function StackedQtyChart({
               rx={h140 > 0 ? 0 : 4}
               fill={C_Q_40}
               opacity={segOp(bi, "40")}
-              style={{ cursor: b.n40 > 0 ? "crosshair" : "default", pointerEvents: b.n40 > 0 ? "auto" : "none" }}
+              style={{ cursor: onSelectMonth ? "pointer" : b.n40 > 0 ? "crosshair" : "default", pointerEvents: b.n40 > 0 ? "auto" : "none" }}
               onPointerEnter={b.n40 > 0 ? tip40 : undefined}
               onPointerMove={b.n40 > 0 ? tip40 : undefined}
             />
@@ -658,7 +729,7 @@ function StackedQtyChart({
               rx={h40 > 0 ? 0 : 4}
               fill={C_Q_140}
               opacity={segOp(bi, "140")}
-              style={{ cursor: b.n140 > 0 ? "crosshair" : "default", pointerEvents: b.n140 > 0 ? "auto" : "none" }}
+              style={{ cursor: onSelectMonth ? "pointer" : b.n140 > 0 ? "crosshair" : "default", pointerEvents: b.n140 > 0 ? "auto" : "none" }}
               onPointerEnter={b.n140 > 0 ? tip140 : undefined}
               onPointerMove={b.n140 > 0 ? tip140 : undefined}
             />
@@ -666,8 +737,9 @@ function StackedQtyChart({
               x={cx}
               y={h - 14}
               textAnchor="middle"
-              fill="rgba(148,163,184,0.85)"
+              fill={selectedI === bi ? "rgba(226,232,240,0.95)" : "rgba(148,163,184,0.85)"}
               fontSize={8}
+              fontWeight={selectedI === bi ? 700 : 400}
               fontFamily="IBM Plex Mono, monospace"
               opacity={labelOp(bi)}
               style={{ pointerEvents: "none" }}
@@ -688,6 +760,8 @@ function DualCumulativeChart({
   n,
   maxL,
   maxR,
+  selectedMonthKey,
+  onSelectMonth,
   onLinesTip,
   onTipLeave,
 }: {
@@ -696,9 +770,12 @@ function DualCumulativeChart({
   n: number;
   maxL: number;
   maxR: number;
+  selectedMonthKey?: string;
+  onSelectMonth?: (monthKey: string) => void;
   onLinesTip: (e: ReactPointerEvent, title: string, lines: string[]) => void;
   onTipLeave: () => void;
 }) {
+  const selectedI = rows.findIndex((r) => r.monthKey === selectedMonthKey);
   const w = 920;
   const h = 300;
   const padL = 72;
@@ -757,6 +834,18 @@ function DualCumulativeChart({
       {ticksL.map((t) => (
         <line key={`gl-${t.key}`} x1={padL} y1={t.y} x2={w - padR} y2={t.y} stroke="rgba(148,163,184,0.1)" strokeWidth={1} />
       ))}
+      {selectedI >= 0 ? (
+        <line
+          x1={xAt(selectedI)}
+          y1={padT}
+          x2={xAt(selectedI)}
+          y2={y0}
+          stroke="rgba(59,130,246,0.55)"
+          strokeWidth={1.5}
+          strokeDasharray="4 4"
+          pointerEvents="none"
+        />
+      ) : null}
       {ticksL.map((t) => (
         <text key={`tl-${t.key}`} x={padL - 10} y={t.y + 3} textAnchor="end" fill="rgba(148,163,184,0.6)" fontSize={8} fontFamily="IBM Plex Mono, monospace">
           {t.lab}
@@ -826,6 +915,13 @@ function DualCumulativeChart({
         />
       ))}
 
+      {selectedI >= 0 ? (
+        <>
+          <circle cx={xAt(selectedI)} cy={yL(cum[selectedI]!.cumFat)} r={5.5} fill="none" stroke={C_CUM_FAT} strokeWidth={2} pointerEvents="none" />
+          <circle cx={xAt(selectedI)} cy={yR(cum[selectedI]!.cumQtd)} r={5.5} fill="none" stroke={C_CUM_Q} strokeWidth={2} pointerEvents="none" />
+        </>
+      ) : null}
+
       {rows.map((r, i) => {
         const cx = xAt(i);
         const slotW = n <= 1 ? innerW : Math.max(step * 0.75, 20);
@@ -844,7 +940,8 @@ function DualCumulativeChart({
             fill="transparent"
             onPointerEnter={tip}
             onPointerMove={tip}
-            style={{ cursor: "crosshair" }}
+            onClick={onSelectMonth ? () => onSelectMonth(r.monthKey) : undefined}
+            style={{ cursor: onSelectMonth ? "pointer" : "crosshair" }}
           />
         );
       })}
@@ -854,8 +951,9 @@ function DualCumulativeChart({
           x={xAt(i)}
           y={h - 12}
           textAnchor="middle"
-          fill="rgba(148,163,184,0.85)"
+          fill={selectedI === i ? "rgba(226,232,240,0.95)" : "rgba(148,163,184,0.85)"}
           fontSize={8}
+          fontWeight={selectedI === i ? 700 : 400}
           fontFamily="IBM Plex Mono, monospace"
           style={{ pointerEvents: "none" }}
         >

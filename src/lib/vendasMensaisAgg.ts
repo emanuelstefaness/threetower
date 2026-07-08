@@ -56,24 +56,39 @@ export function enumerateMonthKeysInclusive(startKey: string, endKey: string): s
 /** Não alargar o eixo X indefinidamente se houver datas muito antigas. */
 const VENDAS_REPORT_MAX_MONTH_SPAN = 72;
 
+/** Valor de {@link monthKeysForVendasReport} que pede o período completo (todas as datas). */
+export const VENDAS_REPORT_ALL_MONTHS = 999;
+
 /**
- * Eixo temporal do relatório: começa no mais cedo entre (i) o primeiro mês da janela “últimos N”
- * e (ii) o mês da venda mais antiga contabilizada; termina no mais recente entre a janela e qualquer venda futura.
- * Assim, as `dataVenda` fora dos últimos N meses ainda aparecem no gráfico (até {@link VENDAS_REPORT_MAX_MONTH_SPAN} meses).
+ * Eixo temporal do relatório, ancorado na venda mais recente: a janela termina no
+ * mês da última venda contabilizada e recua `numMonths` meses a partir daí (assim a
+ * janela sempre cai sobre meses com dados). Com {@link VENDAS_REPORT_ALL_MONTHS} mostra
+ * todo o histórico (da venda mais antiga à mais recente). Sem vendas, usa uma janela
+ * a terminar no mês atual. Limitado a {@link VENDAS_REPORT_MAX_MONTH_SPAN} meses.
  */
 export function monthKeysForVendasReport(building: BuildingSnapshot | null, numMonths: number): string[] {
-  const rolling = lastNCalendarMonthKeys(numMonths);
-  if (rolling.length === 0) return [];
-
-  let startKey = rolling[0]!;
-  let endKey = rolling[rolling.length - 1]!;
-
+  const saleKeys: string[] = [];
   for (const room of Object.values(building?.roomsById ?? {})) {
     const at = vendidoAtMs(room);
     if (at == null) continue;
-    const mk = monthKeyFromTs(at);
-    if (mk < startKey) startKey = mk;
-    if (mk > endKey) endKey = mk;
+    saleKeys.push(monthKeyFromTs(at));
+  }
+
+  if (saleKeys.length === 0) {
+    const span = Math.max(1, Math.min(numMonths, VENDAS_REPORT_MAX_MONTH_SPAN));
+    const rolling = lastNCalendarMonthKeys(span);
+    return rolling;
+  }
+
+  saleKeys.sort();
+  const oldestSale = saleKeys[0]!;
+  const endKey = saleKeys[saleKeys.length - 1]!; // âncora: mês da venda mais recente
+
+  let startKey: string;
+  if (numMonths >= VENDAS_REPORT_ALL_MONTHS) {
+    startKey = oldestSale;
+  } else {
+    startKey = addMonthsToMonthKey(endKey, -(Math.max(1, numMonths) - 1));
   }
 
   let keys = enumerateMonthKeysInclusive(startKey, endKey);

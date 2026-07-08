@@ -28,12 +28,15 @@ import {
   valorVendaBase,
   valorVendido,
   vendidoMomentoRelatorio,
+  VENDAS_REPORT_ALL_MONTHS,
   type VendaMesRow,
   type VendaReportDateFonte,
 } from "@/lib/vendasMensaisAgg";
 import VendasPeriodDashboardCharts from "./VendasPeriodDashboardCharts";
 
-const PERIOD_OPTIONS = [6, 12, 18, 24, 36] as const;
+const PERIOD_OPTIONS = [6, 12, 18, 24, 36, VENDAS_REPORT_ALL_MONTHS] as const;
+const periodOptionLabel = (m: number) =>
+  m >= VENDAS_REPORT_ALL_MONTHS ? "Tudo (histórico)" : `Últimos ${m} meses`;
 const TARGETS_START_KEY = "2026-04";
 const MONTH_KEY_RE = /^\d{4}-\d{2}$/;
 const META_PICK_YEAR_MIN = 2018;
@@ -299,12 +302,15 @@ export default function TowerAlfaVendasMensaisClient() {
   }, [vendasPorMes.rows, apiTargets]);
 
   useEffect(() => {
-    const keys = vendasPorMes.rows.map((r) => r.monthKey);
-    if (keys.length === 0) {
+    const allKeys = vendasPorMes.rows.map((r) => r.monthKey);
+    if (allKeys.length === 0) {
       setSelectedMonthKey("");
       return;
     }
-    setSelectedMonthKey((prev) => (prev && keys.includes(prev) ? prev : keys[keys.length - 1]!));
+    // Default: último mês COM vendas (evita cair num mês vazio); mantém a escolha do utilizador se ainda válida.
+    const withSales = vendasPorMes.rows.filter((r) => r.qtd > 0).map((r) => r.monthKey);
+    const fallback = (withSales.length ? withSales : allKeys).at(-1)!;
+    setSelectedMonthKey((prev) => (prev && allKeys.includes(prev) ? prev : fallback));
   }, [vendasPorMes.rows]);
 
   return (
@@ -341,7 +347,7 @@ export default function TowerAlfaVendasMensaisClient() {
               >
                 {PERIOD_OPTIONS.map((m) => (
                   <option key={m} value={m}>
-                    Últimos {m} meses
+                    {periodOptionLabel(m)}
                   </option>
                 ))}
               </select>
@@ -619,7 +625,13 @@ export default function TowerAlfaVendasMensaisClient() {
             </div>
             {vendasPorMes.rows.length > 0 ? (
               <div className="report-panel report-panel--vendas-dash">
-                <VendasPeriodDashboardCharts building={building} rows={vendasPorMes.rows} targets={targetsEffective} />
+                <VendasPeriodDashboardCharts
+                  building={building}
+                  rows={vendasPorMes.rows}
+                  targets={targetsEffective}
+                  selectedMonthKey={selectedMonthKey}
+                  onSelectMonth={setSelectedMonthKey}
+                />
               </div>
             ) : null}
 
@@ -685,7 +697,9 @@ export default function TowerAlfaVendasMensaisClient() {
             ) : null}
 
             <div className="report-panel">
-              <div className="report-panel-head">Tabela · últimos {periodMonths} meses</div>
+              <div className="report-panel-head">
+                Tabela · {periodMonths >= VENDAS_REPORT_ALL_MONTHS ? "todo o histórico" : `últimos ${periodMonths} meses`}
+              </div>
               <div className="report-sales-table-wrap">
                 <table className="report-sales-table">
                   <thead>
