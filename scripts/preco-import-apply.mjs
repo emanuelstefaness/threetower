@@ -60,6 +60,7 @@ const excel = grid
 // ---- Fonte do snapshot ----
 let snapshot;
 let dbUpdatedAt = null;
+let dbUpdatedAtTxt = null; // texto com microssegundos: o Date do JS só tem milissegundos
 let pool = null;
 let backupFileUsed = null;
 if (APPLY) {
@@ -67,10 +68,11 @@ if (APPLY) {
   if (!url) throw new Error("--apply exige DATABASE_URL definido no terminal.");
   const pg = (await import("pg")).default;
   pool = new pg.Pool({ connectionString: url, max: 1 });
-  const { rows } = await pool.query("SELECT snapshot, updated_at FROM building_state WHERE id = 1");
+  const { rows } = await pool.query("SELECT snapshot, updated_at, updated_at::text AS updated_at_txt FROM building_state WHERE id = 1");
   if (!rows[0]) throw new Error("building_state sem linha id=1.");
   snapshot = rows[0].snapshot;
   dbUpdatedAt = rows[0].updated_at;
+  dbUpdatedAtTxt = rows[0].updated_at_txt;
   // Backup novo ANTES de qualquer escrita.
   mkdirSync("backups", { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -184,13 +186,23 @@ if (TO_FILE) {
 }
 
 // ---- Gravar no banco real, com checagem de conflito ----
+// Compara o horário como TEXTO (microssegundos); comparar com o Date do JS (só milissegundos) falha sempre.
 const res = await pool.query(
-  "UPDATE building_state SET snapshot = $1::jsonb, updated_at = now() WHERE id = 1 AND updated_at = $2",
-  [JSON.stringify(snapshot), dbUpdatedAt],
+  "UPDATE building_state SET snapshot = $1::jsonb, updated_at = now() WHERE id = 1 AND updated_at::text = $2",
+  [JSON.stringify(snapshot), dbUpdatedAtTxt],
 );
-await pool.end();
 if (res.rowCount !== 1) {
-  console.error("\nABORTADO: o banco foi alterado por outra pessoa durante a execução. NADA foi gravado. Rode de novo.");
+  const cur = await pool.query("SELECT updated_at::text AS t FROM building_state WHERE id = 1");
+  await pool.end();
+  console.error("\nABORTADO: o banco mudou entre a leitura e a gravação. NADA foi gravado.");
+  console.error(`  updated_at lido no início : ${dbUpdatedAtTxt}`);
+  console.error(`  updated_at agora no banco : ${cur.rows[0]?.t}`);
+  console.error(
+    dbUpdatedAtTxt === cur.rows[0]?.t
+      ? "  (iguais: falha inesperada da trava — não rode de novo, avise)"
+      : "  (diferentes: alguém gravou no sistema nesse instante — pode rodar de novo)",
+  );
   process.exit(3);
 }
+await pool.end();
 console.log(`\nGRAVADO no banco: ${plan.length} salas atualizadas. Backup anterior: ${backupFileUsed}`);
