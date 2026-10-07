@@ -59,9 +59,21 @@ export default function HistoricoClient() {
           roomName: name,
           floor: room.floor,
           kind: "valores",
-          text: `valor m²: ${formatDecimalBRL(fp.valorM2)} · imóvel: ${formatMoneyBRL(fp.valorImovel)}${
-            fp.faixa && fp.faixa !== "—" ? " · faixa " + fp.faixa : ""
-          }`,
+          text:
+            `preço do imóvel: ${
+              typeof fp.valorImovelAnterior === "number"
+                ? `${formatMoneyBRL(fp.valorImovelAnterior)} → ${formatMoneyBRL(fp.valorImovel)}`
+                : formatMoneyBRL(fp.valorImovel)
+            } · valor m²: ${
+              typeof fp.valorM2Anterior === "number"
+                ? `${formatDecimalBRL(fp.valorM2Anterior)} → ${formatDecimalBRL(fp.valorM2)}`
+                : formatDecimalBRL(fp.valorM2)
+            }` +
+            (fp.faixaAnterior && fp.faixaAnterior !== fp.faixa
+              ? ` · faixa ${fp.faixaAnterior} → ${fp.faixa}`
+              : fp.faixa && fp.faixa !== "—"
+                ? " · faixa " + fp.faixa
+                : ""),
         });
       }
       for (const d of room.detailsHistory ?? []) {

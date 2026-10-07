@@ -1,5 +1,6 @@
 import { isAuthEnabled } from "@/lib/authConfig";
-import { isAdminGestor } from "@/lib/authUi";
+import { canViewPriceHistory, isAdminGestor } from "@/lib/authUi";
+import { stripPriceHistoryFromRoom } from "@/server/building/priceHistoryAccess";
 import { looksLikeSoldStatusSala } from "@/lib/treeTowerStatusSala";
 import {
   ensureBuildingStoreSyncedFromDb,
@@ -143,7 +144,9 @@ export async function PATCH(
       reserveBy,
     });
     await flushBuildingPersistence();
-    return Response.json({ updated });
+    // Quem não é gestor não recebe o histórico de preço na resposta.
+    const canSeePrices = canViewPriceHistory(session?.role ?? null, isAuthEnabled());
+    return Response.json({ updated: canSeePrices ? updated : stripPriceHistoryFromRoom(updated) });
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 400 });
   }

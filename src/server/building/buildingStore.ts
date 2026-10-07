@@ -812,11 +812,16 @@ async function createStore(): Promise<Store> {
         valorImovel !== undefined && valorImovel !== null && round0(valorImovel) !== round0(prevValorImovel);
       const faixaChanged =
         faixa !== undefined && String(prevFaixa ?? "").trim() !== String(faixaNow ?? "").trim();
+      // Alteração direta do m² (campo enviado e diferente do guardado, com tolerância de arredondamento).
+      const m2UserChanged =
+        valorM2 !== undefined &&
+        valorM2 !== null &&
+        (typeof prevM2 !== "number" || !Number.isFinite(prevM2) || Math.abs(valorM2 - prevM2) > 0.5);
       if (
         typeof m2Final === "number" &&
         Number.isFinite(m2Final) &&
         m2Final > 0 &&
-        (imovelUserChanged || faixaChanged)
+        (imovelUserChanged || m2UserChanged || faixaChanged)
       ) {
         const hist: FaixaPrecoHistoricoEntry = {
           at: Date.now(),
@@ -825,6 +830,11 @@ async function createStore(): Promise<Store> {
           valorM2: m2Final,
           valorImovel: typeof m.valorImovel === "number" && Number.isFinite(m.valorImovel) ? m.valorImovel : 0,
           areaBaseM2: unitBase,
+          ...(typeof prevM2 === "number" && Number.isFinite(prevM2) ? { valorM2Anterior: prevM2 } : {}),
+          ...(typeof prevValorImovel === "number" && Number.isFinite(prevValorImovel)
+            ? { valorImovelAnterior: prevValorImovel }
+            : {}),
+          ...(prevFaixa ? { faixaAnterior: String(prevFaixa).trim() } : {}),
         };
         m.faixaPrecoHistorico = [hist, ...(m.faixaPrecoHistorico ?? [])].slice(0, 80);
       }

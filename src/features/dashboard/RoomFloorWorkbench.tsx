@@ -24,7 +24,7 @@ import {
   computeValorM2FromValorImovel,
 } from "@/lib/precificacaoSala";
 import { formatSaleDateIsoLocal } from "@/lib/vendasMensaisAgg";
-import { isAdminGestor } from "@/lib/authUi";
+import { canViewPriceHistory, isAdminGestor } from "@/lib/authUi";
 import { roomCardToneClass, roomPublicLabel, roomShowsListPriceInViewMode } from "@/lib/viewModeRoomDisplay";
 
 /** Aceita vazio (limpa), ponto ou vírgula decimal; remove separadores de milhar comuns. */
@@ -1058,31 +1058,52 @@ export default function RoomFloorWorkbench({
                 </div>
               )}
 
-              {!isViewer && (editingRoom.meta?.faixaPrecoHistorico?.length ?? 0) > 0 ? (
+              {canViewPriceHistory(authRole, authEnabled) && (editingRoom.meta?.faixaPrecoHistorico?.length ?? 0) > 0 ? (
                 <div className="em-section">
-                  <div className="em-section-title">Histórico de faixas e valor m²</div>
+                  <div className="em-section-title">Histórico de preço</div>
                   <div style={{ maxHeight: 180, overflowY: "auto", fontSize: 11, lineHeight: 1.45 }}>
-                    {(editingRoom.meta?.faixaPrecoHistorico ?? []).map((h, idx) => (
-                      <div
-                        key={`${h.at}-${idx}`}
-                        style={{
-                          padding: "6px 8px",
-                          marginBottom: 6,
-                          borderRadius: 6,
-                          background: "rgba(148, 163, 184, 0.08)",
-                          border: "1px solid rgba(148, 163, 184, 0.2)",
-                        }}
-                      >
-                        <div style={{ fontWeight: 600 }}>
-                          {new Date(h.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} ·{" "}
-                          {h.faixa}
+                    {(editingRoom.meta?.faixaPrecoHistorico ?? []).map((h, idx) => {
+                      const pct =
+                        typeof h.valorImovelAnterior === "number" && h.valorImovelAnterior > 0 && h.valorImovel > 0
+                          ? ((h.valorImovel - h.valorImovelAnterior) / h.valorImovelAnterior) * 100
+                          : null;
+                      return (
+                        <div
+                          key={`${h.at}-${idx}`}
+                          style={{
+                            padding: "6px 8px",
+                            marginBottom: 6,
+                            borderRadius: 6,
+                            background: "rgba(148, 163, 184, 0.08)",
+                            border: "1px solid rgba(148, 163, 184, 0.2)",
+                          }}
+                        >
+                          <div style={{ fontWeight: 600 }}>
+                            {new Date(h.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                            {h.faixaAnterior && h.faixaAnterior !== h.faixa
+                              ? ` · ${h.faixaAnterior} → ${h.faixa}`
+                              : ` · ${h.faixa}`}
+                          </div>
+                          <div style={{ opacity: 0.9 }}>
+                            Imóvel:{" "}
+                            {typeof h.valorImovelAnterior === "number"
+                              ? `${formatMoneyBRL(h.valorImovelAnterior)} → ${formatMoneyBRL(h.valorImovel)}`
+                              : formatMoneyBRL(h.valorImovel)}
+                            {pct !== null && Math.abs(pct) >= 0.05
+                              ? ` (${pct > 0 ? "+" : ""}${pct.toFixed(1).replace(".", ",")}%)`
+                              : ""}
+                          </div>
+                          <div style={{ opacity: 0.9 }}>
+                            m²:{" "}
+                            {typeof h.valorM2Anterior === "number"
+                              ? `${formatDecimalBRL(h.valorM2Anterior)} → ${formatDecimalBRL(h.valorM2)}`
+                              : formatDecimalBRL(h.valorM2)}{" "}
+                            · base {h.areaBaseM2} m²
+                          </div>
+                          <div style={{ opacity: 0.65, fontSize: 10 }}>por {h.by}</div>
                         </div>
-                        <div style={{ opacity: 0.9 }}>
-                          m²: {formatDecimalBRL(h.valorM2)} · base {h.areaBaseM2} m² · imóvel: {formatMoneyBRL(h.valorImovel)}
-                        </div>
-                        <div style={{ opacity: 0.65, fontSize: 10 }}>por {h.by}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}

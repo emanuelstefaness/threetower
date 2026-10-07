@@ -40,6 +40,12 @@ export function canAccessHistorico(role: ClientAuthRole, authEnabled: boolean): 
   return role === "gestor";
 }
 
+/** Histórico de preço dos imóveis (faixa, m², valor): só gestores quando a auth está ativa. */
+export function canViewPriceHistory(role: ClientAuthRole, authEnabled: boolean): boolean {
+  if (!authEnabled) return true;
+  return role === "gestor";
+}
+
 export function isSecretaria(role: ClientAuthRole): boolean {
   return role === "secretaria";
 }

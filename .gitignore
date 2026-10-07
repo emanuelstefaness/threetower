@@ -43,3 +43,7 @@ next-env.d.ts
 # Ambiente de treino (dados locais)
 .data-treino/
 .data-test/
+
+# Backups do banco (contêm dados de compradores — nunca commitar)
+/backups/
+/importacao/

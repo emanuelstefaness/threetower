@@ -5,6 +5,8 @@ import { getBuildingStore } from "@/server/building/buildingStore";
 import { isPersistenceEnabled } from "@/server/building/persistBuildingState";
 import { loadFromPostgresCached } from "@/server/building/persistPostgres";
 import { sanitizeSnapshotForViewer } from "@/server/building/sanitizeSnapshotForViewer";
+import { stripPriceHistoryFromSnapshot } from "@/server/building/priceHistoryAccess";
+import { canViewPriceHistory } from "@/lib/authUi";
 
 // Evita que o Next trate como algo estático em builds.
 export const dynamic = "force-dynamic";
@@ -30,6 +32,10 @@ export async function GET() {
   const appMode = await getEffectiveAppMode();
   if (appMode === "view") {
     snapshot = sanitizeSnapshotForViewer(snapshot);
+  }
+  // Histórico de preço: só gestor (com a auth desligada, ex.: dev local, mantém-se visível).
+  if (!canViewPriceHistory(role ?? null, isAuthEnabled())) {
+    snapshot = stripPriceHistoryFromSnapshot(snapshot);
   }
   return Response.json({
     snapshot,

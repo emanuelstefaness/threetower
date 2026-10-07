@@ -19,6 +19,10 @@ export type FaixaPrecoHistoricoEntry = {
   valorM2: number;
   valorImovel: number;
   areaBaseM2: 40 | 140;
+  /** Valores imediatamente antes desta alteração (ausentes nos registos antigos). */
+  valorM2Anterior?: number;
+  valorImovelAnterior?: number;
+  faixaAnterior?: string;
 };
 
 export type RoomMeta = {
